@@ -18,23 +18,17 @@ class AdminUserRoleStatsWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
-        // Get role counts and create a collection with proper structure
-        $roleCounts = User::select('role', DB::raw('COUNT(*) as count'))
-            ->groupBy('role')
-            ->get()
-            ->map(function ($item) {
-                return (object) [
-                    'role' => $item->role,
-                    'count' => $item->count,
-                    'id' => $item->role, // Use role as ID for key
-                ];
-            });
+        // Get one user per role to use as a representative record
+        // This ensures we have proper User models with IDs
+        $roles = ['admin', 'tutor', 'student'];
+        $userIds = collect($roles)->map(function ($role) {
+            return User::where('role', $role)->value('id');
+        })->filter()->toArray();
 
         return $table
             ->query(
-                User::query()->whereRaw('1 = 0') // Empty query, we'll use records
+                User::query()->whereIn('id', $userIds)
             )
-            ->records($roleCounts)
             ->columns([
                 TextColumn::make('role')
                     ->label('User Role')
@@ -49,6 +43,9 @@ class AdminUserRoleStatsWidget extends BaseWidget
                     ->sortable(),
                 TextColumn::make('count')
                     ->label('Count')
+                    ->getStateUsing(function ($record) {
+                        return User::where('role', $record->role)->count();
+                    })
                     ->sortable(),
             ])
             ->defaultSort('count', 'desc')
