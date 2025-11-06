@@ -10,32 +10,32 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: "8.2"
           extensions: mbstring, xml, bcmath, pdo, pdo_sqlite, pdo_mysql, pdo_pgsql, fileinfo, gd, curl, zip
           coverage: none
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
+          node-version: "18"
+
       - name: Install PHP dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
-      
+
       - name: Install Node dependencies
         run: npm ci
-      
+
       - name: Build assets
         run: npm run build
-      
+
       - name: Create deployment archive
         run: |
           tar -czf deploy.tar.gz \
@@ -52,7 +52,7 @@ jobs:
             --exclude='*.md' \
             --exclude='.gitignore' \
             .
-      
+
       - name: Deploy via RSYNC
         uses: burnett01/rsync-deployments@7.0.1
         with:
@@ -76,7 +76,7 @@ jobs:
             tests
             *.md
             .gitignore
-      
+
       - name: Run deployment commands
         uses: appleboy/ssh-action@master
         with:
@@ -88,4 +88,3 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
             chmod +x scripts/deploy.sh
             ./scripts/deploy.sh
-

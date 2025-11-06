@@ -7,24 +7,26 @@ This guide covers both initial deployment and automated CI/CD setup using GitHub
 ## 📋 Prerequisites
 
 ### Server Requirements
-- **PHP:** 8.2 or higher
-- **Composer:** Latest version
-- **Node.js:** 18 or higher
-- **NPM:** Latest version
-- **Database:** MySQL 8.0+ / PostgreSQL 13+ / SQLite 3.8+
-- **Web Server:** Nginx or Apache
-- **SSH Access:** To your server
+
+-   **PHP:** 8.2 or higher
+-   **Composer:** Latest version
+-   **Node.js:** 18 or higher
+-   **NPM:** Latest version
+-   **Database:** MySQL 8.0+ / PostgreSQL 13+ / SQLite 3.8+
+-   **Web Server:** Nginx or Apache
+-   **SSH Access:** To your server
 
 ### PHP Extensions Required
-- mbstring
-- xml
-- bcmath
-- pdo
-- pdo_mysql (or pdo_pgsql)
-- fileinfo
-- gd
-- curl
-- zip
+
+-   mbstring
+-   xml
+-   bcmath
+-   pdo
+-   pdo_mysql (or pdo_pgsql)
+-   fileinfo
+-   gd
+-   curl
+-   zip
 
 ---
 
@@ -64,6 +66,7 @@ nano .env
 ```
 
 **Configure these settings in .env:**
+
 ```env
 APP_NAME="AgriSiti Academy"
 APP_ENV=production
@@ -161,31 +164,35 @@ Go to your GitHub repository → Settings → Secrets and variables → Actions
 Add these secrets:
 
 1. **HOST** - Your server IP or domain
-   ```
-   example.com
-   ```
+
+    ```
+    example.com
+    ```
 
 2. **USERNAME** - SSH username
-   ```
-   deploy
-   ```
+
+    ```
+    deploy
+    ```
 
 3. **SSH_KEY** - Private SSH key (content of ~/.ssh/id_rsa)
-   ```
-   -----BEGIN OPENSSH PRIVATE KEY-----
-   ...
-   -----END OPENSSH PRIVATE KEY-----
-   ```
+
+    ```
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    ...
+    -----END OPENSSH PRIVATE KEY-----
+    ```
 
 4. **DEPLOY_PATH** - Deployment path on server
-   ```
-   /var/www/agrisiti-academy
-   ```
+
+    ```
+    /var/www/agrisiti-academy
+    ```
 
 5. **PORT** (optional) - SSH port (default: 22)
-   ```
-   22
-   ```
+    ```
+    22
+    ```
 
 ### Step 2: Generate SSH Key
 
@@ -217,16 +224,19 @@ chmod 600 ~/.ssh/authorized_keys
 Two workflows are available:
 
 #### Option A: SCP Deployment (`.github/workflows/deploy.yml`)
-- Uses SCP to copy files
-- Good for smaller deployments
-- Simpler setup
+
+-   Uses SCP to copy files
+-   Good for smaller deployments
+-   Simpler setup
 
 #### Option B: RSYNC Deployment (`.github/workflows/deploy-rsync.yml`)
-- Uses RSYNC for efficient file transfer
-- Better for larger deployments
-- Only transfers changed files
+
+-   Uses RSYNC for efficient file transfer
+-   Better for larger deployments
+-   Only transfers changed files
 
 **To use a specific workflow:**
+
 1. Rename the workflow file you want to use to `deploy.yml`
 2. Delete or rename the other workflow file
 
@@ -387,18 +397,18 @@ Add this line:
 
 ## 🔍 Post-Deployment Checklist
 
-- [ ] Verify application is accessible
-- [ ] Test admin panel login
-- [ ] Test tutor panel login
-- [ ] Test API endpoints
-- [ ] Verify database connections
-- [ ] Check file uploads working
-- [ ] Verify email configuration
-- [ ] Test queue workers
-- [ ] Check cron jobs
-- [ ] Verify SSL certificate
-- [ ] Test backup system
-- [ ] Monitor error logs
+-   [ ] Verify application is accessible
+-   [ ] Test admin panel login
+-   [ ] Test tutor panel login
+-   [ ] Test API endpoints
+-   [ ] Verify database connections
+-   [ ] Check file uploads working
+-   [ ] Verify email configuration
+-   [ ] Test queue workers
+-   [ ] Check cron jobs
+-   [ ] Verify SSL certificate
+-   [ ] Test backup system
+-   [ ] Monitor error logs
 
 ---
 
@@ -407,61 +417,66 @@ Add this line:
 ### Deployment Fails
 
 1. **Check SSH connection:**
-   ```bash
-   ssh -i ~/.ssh/id_rsa user@your-server.com
-   ```
+
+    ```bash
+    ssh -i ~/.ssh/id_rsa user@your-server.com
+    ```
 
 2. **Check permissions:**
-   ```bash
-   ls -la /var/www/agrisiti-academy
-   ```
+
+    ```bash
+    ls -la /var/www/agrisiti-academy
+    ```
 
 3. **Check logs:**
-   ```bash
-   tail -f storage/logs/laravel.log
-   ```
+    ```bash
+    tail -f storage/logs/laravel.log
+    ```
 
 ### Application Not Loading
 
 1. **Check web server:**
-   ```bash
-   sudo systemctl status nginx
-   # or
-   sudo systemctl status apache2
-   ```
+
+    ```bash
+    sudo systemctl status nginx
+    # or
+    sudo systemctl status apache2
+    ```
 
 2. **Check PHP-FPM:**
-   ```bash
-   sudo systemctl status php8.2-fpm
-   ```
+
+    ```bash
+    sudo systemctl status php8.2-fpm
+    ```
 
 3. **Check permissions:**
-   ```bash
-   sudo chown -R www-data:www-data /var/www/agrisiti-academy
-   sudo chmod -R 775 /var/www/agrisiti-academy/storage
-   ```
+    ```bash
+    sudo chown -R www-data:www-data /var/www/agrisiti-academy
+    sudo chmod -R 775 /var/www/agrisiti-academy/storage
+    ```
 
 ### Database Connection Issues
 
 1. **Test connection:**
-   ```bash
-   php artisan tinker
-   DB::connection()->getPdo();
-   ```
+
+    ```bash
+    php artisan tinker
+    DB::connection()->getPdo();
+    ```
 
 2. **Check .env file:**
-   ```bash
-   cat .env | grep DB_
-   ```
+    ```bash
+    cat .env | grep DB_
+    ```
 
 ---
 
 ## 📚 Additional Resources
 
-- [Laravel Deployment Documentation](https://laravel.com/docs/deployment)
-- [Filament Documentation](https://filamentphp.com/docs)
-- [Nginx Configuration](https://www.nginx.com/resources/wiki/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+-   [Laravel Deployment Documentation](https://laravel.com/docs/deployment)
+-   [Filament Documentation](https://filamentphp.com/docs)
+-   [Nginx Configuration](https://www.nginx.com/resources/wiki/)
+-   [GitHub Actions Documentation](https://docs.github.com/en/actions)
 
 ---
 
@@ -483,11 +498,11 @@ Add this line:
 ## 📞 Support
 
 For deployment issues, check:
-- Application logs: `storage/logs/laravel.log`
-- Web server logs: `/var/log/nginx/error.log` or `/var/log/apache2/error.log`
-- GitHub Actions logs: Repository → Actions tab
+
+-   Application logs: `storage/logs/laravel.log`
+-   Web server logs: `/var/log/nginx/error.log` or `/var/log/apache2/error.log`
+-   GitHub Actions logs: Repository → Actions tab
 
 ---
 
 **Happy Deploying! 🚀**
-

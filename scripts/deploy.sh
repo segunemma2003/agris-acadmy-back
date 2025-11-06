@@ -42,6 +42,10 @@ fi
 echo "🗄️  Running database migrations..."
 php artisan migrate --force
 
+# Fix password reset tokens key length issue (if needed)
+echo "🔧 Checking for key length issues..."
+php scripts/fix-mysql-key-length.php 2>/dev/null || true
+
 # Clear and cache configuration
 echo "🧹 Clearing caches..."
 php artisan config:clear
