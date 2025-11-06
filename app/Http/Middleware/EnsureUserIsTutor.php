@@ -24,7 +24,8 @@ class EnsureUserIsTutor
         }
 
         if (!auth()->user()->isTutor()) {
-            abort(403, 'Unauthorized access. Tutor role required.');
+            $userRole = auth()->user()->role ?? 'not set';
+            abort(403, "Unauthorized access. Tutor role required. Your current role is: '{$userRole}'. To make this user a tutor, run: php artisan user:make-tutor " . auth()->user()->email);
         }
 
         return $next($request);

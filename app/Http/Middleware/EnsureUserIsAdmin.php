@@ -24,7 +24,8 @@ class EnsureUserIsAdmin
         }
 
         if (!auth()->user()->isAdmin()) {
-            abort(403, 'Unauthorized access. Admin role required.');
+            $userRole = auth()->user()->role ?? 'not set';
+            abort(403, "Unauthorized access. Admin role required. Your current role is: '{$userRole}'. To make this user an admin, run: php artisan user:make-admin " . auth()->user()->email);
         }
 
         return $next($request);

@@ -36,6 +36,19 @@ class TutorPanelProvider extends PanelProvider
                 Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Tutor/Widgets'), for: 'App\\Filament\\Tutor\\Widgets')
+            ->widgets([
+                \App\Filament\Tutor\Widgets\TutorStatsWidget::class,
+                Widgets\AccountWidget::class,
+            ])
+            ->brandName('Tutor Dashboard')
+            ->brandLogo(asset('images/logo.svg'))
+            ->favicon(asset('images/favicon.ico'))
+            ->sidebarCollapsibleOnDesktop()
+            ->navigationGroups([
+                'Course Management',
+                'Student Management',
+                'Communication',
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

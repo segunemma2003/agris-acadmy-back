@@ -17,6 +17,10 @@ class CourseResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
 
+    protected static ?string $navigationGroup = 'Course Management';
+
+    protected static ?int $navigationSort = 1;
+
     public static function form(Form $form): Form
     {
         return $form
@@ -105,6 +109,15 @@ class CourseResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            \App\Filament\Tutor\Resources\CourseResource\RelationManagers\ModulesRelationManager::class,
+            \App\Filament\Tutor\Resources\CourseResource\RelationManagers\EnrollmentsRelationManager::class,
+            \App\Filament\Tutor\Resources\CourseResource\RelationManagers\AssignmentsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
