@@ -21,7 +21,7 @@ class AdminUserRoleStatsWidget extends BaseWidget
         return $table
             ->query(
                 User::query()
-                    ->select('role', DB::raw('COUNT(*) as count'))
+                    ->select('role', DB::raw('COUNT(*) as count'), DB::raw('MIN(id) as id'))
                     ->groupBy('role')
             )
             ->columns([
@@ -41,7 +41,8 @@ class AdminUserRoleStatsWidget extends BaseWidget
                     ->sortable(),
             ])
             ->defaultSort('count', 'desc')
-            ->description('Breakdown of users by their roles');
+            ->description('Breakdown of users by their roles')
+            ->recordKey(fn ($record): string => $record->role ?? (string) ($record->id ?? uniqid()));
     }
 }
 

@@ -16,6 +16,11 @@ class EnsureUserIsTutor
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Allow access to login pages
+        if ($request->routeIs('filament.tutor.auth.login') || $request->routeIs('filament.tutor.auth.*')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
         if (!$user || $user->role !== 'tutor') {
             abort(403, 'Unauthorized. Tutor access required.');

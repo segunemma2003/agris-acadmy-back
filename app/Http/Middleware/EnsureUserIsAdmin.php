@@ -16,6 +16,11 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Allow access to login pages
+        if ($request->routeIs('filament.admin.auth.login') || $request->routeIs('filament.admin.auth.*')) {
+            return $next($request);
+        }
+
         $user = Auth::user();
         if (!$user || $user->role !== 'admin') {
             abort(403, 'Unauthorized. Admin access required.');
