@@ -22,8 +22,9 @@ return new class extends Migration
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
+            // Explicitly set email to 191 to avoid "key too long" error with utf8mb4
             $table->string('email', 191)->primary();
-            $table->string('token');
+            $table->string('token', 64);
             $table->timestamp('created_at')->nullable();
         });
 

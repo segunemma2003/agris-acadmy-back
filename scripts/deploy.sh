@@ -38,12 +38,16 @@ if [ -f package.json ] && [ -f vite.config.js ]; then
     npm run build
 fi
 
+# Fix password reset tokens key length issue BEFORE migrations (if needed)
+echo "🔧 Checking for key length issues..."
+php scripts/fix-password-reset-before-migrate.php 2>/dev/null || true
+
 # Run database migrations
 echo "🗄️  Running database migrations..."
 php artisan migrate --force
 
-# Fix password reset tokens key length issue (if needed)
-echo "🔧 Checking for key length issues..."
+# Fix password reset tokens key length issue AFTER migrations (if needed)
+echo "🔧 Verifying key length fixes..."
 php scripts/fix-mysql-key-length.php 2>/dev/null || true
 
 # Clear and cache configuration
