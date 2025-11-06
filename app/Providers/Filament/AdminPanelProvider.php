@@ -39,6 +39,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 \App\Filament\Widgets\AdminStatsWidget::class,
+                \App\Filament\Widgets\AdminChartStatsWidget::class,
+                \App\Filament\Widgets\AdminTableStatsWidget::class,
                 Widgets\AccountWidget::class,
             ])
             ->brandName('AgriSiti Academy')

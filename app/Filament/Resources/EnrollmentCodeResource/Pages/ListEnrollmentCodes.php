@@ -83,20 +83,11 @@ class ListEnrollmentCodes extends ListRecords
 
                             // Send email
                             try {
-                                $course = $code->course;
-                                Mail::raw(
-                                    "Hello,\n\nYou have been issued an enrollment code for the course: {$course->title}\n\nCode: {$code->code}\n\nYou can use this code to enroll in the course.\n\n" .
-                                        ($code->expires_at ? "This code expires on: {$code->expires_at->format('Y-m-d H:i:s')}\n\n" : '') .
-                                        "Thank you!",
-                                    function ($message) use ($email, $course) {
-                                        $message->to($email)
-                                            ->subject('Your Enrollment Code - ' . $course->title);
-                                    }
-                                );
+                                Mail::to($email)->send(new \App\Mail\EnrollmentCodeMail($code));
                                 $sent++;
                             } catch (\Exception $e) {
                                 // Log error but continue
-                                Log::error('Failed to send enrollment code email: ' . $e->getMessage());
+                                Log::error('Failed to send enrollment code email to ' . $email . ': ' . $e->getMessage());
                             }
                         }
                     }

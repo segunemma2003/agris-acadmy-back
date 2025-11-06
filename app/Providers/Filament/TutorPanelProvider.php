@@ -38,6 +38,8 @@ class TutorPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Tutor/Widgets'), for: 'App\\Filament\\Tutor\\Widgets')
             ->widgets([
                 \App\Filament\Tutor\Widgets\TutorStatsWidget::class,
+                \App\Filament\Tutor\Widgets\TutorChartStatsWidget::class,
+                \App\Filament\Tutor\Widgets\TutorTableStatsWidget::class,
                 Widgets\AccountWidget::class,
             ])
             ->brandName('Tutor Dashboard')
