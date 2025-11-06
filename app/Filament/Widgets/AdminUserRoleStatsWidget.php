@@ -18,12 +18,23 @@ class AdminUserRoleStatsWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
+        // Get role counts and create a collection with proper structure
+        $roleCounts = User::select('role', DB::raw('COUNT(*) as count'))
+            ->groupBy('role')
+            ->get()
+            ->map(function ($item) {
+                return (object) [
+                    'role' => $item->role,
+                    'count' => $item->count,
+                    'id' => $item->role, // Use role as ID for key
+                ];
+            });
+
         return $table
             ->query(
-                User::query()
-                    ->select('role', DB::raw('COUNT(*) as count'), DB::raw('MIN(id) as id'))
-                    ->groupBy('role')
+                User::query()->whereRaw('1 = 0') // Empty query, we'll use records
             )
+            ->records($roleCounts)
             ->columns([
                 TextColumn::make('role')
                     ->label('User Role')
@@ -41,8 +52,7 @@ class AdminUserRoleStatsWidget extends BaseWidget
                     ->sortable(),
             ])
             ->defaultSort('count', 'desc')
-            ->description('Breakdown of users by their roles')
-            ->recordKey(fn ($record): string => $record->role ?? (string) ($record->id ?? uniqid()));
+            ->description('Breakdown of users by their roles');
     }
 }
 

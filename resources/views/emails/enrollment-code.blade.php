@@ -63,23 +63,23 @@
     <div class="content">
         <p>Hello,</p>
         <p>You have been issued an enrollment code for the following course:</p>
-        
+
         <h2>{{ $course->title }}</h2>
         <p>{{ $course->short_description ?? 'Enroll now to start learning!' }}</p>
-        
+
         <div class="code-box">
             <p style="margin: 0 0 10px 0;">Your Enrollment Code:</p>
             <div class="code">{{ $code }}</div>
         </div>
-        
+
         @if($expiresAt)
         <p><strong>⏰ This code expires on:</strong> {{ $expiresAt->format('F d, Y \a\t h:i A') }}</p>
         @endif
-        
+
         <p>Use this code to enroll in the course through our platform.</p>
-        
+
         <p>If you have any questions, please don't hesitate to contact us.</p>
-        
+
         <p>Best regards,<br>
         <strong>AgriSiti Academy Team</strong></p>
     </div>

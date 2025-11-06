@@ -18,7 +18,7 @@ class EnrollmentCodeMail extends Mailable
     public function build()
     {
         $course = $this->enrollmentCode->course;
-        
+
         return $this->subject('Your Enrollment Code - ' . $course->title)
             ->view('emails.enrollment-code', [
                 'code' => $this->enrollmentCode->code,

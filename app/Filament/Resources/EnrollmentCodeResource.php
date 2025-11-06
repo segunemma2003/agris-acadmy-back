@@ -159,7 +159,7 @@ class EnrollmentCodeResource extends Resource
                             $emails = preg_split('/[,\n\r;]+/', $emailText);
                             $emails = array_map('trim', $emails);
                             $emails = array_filter($emails, fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL));
-                            
+
                             if (empty($emails)) {
                                 Notification::make()
                                     ->title('No valid emails provided')
