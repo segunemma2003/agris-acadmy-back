@@ -18,5 +18,3 @@ class ListUsers extends ListRecords
     }
 }
 
-
-

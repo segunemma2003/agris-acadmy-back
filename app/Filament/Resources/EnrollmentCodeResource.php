@@ -9,6 +9,10 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
+use App\Mail\EnrollmentCodeMail;
 
 class EnrollmentCodeResource extends Resource
 {
@@ -43,6 +47,10 @@ class EnrollmentCodeResource extends Resource
                             ->relationship('user', 'name')
                             ->searchable()
                             ->preload(),
+                        Forms\Components\TextInput::make('email')
+                            ->email()
+                            ->label('Email Address')
+                            ->helperText('Email to send the enrollment code to'),
                         Forms\Components\DateTimePicker::make('expires_at'),
                         Forms\Components\Toggle::make('is_used')
                             ->default(false),
@@ -66,6 +74,10 @@ class EnrollmentCodeResource extends Resource
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Assigned To')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Email')
+                    ->searchable()
+                    ->copyable(),
                 Tables\Columns\IconColumn::make('is_used')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('expires_at')
@@ -88,7 +100,8 @@ class EnrollmentCodeResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getPages(): array

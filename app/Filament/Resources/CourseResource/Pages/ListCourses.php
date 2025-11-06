@@ -18,5 +18,3 @@ class ListCourses extends ListRecords
     }
 }
 
-
-

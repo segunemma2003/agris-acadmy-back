@@ -12,11 +12,11 @@
                     </span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                    <div class="bg-primary-600 h-2.5 rounded-full transition-all duration-300" 
+                    <div class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
                          style="width: {{ ($this->currentStep / $this->totalSteps) * 100 }}%"></div>
                 </div>
             </div>
-            
+
             <!-- Step Indicators -->
             <div class="flex justify-between mt-4">
                 @foreach(range(1, $this->totalSteps) as $step)
@@ -49,8 +49,8 @@
             <div class="flex justify-between mt-6">
                 <div>
                     @if($this->currentStep > 1)
-                        <x-filament::button 
-                            type="button" 
+                        <x-filament::button
+                            type="button"
                             wire:click="previousStep"
                             color="gray"
                             outlined>
@@ -59,18 +59,18 @@
                         </x-filament::button>
                     @endif
                 </div>
-                
+
                 <div class="flex gap-3">
                     @if($this->currentStep < $this->totalSteps)
-                        <x-filament::button 
-                            type="button" 
+                        <x-filament::button
+                            type="button"
                             wire:click="nextStep"
                             color="primary">
                             Next
                             <x-heroicon-o-arrow-right class="w-4 h-4 ml-2" />
                         </x-filament::button>
                     @else
-                        <x-filament::button 
+                        <x-filament::button
                             type="submit"
                             color="success"
                             size="lg">

@@ -10,5 +10,3 @@ class CreateEnrollmentCode extends CreateRecord
     protected static string $resource = EnrollmentCodeResource::class;
 }
 
-
-

@@ -12,6 +12,7 @@ class EnrollmentCode extends Model
         'course_id',
         'tutor_id',
         'user_id',
+        'email',
         'code',
         'is_used',
         'expires_at',
