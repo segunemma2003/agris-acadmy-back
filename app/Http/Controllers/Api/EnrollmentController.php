@@ -7,7 +7,6 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\EnrollmentCode;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class EnrollmentController extends Controller
 {
@@ -15,11 +14,19 @@ class EnrollmentController extends Controller
     {
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'enrollment_code' => 'nullable|string',
+            'enrollment_code' => 'required|string',
         ]);
 
         $user = $request->user();
         $course = Course::findOrFail($request->course_id);
+
+        // Check if course is published
+        if (!$course->is_published) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This course is not available for enrollment',
+            ], 400);
+        }
 
         // Check if already enrolled
         $existingEnrollment = Enrollment::where('user_id', $user->id)
@@ -28,56 +35,62 @@ class EnrollmentController extends Controller
 
         if ($existingEnrollment) {
             return response()->json([
+                'success' => false,
                 'message' => 'You are already enrolled in this course',
-                'enrollment' => $existingEnrollment,
+                'data' => [
+                    'enrollment' => $existingEnrollment->load('course:id,title,image,slug'),
+                ],
             ], 400);
         }
 
-        // Validate enrollment code if provided
-        $enrollmentCode = null;
-        if ($request->enrollment_code) {
-            $enrollmentCode = EnrollmentCode::where('code', $request->enrollment_code)
-                ->where('course_id', $course->id)
-                ->where('is_used', false)
-                ->first();
+        // Validate enrollment code - REQUIRED
+        $enrollmentCode = EnrollmentCode::where('code', $request->enrollment_code)
+            ->where('course_id', $course->id)
+            ->where('is_used', false)
+            ->first();
 
-            if (!$enrollmentCode) {
-                return response()->json([
-                    'message' => 'Invalid or already used enrollment code',
-                ], 400);
-            }
+        if (!$enrollmentCode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or already used enrollment code',
+            ], 400);
+        }
 
-            if ($enrollmentCode->expires_at && $enrollmentCode->expires_at->isPast()) {
-                return response()->json([
-                    'message' => 'Enrollment code has expired',
-                ], 400);
-            }
+        // Check if code has expired
+        if ($enrollmentCode->expires_at && $enrollmentCode->expires_at->isPast()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Enrollment code has expired',
+            ], 400);
         }
 
         // Create enrollment
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
-            'enrollment_code' => $enrollmentCode ? $enrollmentCode->code : Str::upper(Str::random(12)),
+            'enrollment_code' => $enrollmentCode->code,
             'status' => 'active',
             'enrolled_at' => now(),
         ]);
 
-        // Mark code as used if applicable
-        if ($enrollmentCode) {
-            $enrollmentCode->update([
-                'is_used' => true,
-                'user_id' => $user->id,
-                'used_at' => now(),
-            ]);
-        }
+        // Mark code as used
+        $enrollmentCode->update([
+            'is_used' => true,
+            'user_id' => $user->id,
+            'used_at' => now(),
+        ]);
 
         // Update course enrollment count
         $course->increment('enrollment_count');
 
+        $enrollment->load(['course:id,title,image,slug,short_description,category_id', 'course.category:id,name,slug']);
+
         return response()->json([
+            'success' => true,
             'message' => 'Successfully enrolled in course',
-            'enrollment' => $enrollment->load('course'),
+            'data' => [
+                'enrollment' => $enrollment,
+            ],
         ], 201);
     }
 
@@ -125,7 +138,73 @@ class EnrollmentController extends Controller
             $enrollment->save();
         });
 
-        return response()->json($enrollments);
+        return response()->json([
+            'success' => true,
+            'data' => $enrollments,
+            'message' => 'Courses retrieved successfully'
+        ]);
+    }
+
+    public function ongoingCourses(Request $request)
+    {
+        $user = $request->user();
+        
+        $enrollments = $user->enrollments()
+            ->where('status', 'active')
+            ->with([
+                'course:id,title,image,slug,short_description,enrollment_count,rating,rating_count,duration_minutes,level,category_id',
+                'course.category:id,name,slug',
+                'course.tutor:id,name,avatar'
+            ])
+            ->orderBy('enrolled_at', 'desc')
+            ->get();
+
+        // Calculate progress for each enrollment
+        $enrollments->each(function ($enrollment) use ($user) {
+            $course = $enrollment->course;
+            
+            // Get total topics
+            $totalTopics = $course->modules()->withCount('topics')->get()->sum('topics_count');
+            
+            // Get completed topics
+            $completedTopics = $user->progress()
+                ->where('course_id', $course->id)
+                ->where('is_completed', true)
+                ->count();
+            
+            // Calculate progress percentage
+            $progress = $totalTopics > 0 ? ($completedTopics / $totalTopics) * 100 : 0;
+            
+            $enrollment->progress_percentage = round($progress, 2);
+            $enrollment->course->total_students = $course->enrollment_count;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $enrollments,
+            'message' => 'Ongoing courses retrieved successfully'
+        ]);
+    }
+
+    public function completedCourses(Request $request)
+    {
+        $user = $request->user();
+        
+        $enrollments = $user->enrollments()
+            ->where('status', 'completed')
+            ->with([
+                'course:id,title,image,slug,short_description,enrollment_count,rating,rating_count,duration_minutes,level,category_id',
+                'course.category:id,name,slug',
+                'course.tutor:id,name,avatar'
+            ])
+            ->orderBy('completed_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $enrollments,
+            'message' => 'Completed courses retrieved successfully'
+        ]);
     }
 
     public function show(Request $request, Enrollment $enrollment)
@@ -136,7 +215,11 @@ class EnrollmentController extends Controller
 
         $enrollment->load(['course.modules.topics', 'course.tutor']);
 
-        return response()->json($enrollment);
+        return response()->json([
+            'success' => true,
+            'data' => $enrollment,
+            'message' => 'Enrollment details retrieved successfully'
+        ]);
     }
 }
 

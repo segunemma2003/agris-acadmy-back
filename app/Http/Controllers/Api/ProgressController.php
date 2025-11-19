@@ -57,11 +57,15 @@ class ProgressController extends Controller
         $enrollment->update(['progress_percentage' => round($overallProgress, 2)]);
 
         return response()->json([
-            'course_id' => $course->id,
-            'overall_progress' => round($overallProgress, 2),
-            'total_topics' => $totalTopics,
-            'completed_topics' => $completedTopics,
-            'topics' => $topicsWithProgress,
+            'success' => true,
+            'data' => [
+                'course_id' => $course->id,
+                'overall_progress' => round($overallProgress, 2),
+                'total_topics' => $totalTopics,
+                'completed_topics' => $completedTopics,
+                'topics' => $topicsWithProgress,
+            ],
+            'message' => 'Course progress retrieved successfully'
         ]);
     }
 
@@ -76,7 +80,10 @@ class ProgressController extends Controller
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'You are not enrolled in this course'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
         }
 
         // Create or update progress
@@ -98,8 +105,11 @@ class ProgressController extends Controller
         $this->updateEnrollmentProgress($user, $course);
 
         return response()->json([
+            'success' => true,
             'message' => 'Topic marked as completed',
-            'progress' => $progress,
+            'data' => [
+                'progress' => $progress,
+            ],
         ]);
     }
 
@@ -130,7 +140,53 @@ class ProgressController extends Controller
         // Update enrollment progress
         $this->updateEnrollmentProgress($request->user(), $progress->course);
 
-        return response()->json($progress);
+        return response()->json([
+            'success' => true,
+            'data' => $progress,
+            'message' => 'Progress updated successfully'
+        ]);
+    }
+
+    public function completeQuiz(Request $request, Course $course, $moduleId, $testId)
+    {
+        $user = $request->user();
+
+        // Check if user is enrolled
+        $enrollment = $user->enrollments()
+            ->where('course_id', $course->id)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
+        }
+
+        // Get the test attempt
+        $testAttempt = \App\Models\TestAttempt::where('id', $testId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$testAttempt) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Test attempt not found'
+            ], 404);
+        }
+
+        // Mark quiz as completed in progress (if needed)
+        // The test attempt already tracks completion, so we just return success
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'test_attempt' => $testAttempt,
+                'is_passed' => $testAttempt->is_passed,
+                'score' => $testAttempt->score,
+                'percentage' => $testAttempt->percentage,
+            ],
+            'message' => 'Quiz marked as completed'
+        ]);
     }
 
     private function updateEnrollmentProgress($user, $course)

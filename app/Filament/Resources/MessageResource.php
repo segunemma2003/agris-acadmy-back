@@ -115,3 +115,4 @@ class MessageResource extends Resource
     }
 }
 
+

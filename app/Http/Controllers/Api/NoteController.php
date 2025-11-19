@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Module;
 use App\Models\StudentNote;
 use Illuminate\Http\Request;
 
@@ -19,16 +20,64 @@ class NoteController extends Controller
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'You are not enrolled in this course'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
         }
 
         $notes = $user->notes()
             ->where('course_id', $course->id)
-            ->with('topic:id,title,module_id')
+            ->with(['topic:id,title,module_id', 'topic.module:id,title'])
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json($notes);
+        return response()->json([
+            'success' => true,
+            'data' => $notes,
+            'message' => 'All course notes retrieved successfully'
+        ]);
+    }
+
+    public function moduleNotes(Request $request, Course $course, Module $module)
+    {
+        $user = $request->user();
+
+        // Check if user is enrolled
+        $enrollment = $user->enrollments()
+            ->where('course_id', $course->id)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
+        }
+
+        // Check if module belongs to course
+        if ($module->course_id !== $course->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Module not found in this course'
+            ], 404);
+        }
+
+        // Get notes for topics in this module
+        $notes = $user->notes()
+            ->where('course_id', $course->id)
+            ->whereHas('topic', function ($query) use ($module) {
+                $query->where('module_id', $module->id);
+            })
+            ->with(['topic:id,title,module_id', 'topic.module:id,title'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $notes,
+            'message' => 'Module notes retrieved successfully'
+        ]);
     }
 
     public function store(Request $request)
@@ -49,7 +98,10 @@ class NoteController extends Controller
             ->first();
 
         if (!$enrollment) {
-            return response()->json(['message' => 'You are not enrolled in this course'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
         }
 
         $note = StudentNote::create([
@@ -61,13 +113,20 @@ class NoteController extends Controller
             'is_public' => $request->is_public ?? false,
         ]);
 
-        return response()->json($note->load('topic'), 201);
+        return response()->json([
+            'success' => true,
+            'data' => $note->load('topic'),
+            'message' => 'Note created successfully'
+        ], 201);
     }
 
     public function update(Request $request, StudentNote $note)
     {
         if ($note->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
         $request->validate([
@@ -80,18 +139,28 @@ class NoteController extends Controller
             'is_public' => $request->is_public ?? $note->is_public,
         ]);
 
-        return response()->json($note->load('topic'));
+        return response()->json([
+            'success' => true,
+            'data' => $note->load('topic'),
+            'message' => 'Note updated successfully'
+        ]);
     }
 
     public function destroy(Request $request, StudentNote $note)
     {
         if ($note->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
         }
 
         $note->delete();
 
-        return response()->json(['message' => 'Note deleted successfully']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Note deleted successfully'
+        ]);
     }
 }
 

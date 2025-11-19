@@ -81,6 +81,18 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\TagsInput::make('tags')
                             ->columnSpanFull(),
+                        Forms\Components\Repeater::make('course_information')
+                            ->label('Course Information')
+                            ->schema([
+                                Forms\Components\TextInput::make('key')
+                                    ->label('Label')
+                                    ->required(),
+                                Forms\Components\Textarea::make('value')
+                                    ->label('Value')
+                                    ->required(),
+                            ])
+                            ->defaultItems(2)
+                            ->columnSpanFull(),
                     ])->columns(2),
                 Forms\Components\Section::make('Pricing & Settings')
                     ->schema([

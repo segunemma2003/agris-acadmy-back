@@ -19,3 +19,4 @@ class ViewMessage extends ViewRecord
     }
 }
 
+

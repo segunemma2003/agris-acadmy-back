@@ -18,3 +18,4 @@ class EditMessage extends EditRecord
     }
 }
 
+

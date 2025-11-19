@@ -10,3 +10,4 @@ class CreateMessage extends CreateRecord
     protected static string $resource = MessageResource::class;
 }
 
+
