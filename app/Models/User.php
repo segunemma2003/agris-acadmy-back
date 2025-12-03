@@ -106,6 +106,11 @@ class User extends Authenticatable
         return $this->hasMany(EnrollmentCode::class, 'tutor_id');
     }
 
+    public function onboardingQuizAttempts()
+    {
+        return $this->hasMany(StaffOnboardingQuizAttempt::class);
+    }
+
     // Helper methods
     public function isAdmin(): bool
     {
