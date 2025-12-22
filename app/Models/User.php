@@ -111,6 +111,11 @@ class User extends Authenticatable
         return $this->hasMany(StaffOnboardingQuizAttempt::class);
     }
 
+    public function onboardingVideoViews()
+    {
+        return $this->hasMany(StaffOnboardingVideoView::class);
+    }
+
     // Helper methods
     public function isAdmin(): bool
     {

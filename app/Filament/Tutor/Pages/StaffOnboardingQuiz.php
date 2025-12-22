@@ -3,6 +3,7 @@
 namespace App\Filament\Tutor\Pages;
 
 use App\Models\StaffOnboardingQuizAttempt;
+use App\Models\StaffOnboardingVideoView;
 use Filament\Forms;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
@@ -17,17 +18,24 @@ class StaffOnboardingQuiz extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
-    
+    protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
+
     protected static string $view = 'filament.tutor.pages.staff-onboarding-quiz';
-    
-    protected static ?string $title = 'Staff Onboarding Quiz';
-    
-    protected static ?string $navigationLabel = 'Onboarding Quiz';
-    
+
+    protected static ?string $title = 'Staff Onboarding & Quiz';
+
+    protected static ?string $navigationLabel = 'Onboarding & Quiz';
+
     protected static ?string $navigationGroup = null;
-    
-    protected static ?int $navigationSort = 100;
+
+    protected static ?string $description = 'Complete your onboarding process and take the comprehensive quiz';
+
+    protected static ?int $navigationSort = 1;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return true;
+    }
 
     public ?array $data = [];
 
@@ -36,27 +44,49 @@ class StaffOnboardingQuiz extends Page implements HasForms
     public $bestScore = null;
     public $hasPassed = false;
     public $questions = [];
+    public $watchedVideos = [];
+    public $allVideosWatched = false;
+    public $currentView = 'videos'; // 'videos' or 'quiz'
+    public $attemptHistory = [];
 
     public function mount(): void
     {
         $user = Auth::user();
-        
+
+        // Check video completion
+        $videos = $this->getVideos();
+        $watchedVideoIds = StaffOnboardingVideoView::where('user_id', $user->id)
+            ->where('is_completed', true)
+            ->pluck('video_id')
+            ->toArray();
+
+        $this->watchedVideos = $watchedVideoIds;
+        $this->allVideosWatched = count($watchedVideoIds) >= count($videos);
+
+        // If all videos watched, show quiz, otherwise show videos
+        $this->currentView = $this->allVideosWatched ? 'quiz' : 'videos';
+
         // Get best attempt
         $bestAttempt = StaffOnboardingQuizAttempt::where('user_id', $user->id)
             ->orderBy('percentage', 'desc')
             ->first();
-            
+
         $this->bestScore = $bestAttempt ? $bestAttempt->percentage : null;
         $this->hasPassed = $bestAttempt ? $bestAttempt->is_passed : false;
-        
+
         // Store questions for view access
         $this->questions = $this->getQuizQuestions();
-        
+
+        // Get attempt history
+        $this->attemptHistory = StaffOnboardingQuizAttempt::where('user_id', $user->id)
+            ->orderBy('completed_at', 'desc')
+            ->get();
+
         // Initialize form data with empty answers
         $this->form->fill(['answers' => []]);
     }
 
-    protected function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema($this->getFormSchema())
@@ -70,16 +100,21 @@ class StaffOnboardingQuiz extends Page implements HasForms
 
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
+            // Format options with A, B, C, D prefixes
+            $formattedOptions = [];
+            foreach ($question['options'] as $key => $option) {
+                $formattedOptions[$key] = $key . '. ' . $option;
+            }
+
             $schema[] = Section::make("Question {$questionNumber}")
                 ->schema([
                     Radio::make("answers.{$question['id']}")
                         ->label($question['question'])
-                        ->options($question['options'])
+                        ->options($formattedOptions)
                         ->required()
                         ->inline()
                         ->columnSpanFull()
                 ])
-                ->description($question['explanation'] ?? null)
                 ->collapsible()
                 ->collapsed(false);
         }
@@ -94,13 +129,13 @@ class StaffOnboardingQuiz extends Page implements HasForms
             $data['answers'] = [];
         }
         $user = Auth::user();
-        
+
         $questions = $this->getQuizQuestions();
         $userAnswers = $data['answers'] ?? [];
-        
+
         $correctAnswers = 0;
         $totalQuestions = count($questions);
-        
+
         foreach ($questions as $question) {
             $questionId = $question['id'];
             $userAnswer = $userAnswers[$questionId] ?? null;
@@ -108,11 +143,11 @@ class StaffOnboardingQuiz extends Page implements HasForms
                 $correctAnswers++;
             }
         }
-        
+
         $score = $correctAnswers;
         $percentage = ($correctAnswers / $totalQuestions) * 100;
         $isPassed = $percentage >= 70; // Passing score is 70%
-        
+
         // Create attempt
         $attempt = StaffOnboardingQuizAttempt::create([
             'user_id' => $user->id,
@@ -124,7 +159,7 @@ class StaffOnboardingQuiz extends Page implements HasForms
             'started_at' => now(),
             'completed_at' => now(),
         ]);
-        
+
         $this->attempt = $attempt;
         $this->showResults = true;
         $bestAttempt = StaffOnboardingQuizAttempt::where('user_id', $user->id)
@@ -132,7 +167,12 @@ class StaffOnboardingQuiz extends Page implements HasForms
             ->first();
         $this->bestScore = $bestAttempt ? $bestAttempt->percentage : $attempt->percentage;
         $this->hasPassed = $attempt->is_passed;
-        
+
+        // Refresh attempt history
+        $this->attemptHistory = StaffOnboardingQuizAttempt::where('user_id', $user->id)
+            ->orderBy('completed_at', 'desc')
+            ->get();
+
         if ($isPassed) {
             Notification::make()
                 ->title('Congratulations!')
@@ -146,7 +186,7 @@ class StaffOnboardingQuiz extends Page implements HasForms
                 ->body("You scored {$attempt->percentage}%. You need 70% to pass. You can retake the quiz.")
                 ->send();
         }
-        
+
         // Reset form
         $this->form->fill(['answers' => []]);
     }
@@ -156,6 +196,83 @@ class StaffOnboardingQuiz extends Page implements HasForms
         $this->showResults = false;
         $this->attempt = null;
         $this->form->fill(['answers' => []]);
+    }
+
+    public function markVideoComplete(string $videoId): void
+    {
+        $user = Auth::user();
+
+        StaffOnboardingVideoView::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'video_id' => $videoId,
+            ],
+            [
+                'is_completed' => true,
+                'watched_at' => now(),
+            ]
+        );
+
+        // Refresh watched videos
+        $videos = $this->getVideos();
+        $watchedVideoIds = StaffOnboardingVideoView::where('user_id', $user->id)
+            ->where('is_completed', true)
+            ->pluck('video_id')
+            ->toArray();
+
+        $this->watchedVideos = $watchedVideoIds;
+        $this->allVideosWatched = count($watchedVideoIds) >= count($videos);
+
+        Notification::make()
+            ->title('Video marked as complete')
+            ->success()
+            ->send();
+
+        // If all videos watched, switch to quiz
+        if ($this->allVideosWatched) {
+            $this->currentView = 'quiz';
+            Notification::make()
+                ->title('All videos completed!')
+                ->body('You can now proceed to take the quiz.')
+                ->success()
+                ->send();
+        }
+    }
+
+    public function startQuiz(): void
+    {
+        if ($this->allVideosWatched) {
+            $this->currentView = 'quiz';
+        } else {
+            Notification::make()
+                ->title('Please watch all videos first')
+                ->warning()
+                ->send();
+        }
+    }
+
+    public function getVideos(): array
+    {
+        return [
+            [
+                'id' => 'Zs41yS7Fvjc',
+                'url' => 'https://www.youtube.com/watch?v=Zs41yS7Fvjc',
+                'embed_url' => 'https://www.youtube.com/embed/Zs41yS7Fvjc',
+                'title' => 'Onboarding Video 1',
+            ],
+            [
+                'id' => '2KiKXr38KUY',
+                'url' => 'https://www.youtube.com/watch?v=2KiKXr38KUY',
+                'embed_url' => 'https://www.youtube.com/embed/2KiKXr38KUY',
+                'title' => 'Onboarding Video 2',
+            ],
+            [
+                'id' => 'AywVVVVXpiU',
+                'url' => 'https://www.youtube.com/watch?v=AywVVVVXpiU',
+                'embed_url' => 'https://www.youtube.com/embed/AywVVVVXpiU',
+                'title' => 'Onboarding Video 3',
+            ],
+        ];
     }
 
     public function getQuizQuestions(): array

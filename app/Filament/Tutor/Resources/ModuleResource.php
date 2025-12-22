@@ -3,6 +3,7 @@
 namespace App\Filament\Tutor\Resources;
 
 use App\Filament\Tutor\Resources\ModuleResource\Pages;
+use App\Filament\Tutor\Resources\ModuleResource\RelationManagers;
 use App\Models\Module;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -96,6 +97,13 @@ class ModuleResource extends Resource
                 ]),
             ])
             ->defaultSort('sort_order');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\TestRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

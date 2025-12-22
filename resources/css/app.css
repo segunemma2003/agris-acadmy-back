@@ -9,3 +9,226 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Custom Filament Panel Styling - Green & White Theme */
+:root {
+    --sidebar-width: 16rem; /* Reduced from default 20rem */
+}
+
+/* Reduce sidebar width - More compact sidebar */
+.fi-sidebar {
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+}
+
+.fi-sidebar-nav {
+    padding: 0.75rem 0.5rem !important;
+    gap: 0.25rem !important;
+}
+
+.fi-sidebar-header {
+    padding: 1rem 0.75rem !important;
+}
+
+/* Improve text readability */
+.fi-sidebar-nav-item {
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+    font-weight: 500 !important;
+}
+
+.fi-sidebar-nav-item-label {
+    color: rgb(30 41 59) !important; /* slate-800 for better contrast */
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+}
+
+.fi-sidebar-nav-item-icon {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+}
+
+/* Improve dashboard text readability */
+.fi-main {
+    background-color: #ffffff !important;
+}
+
+.fi-section-header-heading {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: rgb(15 23 42) !important; /* slate-900 */
+    line-height: 1.5 !important;
+}
+
+.fi-section-content {
+    color: rgb(51 65 85) !important; /* slate-700 for better readability */
+    line-height: 1.6 !important;
+}
+
+/* Table text readability */
+.fi-ta-cell {
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+    color: rgb(30 41 59) !important; /* slate-800 */
+}
+
+.fi-ta-header-cell {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: rgb(15 23 42) !important; /* slate-900 */
+    line-height: 1.5 !important;
+}
+
+/* Form label readability */
+.fi-fo-field-wrp-label {
+    font-size: 0.9375rem !important;
+    font-weight: 600 !important;
+    color: rgb(15 23 42) !important; /* slate-900 */
+    line-height: 1.5 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Input text readability */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+textarea,
+select {
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+    color: rgb(15 23 42) !important; /* slate-900 */
+}
+
+/* Widget text readability */
+.fi-stats-overview-stat {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: rgb(15 23 42) !important; /* slate-900 */
+    line-height: 1.2 !important;
+}
+
+.fi-stats-overview-stat-label {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: rgb(71 85 105) !important; /* slate-600 */
+    line-height: 1.5 !important;
+}
+
+/* Green primary color enhancements */
+.fi-btn-primary {
+    background-color: rgb(34 197 94) !important; /* green-500 */
+    border-color: rgb(34 197 94) !important;
+    color: white !important;
+    font-weight: 500 !important;
+}
+
+.fi-btn-primary:hover {
+    background-color: rgb(22 163 74) !important; /* green-600 */
+    border-color: rgb(22 163 74) !important;
+}
+
+.fi-sidebar-nav-item-active .fi-sidebar-nav-item-label {
+    color: rgb(34 197 94) !important; /* green-500 */
+    font-weight: 600 !important;
+}
+
+.fi-sidebar-nav-item-active .fi-sidebar-nav-item-icon {
+    color: rgb(34 197 94) !important; /* green-500 */
+}
+
+/* Badge and status colors with green theme */
+.fi-badge-primary {
+    background-color: rgb(220 252 231) !important; /* green-100 */
+    color: rgb(22 101 52) !important; /* green-800 */
+    font-weight: 500 !important;
+}
+
+/* Improve card/section readability */
+.fi-section {
+    background-color: #ffffff !important;
+    border: 1px solid rgb(226 232 240) !important; /* slate-200 */
+    border-radius: 0.5rem !important;
+}
+
+.fi-section-header {
+    border-bottom: 1px solid rgb(226 232 240) !important; /* slate-200 */
+    padding: 1rem 1.5rem !important;
+}
+
+.fi-section-content-ctn {
+    padding: 1.5rem !important;
+}
+
+/* Dark mode adjustments for better readability */
+@media (prefers-color-scheme: dark) {
+    .fi-main {
+        background-color: rgb(15 23 42) !important; /* slate-900 */
+    }
+    
+    .fi-sidebar-nav-item-label {
+        color: rgb(226 232 240) !important; /* slate-200 */
+    }
+    
+    .fi-section-header-heading {
+        color: rgb(248 250 252) !important; /* slate-50 */
+    }
+    
+    .fi-section-content {
+        color: rgb(203 213 225) !important; /* slate-300 */
+    }
+    
+    .fi-ta-cell {
+        color: rgb(226 232 240) !important; /* slate-200 */
+    }
+    
+    .fi-ta-header-cell {
+        color: rgb(248 250 252) !important; /* slate-50 */
+    }
+    
+    .fi-fo-field-wrp-label {
+        color: rgb(248 250 252) !important; /* slate-50 */
+    }
+    
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="password"],
+    textarea,
+    select {
+        color: rgb(248 250 252) !important; /* slate-50 */
+        background-color: rgb(30 41 59) !important; /* slate-800 */
+    }
+    
+    .fi-section {
+        background-color: rgb(30 41 59) !important; /* slate-800 */
+        border-color: rgb(51 65 85) !important; /* slate-700 */
+    }
+    
+    .fi-section-header {
+        border-bottom-color: rgb(51 65 85) !important; /* slate-700 */
+    }
+}
+
+/* Branding - Green theme accents */
+.fi-topbar {
+    background-color: rgb(34 197 94) !important; /* green-500 */
+    border-bottom: 1px solid rgb(22 163 74) !important; /* green-600 */
+}
+
+.fi-sidebar {
+    background-color: #ffffff !important;
+    border-right: 1px solid rgb(226 232 240) !important; /* slate-200 */
+}
+
+@media (prefers-color-scheme: dark) {
+    .fi-sidebar {
+        background-color: rgb(15 23 42) !important; /* slate-900 */
+        border-right-color: rgb(51 65 85) !important; /* slate-700 */
+    }
+    
+    .fi-topbar {
+        background-color: rgb(22 163 74) !important; /* green-600 */
+        border-bottom-color: rgb(21 128 61) !important; /* green-700 */
+    }
+}

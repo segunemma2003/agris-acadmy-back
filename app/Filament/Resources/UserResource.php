@@ -41,6 +41,7 @@ class UserResource extends Resource
                                 'admin' => 'Admin',
                                 'tutor' => 'Tutor',
                                 'student' => 'Student',
+                                'tagdev' => 'TagDev',
                             ])
                             ->required()
                             ->default('student'),
@@ -114,7 +115,6 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
         ];
     }
 

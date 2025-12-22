@@ -3,6 +3,7 @@
 namespace App\Filament\Tutor\Resources;
 
 use App\Filament\Tutor\Resources\ModuleTestResource\Pages;
+use App\Filament\Tutor\Resources\ModuleTestResource\RelationManagers;
 use App\Models\ModuleTest;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -122,6 +123,13 @@ class ModuleTestResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\QuestionsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

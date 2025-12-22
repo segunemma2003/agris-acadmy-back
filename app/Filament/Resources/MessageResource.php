@@ -6,6 +6,8 @@ use App\Filament\Resources\MessageResource\Pages;
 use App\Models\Message;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -29,12 +31,6 @@ class MessageResource extends Resource
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
                             ->relationship('course', 'title')
-                            ->required()
-                            ->searchable()
-                            ->preload(),
-                        Forms\Components\Select::make('sender_id')
-                            ->label('From')
-                            ->relationship('sender', 'name')
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -75,7 +71,14 @@ class MessageResource extends Resource
                 Tables\Columns\TextColumn::make('subject')
                     ->searchable()
                     ->sortable()
-                    ->wrap(),
+                    ->wrap()
+                    ->formatStateUsing(fn ($record, $state) => $record->parent_id ? '↳ ' . $state : $state),
+                Tables\Columns\TextColumn::make('parent_id')
+                    ->label('Thread')
+                    ->formatStateUsing(fn ($state) => $state ? 'Reply' : 'Original')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'gray' : 'primary')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_read')
                     ->boolean()
                     ->sortable(),
@@ -102,6 +105,52 @@ class MessageResource extends Resource
                 Tables\Actions\DeleteAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Infolists\Components\Section::make('Message Details')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('course.title')
+                            ->label('Course'),
+                        Infolists\Components\TextEntry::make('sender.name')
+                            ->label('From'),
+                        Infolists\Components\TextEntry::make('recipient.name')
+                            ->label('To'),
+                        Infolists\Components\TextEntry::make('subject')
+                            ->label('Subject'),
+                        Infolists\Components\TextEntry::make('message')
+                            ->label('Message')
+                            ->html()
+                            ->columnSpanFull(),
+                        Infolists\Components\TextEntry::make('created_at')
+                            ->dateTime(),
+                        Infolists\Components\IconEntry::make('is_read')
+                            ->boolean()
+                            ->label('Read Status'),
+                    ])->columns(2),
+                Infolists\Components\Section::make('Replies')
+                    ->schema([
+                        Infolists\Components\RepeatableEntry::make('replies')
+                            ->label('')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('sender.name')
+                                    ->label('From'),
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->dateTime(),
+                                Infolists\Components\TextEntry::make('message')
+                                    ->label('Reply')
+                                    ->html()
+                                    ->columnSpanFull(),
+                            ])
+                            ->columns(2)
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->visible(fn ($record) => $record->replies->count() > 0),
+            ]);
     }
 
     public static function getPages(): array

@@ -89,7 +89,6 @@ class CategoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
         ];
     }
 
@@ -102,6 +101,4 @@ class CategoryResource extends Resource
         ];
     }
 }
-
-
 

@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Filament\TagDev\Resources\WeeklyReportResource\Pages;
+
+use App\Filament\TagDev\Resources\WeeklyReportResource;
+use Filament\Actions;
+use Filament\Resources\Pages\EditRecord;
+
+class EditWeeklyReport extends EditRecord
+{
+    protected static string $resource = WeeklyReportResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\ViewAction::make(),
+            Actions\DeleteAction::make(),
+        ];
+    }
+}
