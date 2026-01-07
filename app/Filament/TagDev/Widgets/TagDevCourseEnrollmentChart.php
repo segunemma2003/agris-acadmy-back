@@ -79,3 +79,4 @@ class TagDevCourseEnrollmentChart extends ChartWidget
     }
 }
 
+

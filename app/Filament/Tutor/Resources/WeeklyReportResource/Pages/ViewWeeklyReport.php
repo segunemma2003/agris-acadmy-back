@@ -18,3 +18,4 @@ class ViewWeeklyReport extends ViewRecord
     }
 }
 
+
