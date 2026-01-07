@@ -42,6 +42,7 @@ class UserResource extends Resource
                                 'tutor' => 'Tutor',
                                 'student' => 'Student',
                                 'tagdev' => 'TagDev',
+                                'supervisor' => 'Supervisor',
                             ])
                             ->required()
                             ->default('student'),

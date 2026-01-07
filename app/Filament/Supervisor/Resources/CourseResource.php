@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Tutor\Resources;
+namespace App\Filament\Supervisor\Resources;
 
-use App\Filament\Tutor\Resources\CourseResource\Pages;
-use App\Filament\Tutor\Resources\CourseResource\RelationManagers;
+use App\Filament\Supervisor\Resources\CourseResource\Pages;
+use App\Filament\Supervisor\Resources\CourseResource\RelationManagers;
 use App\Models\Category;
 use App\Models\Course;
 use Filament\Forms;
@@ -188,7 +188,7 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ListCourses::route('/'),
-            // Tutors cannot create courses - removed 'create' page
+            // Supervisors cannot create courses - removed 'create' page
             'edit' => Pages\EditCourse::route('/{record}/edit'),
         ];
     }
@@ -196,7 +196,7 @@ class CourseResource extends Resource
     public static function canViewAny(): bool
     {
         $user = Auth::user();
-        return $user && $user->role === 'tutor';
+        return $user && $user->role === 'supervisor';
     }
 
     public static function canCreate(): bool

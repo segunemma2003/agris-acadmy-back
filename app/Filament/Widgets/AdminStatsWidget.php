@@ -22,7 +22,7 @@ class AdminStatsWidget extends BaseWidget
         $completedEnrollments = Enrollment::where('status', 'completed')->count();
 
         // Calculate revenue (if you have payment tracking)
-        $totalRevenue = Enrollment::sum('amount_paid');
+        $totalRevenue = Enrollment::sum('amount_paid') ?? 0;
 
         return [
             Stat::make('Total Users', $totalUsers)

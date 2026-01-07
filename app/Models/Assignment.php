@@ -11,6 +11,7 @@ class Assignment extends Model
     protected $fillable = [
         'course_id',
         'module_id',
+        'topic_id',
         'tutor_id',
         'title',
         'description',
@@ -38,6 +39,11 @@ class Assignment extends Model
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class);
     }
 
     public function tutor(): BelongsTo

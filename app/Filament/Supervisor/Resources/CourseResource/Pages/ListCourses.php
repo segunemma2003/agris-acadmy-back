@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\TagDev\Resources\CourseResource\Pages;
+namespace App\Filament\Supervisor\Resources\CourseResource\Pages;
 
-use App\Filament\TagDev\Resources\CourseResource;
+use App\Filament\Supervisor\Resources\CourseResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -13,7 +13,7 @@ class ListCourses extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
         ];
     }
 }
+

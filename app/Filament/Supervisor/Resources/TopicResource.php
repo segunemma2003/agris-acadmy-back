@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tutor\Resources;
+namespace App\Filament\Supervisor\Resources;
 
-use App\Filament\Tutor\Resources\TopicResource\Pages;
+use App\Filament\Supervisor\Resources\TopicResource\Pages;
 use App\Models\Topic;
 use Filament\Forms;
 use Filament\Forms\Form;

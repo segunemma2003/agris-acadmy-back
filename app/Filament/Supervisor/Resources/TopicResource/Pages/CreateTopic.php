@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tutor\Resources\TopicResource\Pages;
+namespace App\Filament\Supervisor\Resources\TopicResource\Pages;
 
-use App\Filament\Tutor\Resources\TopicResource;
+use App\Filament\Supervisor\Resources\TopicResource;
 use App\Models\Assignment;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;

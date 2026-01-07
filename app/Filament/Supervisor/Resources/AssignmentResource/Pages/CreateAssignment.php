@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Tutor\Resources\CourseResource\Pages;
+namespace App\Filament\Supervisor\Resources\AssignmentResource\Pages;
 
-use App\Filament\Tutor\Resources\CourseResource;
+use App\Filament\Supervisor\Resources\AssignmentResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 
-class CreateCourse extends CreateRecord
+class CreateAssignment extends CreateRecord
 {
-    protected static string $resource = CourseResource::class;
+    protected static string $resource = AssignmentResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {

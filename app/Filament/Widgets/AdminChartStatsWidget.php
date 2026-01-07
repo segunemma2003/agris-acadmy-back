@@ -17,14 +17,26 @@ class AdminChartStatsWidget extends ChartWidget
     protected function getData(): array
     {
         // Get enrollments for the last 7 days
-        $enrollments = Enrollment::select(
-            DB::raw('DATE(created_at) as date'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->where('created_at', '>=', now()->subDays(7))
-        ->groupBy('date')
-        ->orderBy('date')
-        ->get();
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
+            $enrollments = Enrollment::select(
+                DB::raw("DATE(created_at) as date"),
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('created_at', '>=', now()->subDays(7))
+            ->groupBy(DB::raw("DATE(created_at)"))
+            ->orderBy('date')
+            ->get();
+        } else {
+            $enrollments = Enrollment::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('created_at', '>=', now()->subDays(7))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+        }
 
         $labels = $enrollments->pluck('date')->map(fn ($date) => date('M d', strtotime($date)))->toArray();
         $data = $enrollments->pluck('count')->toArray();

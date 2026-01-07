@@ -51,6 +51,11 @@ class Topic extends Model
         return $this->hasMany(TopicDownload::class);
     }
 
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(Assignment::class);
+    }
+
     // Update module's total_topics when topic is created/deleted
     protected static function boot()
     {
