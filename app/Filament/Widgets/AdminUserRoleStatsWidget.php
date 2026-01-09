@@ -45,10 +45,9 @@ class AdminUserRoleStatsWidget extends BaseWidget
                     ->label('Count')
                     ->getStateUsing(function ($record) {
                         return User::where('role', $record->role)->count();
-                    })
-                    ->sortable(),
+                    }),
             ])
-            ->defaultSort('count', 'desc')
+            ->defaultSort('role', 'asc')
             ->description('Breakdown of users by their roles');
     }
 }

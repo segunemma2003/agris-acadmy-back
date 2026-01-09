@@ -136,10 +136,16 @@ class CourseResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Show courses where tutor is primary tutor, additional tutor, or course was created by admin
         return $table
             ->modifyQueryUsing(fn ($query) => $query->where(function ($q) {
-                $q->where('tutor_id', Auth::id())
-                  ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', Auth::id()));
+                $tutorId = Auth::id();
+                // Primary tutor
+                $q->where('tutor_id', $tutorId)
+                  // Additional tutor
+                  ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                  // Course created by admin
+                  ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
             }))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
