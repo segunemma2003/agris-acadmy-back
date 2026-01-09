@@ -111,7 +111,7 @@ class EnrollmentController extends Controller
 
         $query = $request->user()
             ->enrollments()
-            ->with(['course.category', 'course.tutor:id,name', 'course.modules.topics']);
+            ->with(['course.category', 'course.tutor:id,name', 'course.tutors:id,name,avatar', 'course.modules.topics']);
 
         if ($status !== 'all') {
             $query->where('status', $status);
@@ -154,7 +154,8 @@ class EnrollmentController extends Controller
             ->with([
                 'course:id,title,image,slug,short_description,enrollment_count,rating,rating_count,duration_minutes,level,category_id',
                 'course.category:id,name,slug',
-                'course.tutor:id,name,avatar'
+                'course.tutor:id,name,avatar',
+                'course.tutors:id,name,avatar'
             ])
             ->orderBy('enrolled_at', 'desc')
             ->get();
@@ -195,7 +196,8 @@ class EnrollmentController extends Controller
             ->with([
                 'course:id,title,image,slug,short_description,enrollment_count,rating,rating_count,duration_minutes,level,category_id',
                 'course.category:id,name,slug',
-                'course.tutor:id,name,avatar'
+                'course.tutor:id,name,avatar',
+                'course.tutors:id,name,avatar'
             ])
             ->orderBy('completed_at', 'desc')
             ->get();
@@ -213,7 +215,7 @@ class EnrollmentController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $enrollment->load(['course.modules.topics', 'course.tutor']);
+        $enrollment->load(['course.modules.topics', 'course.tutor', 'course.tutors']);
 
         return response()->json([
             'success' => true,

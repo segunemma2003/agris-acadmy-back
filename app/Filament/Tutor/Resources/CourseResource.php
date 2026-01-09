@@ -52,6 +52,13 @@ class CourseResource extends Resource
                         Forms\Components\RichEditor::make('description')
                             ->required()
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('tutors')
+                            ->label('Additional Tutors')
+                            ->relationship('tutors', 'name', fn ($query) => $query->where('role', 'tutor')->where('id', '!=', Auth::id()))
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Select additional tutors for this course (excluding yourself)'),
                     ])->columns(2),
                 Forms\Components\Section::make('Course Details')
                     ->schema([
@@ -130,7 +137,10 @@ class CourseResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
+            ->modifyQueryUsing(fn ($query) => $query->where(function ($q) {
+                $q->where('tutor_id', Auth::id())
+                  ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', Auth::id()));
+            }))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->circular(),

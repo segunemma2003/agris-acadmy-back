@@ -26,13 +26,13 @@ class AdminPanelProvider extends PanelProvider
     public function register(): void
     {
         parent::register();
-        
+
         FilamentView::registerRenderHook(
             'panels::head.end',
             fn (): View => view('filament.admin.custom-styles'),
         );
     }
-    
+
     public function panel(Panel $panel): Panel
     {
         return $panel

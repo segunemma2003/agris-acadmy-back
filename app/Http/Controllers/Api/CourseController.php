@@ -11,7 +11,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         $query = Course::where('is_published', true)
-            ->with(['category', 'tutor:id,name,avatar']);
+            ->with(['category', 'tutor:id,name,avatar', 'tutors:id,name,avatar']);
 
         // Category filter
         if ($request->has('category_id')) {
@@ -76,6 +76,7 @@ class CourseController extends Controller
         $course->load([
             'category',
             'tutor:id,name,bio,avatar',
+            'tutors:id,name,bio,avatar',
             'modules.topics',
             'resources',
             'reviews.user:id,name',
@@ -109,7 +110,7 @@ class CourseController extends Controller
             ->whereHas('recommendedCourses', function ($query) use ($enrolledCourseIds) {
                 $query->whereIn('course_id', $enrolledCourseIds);
             })
-            ->with(['category:id,name,slug', 'tutor:id,name,avatar'])
+            ->with(['category:id,name,slug', 'tutor:id,name,avatar', 'tutors:id,name,avatar'])
             ->get();
 
         // Get featured courses if not enough recommendations
@@ -117,7 +118,7 @@ class CourseController extends Controller
             ->where('is_featured', true)
             ->whereNotIn('id', $enrolledCourseIds)
             ->whereNotIn('id', $recommendedFromEnrollments->pluck('id'))
-            ->with(['category:id,name,slug', 'tutor:id,name,avatar'])
+            ->with(['category:id,name,slug', 'tutor:id,name,avatar', 'tutors:id,name,avatar'])
             ->limit(10 - $recommendedFromEnrollments->count())
             ->get();
 
@@ -194,6 +195,7 @@ class CourseController extends Controller
                 'enrollment_count' => $course->enrollment_count,
                 'category' => $course->category,
                 'tutor' => $course->tutor()->select('id', 'name', 'bio', 'avatar')->first(),
+                'tutors' => $course->tutors()->select('id', 'name', 'bio', 'avatar')->get(),
             ],
             'message' => 'Course information retrieved successfully'
         ]);

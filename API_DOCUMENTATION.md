@@ -277,9 +277,21 @@ Authorization: Bearer {your_token}
         "image": "https://example.com/course.jpg",
         "tutor": {
           "id": 2,
-          "name": "John Tutor",
+          "name": "Primary Tutor",
           "avatar": "https://example.com/tutor.jpg"
-        }
+        },
+        "tutors": [
+          {
+            "id": 2,
+            "name": "Primary Tutor",
+            "avatar": "https://example.com/tutor.jpg"
+          },
+          {
+            "id": 3,
+            "name": "Additional Tutor",
+            "avatar": "https://example.com/tutor2.jpg"
+          }
+        ]
       }
     ]
   },
@@ -341,6 +353,8 @@ Authorization: Bearer {your_token}
 
 ## 3. Courses Endpoints
 
+**Note:** Courses can have multiple tutors. The `tutor` field contains the primary tutor (for backward compatibility), while the `tutors` array contains all tutors assigned to the course.
+
 ### 3.1 Get All Courses
 **Endpoint:** `GET /courses`
 
@@ -376,9 +390,21 @@ Authorization: Bearer {your_token}
       },
       "tutor": {
         "id": 2,
-        "name": "John Tutor",
+        "name": "Primary Tutor",
         "avatar": "https://example.com/tutor.jpg"
-      }
+      },
+      "tutors": [
+        {
+          "id": 2,
+          "name": "Primary Tutor",
+          "avatar": "https://example.com/tutor.jpg"
+        },
+        {
+          "id": 3,
+          "name": "Additional Tutor",
+          "avatar": "https://example.com/tutor2.jpg"
+        }
+      ]
     }
   ],
   "pagination": {

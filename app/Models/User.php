@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -56,9 +57,19 @@ class User extends Authenticatable
     }
 
     // Relationships
+    // Primary tutor courses (backward compatibility)
     public function coursesAsTutor()
     {
         return $this->hasMany(Course::class, 'tutor_id');
+    }
+
+    // Multiple courses as tutor (many-to-many)
+    public function coursesAsTutors(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_tutors', 'tutor_id', 'course_id')
+            ->withPivot('is_primary', 'sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
     }
 
     public function enrollments()

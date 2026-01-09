@@ -48,7 +48,7 @@ class CategoryController extends Controller
         $categories = Category::where('is_active', true)
             ->with(['courses' => function ($query) {
                 $query->where('is_published', true)
-                    ->with(['tutor:id,name,avatar'])
+                    ->with(['tutor:id,name,avatar', 'tutors:id,name,avatar'])
                     ->orderBy('created_at', 'desc');
             }])
             ->orderBy('sort_order')
@@ -67,7 +67,7 @@ class CategoryController extends Controller
             ->with(['courses' => function ($query) {
                 $query->where('is_published', true)
                     ->where('is_featured', true)
-                    ->with(['tutor:id,name,avatar'])
+                    ->with(['tutor:id,name,avatar', 'tutors:id,name,avatar'])
                     ->orderBy('created_at', 'desc');
             }])
             ->whereHas('courses', function ($query) {

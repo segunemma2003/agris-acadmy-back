@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -55,9 +56,19 @@ class Course extends Model
         return $this->belongsTo(Category::class);
     }
 
+    // Primary tutor (backward compatibility)
     public function tutor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'tutor_id');
+    }
+
+    // Multiple tutors (many-to-many)
+    public function tutors(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'course_tutors', 'course_id', 'tutor_id')
+            ->withPivot('is_primary', 'sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
     }
 
     public function modules(): HasMany

@@ -35,11 +35,19 @@ class CourseResource extends Resource
                             ->searchable()
                             ->preload(),
                         Forms\Components\Select::make('tutor_id')
-                            ->label('Tutor')
+                            ->label('Primary Tutor')
                             ->relationship('tutor', 'name', fn ($query) => $query->where('role', 'tutor'))
                             ->required()
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->helperText('Primary tutor for backward compatibility'),
+                        Forms\Components\Select::make('tutors')
+                            ->label('Additional Tutors')
+                            ->relationship('tutors', 'name', fn ($query) => $query->where('role', 'tutor'))
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Select multiple tutors for this course'),
                         Forms\Components\TextInput::make('title')
                             ->required()
                             ->maxLength(255)
