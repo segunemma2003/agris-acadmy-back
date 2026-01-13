@@ -31,7 +31,7 @@ class MessageResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('course', 'title', fn ($query) => $query->accessibleByTutor(Auth::id()))
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -55,7 +55,7 @@ class MessageResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()

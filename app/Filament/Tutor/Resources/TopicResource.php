@@ -29,7 +29,7 @@ class TopicResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('module_id')
                             ->label('Module')
-                            ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+                            ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
                             ->required()
                             ->searchable()
                             ->preload()
@@ -122,7 +122,7 @@ class TopicResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('module.course', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('module.course', fn ($q) => $q->accessibleByTutor(Auth::id())))
             ->columns([
                 Tables\Columns\TextColumn::make('module.course.title')
                     ->label('Course')

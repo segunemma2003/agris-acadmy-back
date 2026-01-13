@@ -49,7 +49,7 @@ class StudentResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query
                 ->where('role', 'student')
-                ->whereHas('enrollments.course', fn ($q) => $q->where('tutor_id', Auth::id()))
+                ->whereHas('enrollments.course', fn ($q) => $q->accessibleByTutor(Auth::id()))
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')

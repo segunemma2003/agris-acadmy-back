@@ -47,7 +47,7 @@ class WeeklyReportResource extends Resource
                             ->default(Carbon::now()->endOfWeek()),
                         Forms\Components\Select::make('course_id')
                             ->label('Course (Optional)')
-                            ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('course', 'title', fn ($query) => $query->accessibleByTutor(Auth::id()))
                             ->searchable()
                             ->preload(),
                     ])->columns(3),

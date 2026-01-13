@@ -180,13 +180,11 @@ class CourseResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
+                // Tutors can only view courses, not edit or delete
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                // Tutors cannot perform bulk actions on courses
             ]);
     }
 
@@ -204,8 +202,8 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ListCourses::route('/'),
-            // Tutors cannot create courses - removed 'create' page
-            'edit' => Pages\EditCourse::route('/{record}/edit'),
+            'view' => Pages\ViewCourse::route('/{record}'),
+            // Tutors cannot create or edit courses - removed 'create' and 'edit' pages
         ];
     }
 
@@ -218,6 +216,31 @@ class CourseResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
+    public static function canView($record): bool
+    {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'tutor') {
+            return false;
+        }
+
+        $tutorId = $user->id;
+        
+        // Check if tutor has access to this course
+        return $record->tutor_id === $tutorId
+            || $record->tutors()->where('tutor_id', $tutorId)->exists()
+            || ($record->tutor && $record->tutor->role === 'admin');
     }
 }
 

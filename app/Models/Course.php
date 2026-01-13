@@ -126,6 +126,19 @@ class Course extends Model
         return $this->hasMany(CourseRecommendation::class, 'recommended_course_id');
     }
 
+    // Scope for tutors to see accessible courses
+    public function scopeAccessibleByTutor($query, $tutorId)
+    {
+        return $query->where(function ($q) use ($tutorId) {
+            // Primary tutor
+            $q->where('tutor_id', $tutorId)
+              // Additional tutor
+              ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+              // Course created by admin
+              ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+        });
+    }
+
     // Auto-generate slug
     protected static function boot()
     {
