@@ -81,48 +81,101 @@ jobs:
             # Verify PHP version
             php -v
 
+            # Ensure proper ownership before operations
+            echo "Setting initial permissions..."
+            sudo chown -R www-data:www-data /var/www/laravel
+            sudo chmod -R 755 /var/www/laravel
+
             # Pull latest code
+            echo "Pulling latest code..."
             git pull origin main
 
+            # Ensure storage and cache directories exist
+            echo "Creating required directories..."
+            sudo -u www-data mkdir -p storage/app/public
+            sudo -u www-data mkdir -p storage/framework/cache/data
+            sudo -u www-data mkdir -p storage/framework/sessions
+            sudo -u www-data mkdir -p storage/framework/views
+            sudo -u www-data mkdir -p storage/logs
+            sudo -u www-data mkdir -p bootstrap/cache
+
             # Install dependencies
+            echo "Installing PHP dependencies..."
             composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
 
             # Install/update frontend dependencies
-            npm install
+            echo "Installing Node dependencies..."
+            npm install --production
+
+            # Build assets
+            echo "Building assets..."
             npm run build
 
-            # Set environment variables
-            cat > .env <<EOF
-            APP_NAME=Agrisiti-Academy
-            APP_ENV=${{ secrets.APP_ENV }}
-            APP_KEY=${{ secrets.APP_KEY }}
-            APP_DEBUG=${{ secrets.APP_DEBUG }}
-            APP_URL=https://academy-backends.agrisiti.com
+            # Update .env file (preserve existing values, update only what's provided)
+            echo "Updating .env file..."
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
 
-            DB_CONNECTION=mysql
-            DB_HOST=${{ secrets.DB_HOST }}
-            DB_PORT=3306
-            DB_DATABASE=${{ secrets.DB_DATABASE }}
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            EOF
+            # Helper function to update or add .env variable
+            update_env() {
+              local key=$1
+              local value=$2
+              if grep -q "^${key}=" .env 2>/dev/null; then
+                sudo -u www-data sed -i "s|^${key}=.*|${key}=${value}|g" .env
+              else
+                echo "${key}=${value}" | sudo -u www-data tee -a .env > /dev/null
+              fi
+            }
+
+            # Update specific .env variables from secrets
+            update_env "APP_NAME" "Agrisiti-Academy"
+            update_env "APP_ENV" "${{ secrets.APP_ENV }}"
+            update_env "APP_KEY" "${{ secrets.APP_KEY }}"
+            update_env "APP_DEBUG" "${{ secrets.APP_DEBUG }}"
+            update_env "APP_URL" "https://academy-backends.agrisiti.com"
+            update_env "DB_CONNECTION" "mysql"
+            update_env "DB_HOST" "${{ secrets.DB_HOST }}"
+            update_env "DB_PORT" "3306"
+            update_env "DB_DATABASE" "${{ secrets.DB_DATABASE }}"
+            update_env "DB_USERNAME" "${{ secrets.DB_USERNAME }}"
+            update_env "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
+
+            # Create storage link if it doesn't exist
+            echo "Creating storage link..."
+            sudo -u www-data php artisan storage:link || true
 
             # Run migrations
-            php artisan migrate --force
+            echo "Running migrations..."
+            sudo -u www-data php artisan migrate --force
 
             # Clear caches
-            php artisan config:clear
-            php artisan cache:clear
-            php artisan view:clear
-            php artisan route:clear
+            echo "Clearing caches..."
+            sudo -u www-data php artisan config:clear
+            sudo -u www-data php artisan cache:clear
+            sudo -u www-data php artisan view:clear
+            sudo -u www-data php artisan route:clear
 
-            # Set permissions
+            # Set final permissions (ensure nginx/www-data has full access)
+            echo "Setting final permissions..."
             sudo chown -R www-data:www-data /var/www/laravel
+            sudo chmod -R 755 /var/www/laravel
             sudo chmod -R 775 /var/www/laravel/storage
             sudo chmod -R 775 /var/www/laravel/bootstrap/cache
+            sudo chmod -R 755 /var/www/laravel/public
+
+            # Ensure nginx can read all files
+            sudo chmod -R o+r /var/www/laravel/public
+            sudo chmod -R o+X /var/www/laravel/public
 
             # Restart services
+            echo "Restarting services..."
             sudo systemctl restart php8.3-fpm
             sudo systemctl restart nginx
+
+            # Verify nginx can access the directory
+            echo "Verifying nginx access..."
+            sudo -u www-data test -r /var/www/laravel/public/index.php && echo "✓ Nginx can read public files" || echo "✗ Nginx access issue detected"
+            sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Nginx can write to storage" || echo "✗ Storage write issue detected"
 
             echo "Deployment completed successfully!"
