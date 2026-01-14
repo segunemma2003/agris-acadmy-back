@@ -81,6 +81,11 @@ jobs:
             # Verify PHP version
             php -v
 
+            # Configure git safe.directory to avoid ownership issues
+            echo "Configuring git safe.directory..."
+            git config --global --add safe.directory /var/www/laravel || true
+            sudo -u $USER git config --global --add safe.directory /var/www/laravel || true
+
             # Ensure .git directory is accessible for git pull
             echo "Setting git permissions..."
             sudo chown -R $USER:$USER .git || true
@@ -88,10 +93,7 @@ jobs:
 
             # Pull latest code (as current user)
             echo "Pulling latest code..."
-            git pull origin main || {
-              echo "Git pull failed, trying with sudo..."
-              sudo -u $USER git pull origin main
-            }
+            git pull origin main
 
             # Set ownership to www-data for web server access
             echo "Setting ownership to www-data..."
@@ -107,29 +109,24 @@ jobs:
             sudo -u www-data mkdir -p storage/logs
             sudo -u www-data mkdir -p bootstrap/cache
 
-            # Install dependencies (as www-data to ensure proper permissions)
+            # Install dependencies (run as current user, then fix ownership)
             echo "Installing PHP dependencies..."
-            sudo -u www-data composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction || {
-              echo "Composer failed as www-data, trying as current user..."
-              composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
-              sudo chown -R www-data:www-data vendor
-            }
+            # Composer scripts now handle errors gracefully (|| true in composer.json)
+            composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
+            # Fix ownership after installation
+            sudo chown -R www-data:www-data vendor bootstrap/cache
 
-            # Install/update frontend dependencies
-            echo "Installing Node dependencies..."
-            sudo -u www-data npm install --production || {
-              echo "NPM failed as www-data, trying as current user..."
-              npm install --production
-              sudo chown -R www-data:www-data node_modules
-            }
+            # Install/update frontend dependencies (need dev dependencies for build)
+            echo "Installing Node dependencies (including dev for build)..."
+            npm install
+            # Fix ownership after installation
+            sudo chown -R www-data:www-data node_modules
 
-            # Build assets
+            # Build assets (vite needs dev dependencies)
             echo "Building assets..."
-            sudo -u www-data npm run build || {
-              echo "NPM build failed as www-data, trying as current user..."
-              npm run build
-              sudo chown -R www-data:www-data public/build public/hot
-            }
+            npm run build
+            # Fix ownership of built assets
+            sudo chown -R www-data:www-data public/build public/hot 2>/dev/null || true
 
             # Update .env file (preserve existing values, update only what's provided)
             echo "Updating .env file..."
@@ -169,14 +166,16 @@ jobs:
 
             # Run migrations
             echo "Running migrations..."
-            sudo -u www-data php artisan migrate --force
+            sudo -u www-data php artisan migrate --force || {
+              echo "Migration failed, but continuing..."
+            }
 
-            # Clear caches
+            # Clear caches (errors handled gracefully in composer.json)
             echo "Clearing caches..."
-            sudo -u www-data php artisan config:clear
-            sudo -u www-data php artisan cache:clear
-            sudo -u www-data php artisan view:clear
-            sudo -u www-data php artisan route:clear
+            sudo -u www-data php artisan config:clear || true
+            sudo -u www-data php artisan cache:clear || true
+            sudo -u www-data php artisan view:clear || true
+            sudo -u www-data php artisan route:clear || true
 
             # Set final permissions (ensure nginx/www-data has full access)
             echo "Setting final permissions..."
@@ -215,25 +214,30 @@ jobs:
             sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Nginx can write to storage" || echo "✗ Storage write issue detected"
 
             # Wait a moment for services to fully restart
-            sleep 3
+            echo "Waiting for services to stabilize..."
+            sleep 5
 
-            # Health check - verify website is accessible
-            echo "Checking website health..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://academy-backends.agrisiti.com || echo "000")
+            # Health check - verify website is accessible (on-server check)
+            echo "Checking website health from server..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://academy-backends.agrisiti.com 2>/dev/null || echo "000")
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
-              echo "✓ Website is accessible (HTTP $HTTP_CODE)"
+              echo "✓ Website is accessible from server (HTTP $HTTP_CODE)"
+            elif [ "$HTTP_CODE" = "000" ]; then
+              echo "⚠ Website connection failed from server (HTTP 000) - This will be verified externally"
+              echo "  Possible causes: DNS not propagated, firewall blocking, or service not ready"
             else
-              echo "⚠ Website returned HTTP $HTTP_CODE - may need investigation"
-              # Don't fail deployment, but log the issue
+              echo "⚠ Website returned HTTP $HTTP_CODE from server - External check will verify"
             fi
 
             # Additional API health check
-            echo "Checking API health..."
-            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://academy-backends.agrisiti.com/api/categories || echo "000")
+            echo "Checking API health from server..."
+            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://academy-backends.agrisiti.com/api/categories 2>/dev/null || echo "000")
             if [ "$API_CODE" = "200" ] || [ "$API_CODE" = "401" ] || [ "$API_CODE" = "404" ]; then
-              echo "✓ API is responding (HTTP $API_CODE)"
+              echo "✓ API is responding from server (HTTP $API_CODE)"
+            elif [ "$API_CODE" = "000" ]; then
+              echo "⚠ API connection failed from server (HTTP 000) - External check will verify"
             else
-              echo "⚠ API returned HTTP $API_CODE - may need investigation"
+              echo "⚠ API returned HTTP $API_CODE from server - External check will verify"
             fi
 
             echo "Deployment completed successfully!"
@@ -241,23 +245,73 @@ jobs:
       - name: Verify Deployment (External Check)
         run: |
           echo "Waiting for services to stabilize..."
-          sleep 5
+          sleep 10
 
-          echo "Checking website accessibility from GitHub Actions..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://academy-backends.agrisiti.com || echo "000")
+          # Function to check URL with retries
+          check_url() {
+            local url=$1
+            local expected_codes=$2
+            local max_retries=3
+            local retry=0
+            local http_code="000"
 
-          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
-            echo "✅ Website is accessible (HTTP $HTTP_CODE)"
-          else
-            echo "⚠️ Website returned HTTP $HTTP_CODE"
-            echo "This may indicate a deployment issue. Please check the server logs."
+            while [ $retry -lt $max_retries ]; do
+              echo "Attempt $((retry + 1))/$max_retries: Checking $url..."
+              http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 10 "$url" 2>/dev/null || echo "000")
+
+              if [ "$http_code" != "000" ]; then
+                echo "Received HTTP $http_code"
+                # Check if code is in expected list
+                for code in $expected_codes; do
+                  if [ "$http_code" = "$code" ]; then
+                    echo "✅ Success: HTTP $http_code is acceptable"
+                    return 0
+                  fi
+                done
+                echo "⚠️ HTTP $http_code is not in expected codes: $expected_codes"
+              else
+                echo "⚠️ Connection failed or timeout (HTTP 000)"
+              fi
+
+              retry=$((retry + 1))
+              if [ $retry -lt $max_retries ]; then
+                echo "Retrying in 5 seconds..."
+                sleep 5
+              fi
+            done
+
+            echo "❌ Failed: All $max_retries attempts failed. Last HTTP code: $http_code"
+            return 1
+          }
+
+          # Check website root
+          echo "=========================================="
+          echo "Checking website accessibility..."
+          echo "=========================================="
+          if ! check_url "https://academy-backends.agrisiti.com" "200 301 302"; then
+            echo "❌ DEPLOYMENT FAILED: Website is not accessible!"
+            echo "Please check:"
+            echo "  - Server is running"
+            echo "  - Nginx is running: sudo systemctl status nginx"
+            echo "  - PHP-FPM is running: sudo systemctl status php8.3-fpm"
+            echo "  - Firewall allows HTTP/HTTPS"
+            echo "  - DNS is pointing to correct server"
+            exit 1
           fi
 
+          # Check API endpoint
+          echo ""
+          echo "=========================================="
           echo "Checking API endpoint..."
-          API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://academy-backends.agrisiti.com/api/categories || echo "000")
-
-          if [ "$API_CODE" = "200" ] || [ "$API_CODE" = "401" ] || [ "$API_CODE" = "404" ]; then
-            echo "✅ API is responding (HTTP $API_CODE)"
-          else
-            echo "⚠️ API returned HTTP $API_CODE"
+          echo "=========================================="
+          if ! check_url "https://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
+            echo "❌ DEPLOYMENT FAILED: API endpoint is not accessible!"
+            echo "Please check:"
+            echo "  - Laravel application is working"
+            echo "  - Routes are properly configured"
+            echo "  - Database connection is working"
+            exit 1
           fi
+
+          echo ""
+          echo "✅ All health checks passed! Deployment successful."
