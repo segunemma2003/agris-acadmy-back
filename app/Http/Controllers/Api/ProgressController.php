@@ -59,11 +59,11 @@ class ProgressController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'course_id' => $course->id,
-                'overall_progress' => round($overallProgress, 2),
-                'total_topics' => $totalTopics,
-                'completed_topics' => $completedTopics,
-                'topics' => $topicsWithProgress,
+            'course_id' => $course->id,
+            'overall_progress' => round($overallProgress, 2),
+            'total_topics' => $totalTopics,
+            'completed_topics' => $completedTopics,
+            'topics' => $topicsWithProgress,
             ],
             'message' => 'Course progress retrieved successfully'
         ]);
@@ -108,7 +108,7 @@ class ProgressController extends Controller
             'success' => true,
             'message' => 'Topic marked as completed',
             'data' => [
-                'progress' => $progress,
+            'progress' => $progress,
             ],
         ]);
     }
