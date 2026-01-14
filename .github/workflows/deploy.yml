@@ -91,14 +91,18 @@ jobs:
             echo "Step 2: Pulling latest code..."
             git pull origin main || true
 
-            # 3. CREATE ALL REQUIRED DIRECTORIES FIRST (only if missing)
-            echo "Step 3: Creating required directories (if missing)..."
-            [ ! -d storage/app/public ] && sudo mkdir -p storage/app/public
-            [ ! -d storage/framework/cache/data ] && sudo mkdir -p storage/framework/cache/data
-            [ ! -d storage/framework/sessions ] && sudo mkdir -p storage/framework/sessions
-            [ ! -d storage/framework/views ] && sudo mkdir -p storage/framework/views
-            [ ! -d storage/logs ] && sudo mkdir -p storage/logs
-            [ ! -d bootstrap/cache ] && sudo mkdir -p bootstrap/cache
+            # 3. CREATE ALL REQUIRED DIRECTORIES FIRST (always create to ensure they exist)
+            echo "Step 3: Creating required directories..."
+            sudo mkdir -p storage/app/public
+            sudo mkdir -p storage/framework/cache/data
+            sudo mkdir -p storage/framework/sessions
+            sudo mkdir -p storage/framework/views
+            sudo mkdir -p storage/logs
+            sudo mkdir -p bootstrap/cache
+            
+            # Ensure they have correct ownership immediately
+            sudo chown -R $USER:$USER /var/www/laravel/storage
+            sudo chown -R $USER:$USER /var/www/laravel/bootstrap
 
             # 4. INSTALL PHP DEPENDENCIES (as current user)
             echo "Step 4: Installing PHP dependencies..."
