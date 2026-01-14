@@ -94,6 +94,10 @@ jobs:
 
             # 2. PULL LATEST CODE - do this FIRST while ubuntu owns everything
             echo "Step 2: Pulling latest code..."
+            # Reset any local changes to avoid merge conflicts
+            git reset --hard HEAD || true
+            git clean -fd || true
+            # Now pull
             git pull origin main || true
 
             # 3. CREATE ALL REQUIRED DIRECTORIES
