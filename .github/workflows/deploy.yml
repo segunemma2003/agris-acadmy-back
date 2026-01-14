@@ -81,32 +81,27 @@ jobs:
             echo "=== Starting Deployment ==="
             php -v
 
-            # 1. SETUP GIT
+            # 1. SETUP GIT - Change to ubuntu user for git operations
             echo "Step 1: Configuring git..."
             git config --global --add safe.directory /var/www/laravel || true
-            sudo chown -R $USER:$USER /var/www/laravel || true
-            sudo chmod -R 755 /var/www/laravel || true
+            sudo chown -R $USER:$USER /var/www/laravel
+            sudo chmod -R 755 /var/www/laravel
 
-            # 2. PULL LATEST CODE
+            # 2. PULL LATEST CODE - do this FIRST while ubuntu owns everything
             echo "Step 2: Pulling latest code..."
             git pull origin main || true
 
-            # 3. CREATE ALL REQUIRED DIRECTORIES FIRST (always create to ensure they exist)
+            # 3. CREATE ALL REQUIRED DIRECTORIES
             echo "Step 3: Creating required directories..."
-            sudo mkdir -p storage/app/public
-            sudo mkdir -p storage/framework/cache/data
-            sudo mkdir -p storage/framework/sessions
-            sudo mkdir -p storage/framework/views
-            sudo mkdir -p storage/logs
-            sudo mkdir -p bootstrap/cache
-            
-            # Ensure they have correct ownership immediately
-            sudo chown -R $USER:$USER /var/www/laravel/storage
-            sudo chown -R $USER:$USER /var/www/laravel/bootstrap
+            mkdir -p storage/app/public
+            mkdir -p storage/framework/cache/data
+            mkdir -p storage/framework/sessions
+            mkdir -p storage/framework/views
+            mkdir -p storage/logs
+            mkdir -p bootstrap/cache
 
             # 4. INSTALL PHP DEPENDENCIES (as current user)
             echo "Step 4: Installing PHP dependencies..."
-            sudo chown -R $USER:$USER /var/www/laravel
             composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
 
             # 5. INSTALL NODE DEPENDENCIES (as current user, BEFORE ownership change)
