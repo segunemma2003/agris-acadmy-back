@@ -81,11 +81,16 @@ jobs:
             echo "=== Starting Deployment ==="
             php -v
 
-            # 1. SETUP GIT - Change to ubuntu user for git operations
+            # 1. SETUP GIT - Give ubuntu user full access for git operations
             echo "Step 1: Configuring git..."
             git config --global --add safe.directory /var/www/laravel || true
+            
+            # Change ownership to ubuntu user with group ownership to both ubuntu and www-data
             sudo chown -R $USER:$USER /var/www/laravel
             sudo chmod -R 755 /var/www/laravel
+            
+            # Make files group-writable so www-data can also use them
+            sudo chmod -R g+w /var/www/laravel
 
             # 2. PULL LATEST CODE - do this FIRST while ubuntu owns everything
             echo "Step 2: Pulling latest code..."
@@ -113,18 +118,26 @@ jobs:
             npm run build || echo "Build step completed (may have warnings)"
 
             # 7. NOW CHANGE OWNERSHIP TO WWW-DATA (after all build operations)
-            echo "Step 7: Setting ownership to www-data..."
-            sudo chown -R www-data:www-data /var/www/laravel
+            echo "Step 7: Setting ownership for www-data..."
+            # Change group to www-data but keep owner as ubuntu for git operations
+            sudo chown -R $USER:www-data /var/www/laravel
             
-            # Keep .git accessible to the deploy user for future pulls
-            echo "Making .git accessible to deploy user..."
+            # Set permissions: owner can read/write, group (www-data) can read/write
+            sudo chmod -R 755 /var/www/laravel
+            sudo chmod -R g+w /var/www/laravel
+            
+            # Special handling for .git - keep ubuntu ownership
             sudo chown -R $USER:$USER /var/www/laravel/.git
             sudo chmod -R 755 /var/www/laravel/.git
+            sudo chmod -R g+w /var/www/laravel/.git
 
             # 8. FIX PERMISSIONS ON ALL DIRECTORIES AND FILES
             echo "Step 8: Setting directory and file permissions..."
             sudo find /var/www/laravel -type d -exec chmod 755 {} \;
             sudo find /var/www/laravel -type f -exec chmod 644 {} \;
+            
+            # Make everything group-writable for www-data
+            sudo chmod -R g+w /var/www/laravel
 
             # 9. SPECIAL PERMISSIONS FOR WRITABLE DIRECTORIES
             echo "Step 9: Setting writable directory permissions..."
