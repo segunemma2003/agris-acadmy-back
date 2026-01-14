@@ -81,16 +81,24 @@ jobs:
             # Verify PHP version
             php -v
 
-            # Ensure proper ownership before operations
-            echo "Setting initial permissions..."
+            # Ensure .git directory is accessible for git pull
+            echo "Setting git permissions..."
+            sudo chown -R $USER:$USER .git || true
+            sudo chmod -R 755 .git || true
+
+            # Pull latest code (as current user)
+            echo "Pulling latest code..."
+            git pull origin main || {
+              echo "Git pull failed, trying with sudo..."
+              sudo -u $USER git pull origin main
+            }
+
+            # Set ownership to www-data for web server access
+            echo "Setting ownership to www-data..."
             sudo chown -R www-data:www-data /var/www/laravel
             sudo chmod -R 755 /var/www/laravel
 
-            # Pull latest code
-            echo "Pulling latest code..."
-            git pull origin main
-
-            # Ensure storage and cache directories exist
+            # Ensure storage and cache directories exist with correct permissions
             echo "Creating required directories..."
             sudo -u www-data mkdir -p storage/app/public
             sudo -u www-data mkdir -p storage/framework/cache/data
@@ -99,23 +107,37 @@ jobs:
             sudo -u www-data mkdir -p storage/logs
             sudo -u www-data mkdir -p bootstrap/cache
 
-            # Install dependencies
+            # Install dependencies (as www-data to ensure proper permissions)
             echo "Installing PHP dependencies..."
-            composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
+            sudo -u www-data composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction || {
+              echo "Composer failed as www-data, trying as current user..."
+              composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
+              sudo chown -R www-data:www-data vendor
+            }
 
             # Install/update frontend dependencies
             echo "Installing Node dependencies..."
-            npm install --production
+            sudo -u www-data npm install --production || {
+              echo "NPM failed as www-data, trying as current user..."
+              npm install --production
+              sudo chown -R www-data:www-data node_modules
+            }
 
             # Build assets
             echo "Building assets..."
-            npm run build
+            sudo -u www-data npm run build || {
+              echo "NPM build failed as www-data, trying as current user..."
+              npm run build
+              sudo chown -R www-data:www-data public/build public/hot
+            }
 
             # Update .env file (preserve existing values, update only what's provided)
             echo "Updating .env file..."
             if [ ! -f .env ]; then
-              cp .env.example .env
+              sudo -u www-data cp .env.example .env
             fi
+            sudo chown www-data:www-data .env
+            sudo chmod 644 .env
 
             # Helper function to update or add .env variable
             update_env() {
@@ -159,10 +181,24 @@ jobs:
             # Set final permissions (ensure nginx/www-data has full access)
             echo "Setting final permissions..."
             sudo chown -R www-data:www-data /var/www/laravel
-            sudo chmod -R 755 /var/www/laravel
+
+            # Ensure .git is accessible for future pulls (owned by SSH user)
+            sudo chown -R $USER:$USER /var/www/laravel/.git 2>/dev/null || true
+            sudo chmod -R 755 /var/www/laravel/.git 2>/dev/null || true
+
+            # Set directory permissions (755 = rwxr-xr-x)
+            sudo find /var/www/laravel -type d -exec chmod 755 {} \;
+
+            # Set file permissions (644 = rw-r--r--)
+            sudo find /var/www/laravel -type f -exec chmod 644 {} \;
+
+            # Special permissions for storage and cache (775 = rwxrwxr-x, writable by www-data)
             sudo chmod -R 775 /var/www/laravel/storage
             sudo chmod -R 775 /var/www/laravel/bootstrap/cache
+
+            # Public directory permissions
             sudo chmod -R 755 /var/www/laravel/public
+            sudo find /var/www/laravel/public -type f -exec chmod 644 {} \;
 
             # Ensure nginx can read all files
             sudo chmod -R o+r /var/www/laravel/public
@@ -178,4 +214,50 @@ jobs:
             sudo -u www-data test -r /var/www/laravel/public/index.php && echo "✓ Nginx can read public files" || echo "✗ Nginx access issue detected"
             sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Nginx can write to storage" || echo "✗ Storage write issue detected"
 
+            # Wait a moment for services to fully restart
+            sleep 3
+
+            # Health check - verify website is accessible
+            echo "Checking website health..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://academy-backends.agrisiti.com || echo "000")
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+              echo "✓ Website is accessible (HTTP $HTTP_CODE)"
+            else
+              echo "⚠ Website returned HTTP $HTTP_CODE - may need investigation"
+              # Don't fail deployment, but log the issue
+            fi
+
+            # Additional API health check
+            echo "Checking API health..."
+            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://academy-backends.agrisiti.com/api/categories || echo "000")
+            if [ "$API_CODE" = "200" ] || [ "$API_CODE" = "401" ] || [ "$API_CODE" = "404" ]; then
+              echo "✓ API is responding (HTTP $API_CODE)"
+            else
+              echo "⚠ API returned HTTP $API_CODE - may need investigation"
+            fi
+
             echo "Deployment completed successfully!"
+
+      - name: Verify Deployment (External Check)
+        run: |
+          echo "Waiting for services to stabilize..."
+          sleep 5
+
+          echo "Checking website accessibility from GitHub Actions..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://academy-backends.agrisiti.com || echo "000")
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ Website is accessible (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️ Website returned HTTP $HTTP_CODE"
+            echo "This may indicate a deployment issue. Please check the server logs."
+          fi
+
+          echo "Checking API endpoint..."
+          API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://academy-backends.agrisiti.com/api/categories || echo "000")
+
+          if [ "$API_CODE" = "200" ] || [ "$API_CODE" = "401" ] || [ "$API_CODE" = "404" ]; then
+            echo "✅ API is responding (HTTP $API_CODE)"
+          else
+            echo "⚠️ API returned HTTP $API_CODE"
+          fi
