@@ -90,7 +90,7 @@ jobs:
 
             # Set environment variables
             cat > .env <<EOF
-            APP_NAME=Agrisiti Academy
+            APP_NAME=Agrisiti-Academy
             APP_ENV=${{ secrets.APP_ENV }}
             APP_KEY=${{ secrets.APP_KEY }}
             APP_DEBUG=${{ secrets.APP_DEBUG }}
