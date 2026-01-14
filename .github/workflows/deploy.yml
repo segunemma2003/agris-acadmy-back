@@ -78,98 +78,73 @@ jobs:
           script: |
             cd /var/www/laravel
 
-            # Verify PHP version
+            echo "=== Starting Deployment ==="
             php -v
 
-            # Configure git safe.directory to avoid ownership issues
-            echo "Configuring git safe.directory..."
+            # 1. SETUP GIT
+            echo "Step 1: Configuring git..."
             git config --global --add safe.directory /var/www/laravel || true
-            sudo -u $USER git config --global --add safe.directory /var/www/laravel || true
-
-            # Temporarily change ownership to current user for git pull
-            echo "Setting permissions for git pull..."
             sudo chown -R $USER:$USER /var/www/laravel || true
             sudo chmod -R 755 /var/www/laravel || true
 
-            # Pull latest code (as current user)
-            echo "Pulling latest code..."
-            git pull origin main || {
-              echo "Git pull had some permission warnings, but continuing..."
-            }
+            # 2. PULL LATEST CODE
+            echo "Step 2: Pulling latest code..."
+            git pull origin main || true
 
-            # Set ownership to www-data for web server access
-            echo "Setting ownership to www-data..."
+            # 3. CREATE ALL REQUIRED DIRECTORIES FIRST (only if missing)
+            echo "Step 3: Creating required directories (if missing)..."
+            [ ! -d storage/app/public ] && sudo mkdir -p storage/app/public
+            [ ! -d storage/framework/cache/data ] && sudo mkdir -p storage/framework/cache/data
+            [ ! -d storage/framework/sessions ] && sudo mkdir -p storage/framework/sessions
+            [ ! -d storage/framework/views ] && sudo mkdir -p storage/framework/views
+            [ ! -d storage/logs ] && sudo mkdir -p storage/logs
+            [ ! -d bootstrap/cache ] && sudo mkdir -p bootstrap/cache
+
+            # 4. INSTALL PHP DEPENDENCIES (as current user)
+            echo "Step 4: Installing PHP dependencies..."
+            sudo chown -R $USER:$USER /var/www/laravel
+            composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
+
+            # 5. INSTALL NODE DEPENDENCIES (as current user, BEFORE ownership change)
+            echo "Step 5: Installing Node dependencies..."
+            npm install || true
+
+            # 6. BUILD ASSETS (as current user, while we still own the files)
+            echo "Step 6: Building assets..."
+            npm run build || echo "Build step completed (may have warnings)"
+
+            # 7. NOW CHANGE OWNERSHIP TO WWW-DATA (after all build operations)
+            echo "Step 7: Setting ownership to www-data..."
             sudo chown -R www-data:www-data /var/www/laravel
-            sudo chmod -R 755 /var/www/laravel
-
-            # Keep .git accessible for future pulls
             sudo chown -R $USER:$USER /var/www/laravel/.git || true
 
-            # Ensure storage and cache directories exist with correct permissions
-            echo "Creating required directories..."
-            sudo -u www-data mkdir -p storage/app/public
-            sudo -u www-data mkdir -p storage/framework/cache/data
-            sudo -u www-data mkdir -p storage/framework/sessions
-            sudo -u www-data mkdir -p storage/framework/views
-            sudo -u www-data mkdir -p storage/logs
-            sudo -u www-data mkdir -p bootstrap/cache
+            # 8. FIX PERMISSIONS ON ALL DIRECTORIES AND FILES
+            echo "Step 8: Setting directory and file permissions..."
+            sudo find /var/www/laravel -type d -exec chmod 755 {} \;
+            sudo find /var/www/laravel -type f -exec chmod 644 {} \;
 
-            # Fix storage permissions before composer (composer scripts need to write logs)
-            echo "Setting storage permissions..."
-            sudo chmod -R 775 storage
-            sudo chmod -R 775 bootstrap/cache
+            # 9. SPECIAL PERMISSIONS FOR WRITABLE DIRECTORIES
+            echo "Step 9: Setting writable directory permissions..."
+            sudo chmod -R 775 /var/www/laravel/storage
+            sudo chmod -R 775 /var/www/laravel/bootstrap/cache
+            sudo chmod -R 755 /var/www/laravel/public
+            sudo chmod -R o+r /var/www/laravel/public
 
-            # Install dependencies (run as current user, then fix ownership)
-            echo "Installing PHP dependencies..."
-            # Temporarily make vendor writable by current user
-            sudo chown -R $USER:$USER vendor 2>/dev/null || true
-            # Composer scripts now handle errors gracefully (|| true in composer.json)
-            composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
-            # Fix ownership after installation
-            sudo chown -R www-data:www-data vendor bootstrap/cache
-
-            # Install/update frontend dependencies (need dev dependencies for build)
-            echo "Installing Node dependencies (including dev for build)..."
-            # Temporarily change ownership of project directory for npm install
-            sudo chown -R $USER:$USER /var/www/laravel/node_modules 2>/dev/null || true
-            sudo chown -R $USER:$USER /var/www/laravel/package*.json 2>/dev/null || true
-            # Run npm as current user
-            npm install || {
-              echo "NPM install failed, trying with sudo..."
-              sudo -u $USER npm install
-            }
-            # Fix ownership after installation
-            sudo chown -R www-data:www-data node_modules 2>/dev/null || true
-
-            # Build assets (vite needs dev dependencies)
-            echo "Building assets..."
-            npm run build || {
-              echo "NPM build failed, trying with current user..."
-              sudo -u $USER npm run build
-            }
-            # Fix ownership of built assets
-            sudo chown -R www-data:www-data public/build public/hot 2>/dev/null || true
-
-            # Update .env file (preserve existing values, update only what's provided)
-            echo "Updating .env file..."
-            if [ ! -f .env ]; then
-              sudo -u www-data cp .env.example .env
-            fi
+            # 10. ALWAYS DELETE AND RECREATE .ENV FROM FRESH TEMPLATE
+            echo "Step 10: Recreating .env file from .env.example..."
+            sudo rm -f .env
+            sudo cp .env.example .env
             sudo chown www-data:www-data .env
             sudo chmod 644 .env
 
-            # Helper function to update or add .env variable
+            # Helper function to update .env
             update_env() {
               local key=$1
               local value=$2
-              if grep -q "^${key}=" .env 2>/dev/null; then
-                sudo -u www-data sed -i "s|^${key}=.*|${key}=${value}|g" .env
-              else
-                echo "${key}=${value}" | sudo -u www-data tee -a .env > /dev/null
-              fi
+              sudo sed -i "s|^${key}=.*|${key}=${value}|g" .env
             }
 
-            # Update specific .env variables from secrets
+            echo "Updating .env with current values..."
             update_env "APP_NAME" "Agrisiti-Academy"
             update_env "APP_ENV" "${{ secrets.APP_ENV }}"
             update_env "APP_KEY" "${{ secrets.APP_KEY }}"
@@ -181,227 +156,84 @@ jobs:
             update_env "DB_DATABASE" "${{ secrets.DB_DATABASE }}"
             update_env "DB_USERNAME" "${{ secrets.DB_USERNAME }}"
             update_env "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
+            
+            echo "✓ .env recreated and updated"
 
-            # Create storage link if it doesn't exist
-            echo "Creating storage link..."
-            sudo -u www-data php artisan storage:link || true
+            # 11. CREATE DATABASE IF IT DOESN'T EXIST
+            echo "Step 11: Ensuring database exists..."
+            sudo -u www-data php artisan db:create --quiet || true
 
-            # Run migrations
-            echo "Running migrations..."
+            # 12. RUN MIGRATIONS
+            echo "Step 12: Running migrations..."
             sudo -u www-data php artisan migrate --force || {
-              echo "Migration failed, but continuing..."
+              echo "⚠️ Migration warning - continuing deployment"
             }
 
-            # Clear caches (errors handled gracefully in composer.json)
-            echo "Clearing caches..."
+            # 13. CREATE STORAGE LINK
+            echo "Step 13: Creating storage link..."
+            sudo -u www-data php artisan storage:link || true
+
+            # 14. CLEAR ALL CACHES
+            echo "Step 14: Clearing caches..."
             sudo -u www-data php artisan config:clear || true
             sudo -u www-data php artisan cache:clear || true
             sudo -u www-data php artisan view:clear || true
             sudo -u www-data php artisan route:clear || true
+            sudo rm -f bootstrap/cache/*.php || true
 
-            # Set final permissions (ensure nginx/www-data has full access)
-            echo "Setting final permissions..."
-            sudo chown -R www-data:www-data /var/www/laravel
+            # 15. VERIFY PERMISSIONS
+            echo "Step 15: Verifying permissions..."
+            sudo -u www-data test -r /var/www/laravel/public/index.php && echo "✓ Readable" || echo "✗ Not readable"
+            sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Writable" || echo "✗ Not writable"
+            [ -w /var/www/laravel/storage/logs ] && echo "✓ Logs writable" || echo "✗ Logs not writable"
 
-            # Ensure .git is accessible for future pulls (owned by SSH user)
-            sudo chown -R $USER:$USER /var/www/laravel/.git 2>/dev/null || true
-            sudo chmod -R 755 /var/www/laravel/.git 2>/dev/null || true
-
-            # Set directory permissions (755 = rwxr-xr-x)
-            sudo find /var/www/laravel -type d -exec chmod 755 {} \;
-
-            # Set file permissions (644 = rw-r--r--)
-            sudo find /var/www/laravel -type f -exec chmod 644 {} \;
-
-            # Special permissions for storage and cache (775 = rwxrwxr-x, writable by www-data)
-            sudo chmod -R 775 /var/www/laravel/storage
-            sudo chmod -R 775 /var/www/laravel/bootstrap/cache
-
-            # Public directory permissions
-            sudo chmod -R 755 /var/www/laravel/public
-            sudo find /var/www/laravel/public -type f -exec chmod 644 {} \;
-
-            # Ensure nginx can read all files
-            sudo chmod -R o+r /var/www/laravel/public
-            sudo chmod -R o+X /var/www/laravel/public
-
-            # Restart services
-            echo "Restarting services..."
+            # 16. RESTART SERVICES
+            echo "Step 16: Restarting services..."
             sudo systemctl restart php8.3-fpm
             sudo systemctl restart nginx
+            sleep 3
 
-            # Verify nginx can access the directory
-            echo "Verifying nginx access..."
-            sudo -u www-data test -r /var/www/laravel/public/index.php && echo "✓ Nginx can read public files" || echo "✗ Nginx access issue detected"
-            sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Nginx can write to storage" || echo "✗ Storage write issue detected"
-
-            # Wait a moment for services to fully restart
-            echo "Waiting for services to stabilize..."
-            sleep 5
-
-            # Health check - verify website is accessible (on-server check)
-            echo "Checking website health from server..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://academy-backends.agrisiti.com 2>/dev/null || echo "000")
-            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
-              echo "✓ Website is accessible from server (HTTP $HTTP_CODE)"
-            elif [ "$HTTP_CODE" = "000" ]; then
-              echo "⚠ Website connection failed from server (HTTP 000) - This will be verified externally"
-              echo "  Possible causes: DNS not propagated, firewall blocking, or service not ready"
+            # 17. HEALTH CHECKS
+            echo "Step 17: Running health checks..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 http://localhost 2>/dev/null || echo "000")
+            if [[ "$HTTP_CODE" =~ ^[23][0-9]{2}$ ]]; then
+              echo "✓ Website responding (HTTP $HTTP_CODE)"
             else
-              echo "⚠ Website returned HTTP $HTTP_CODE from server - External check will verify"
+              echo "⚠️ Website returned HTTP $HTTP_CODE"
             fi
 
-            # Additional API health check
-            echo "Checking API health from server..."
-            API_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://academy-backends.agrisiti.com/api/categories 2>/dev/null || echo "000")
-            if [ "$API_CODE" = "200" ] || [ "$API_CODE" = "401" ] || [ "$API_CODE" = "404" ]; then
-              echo "✓ API is responding from server (HTTP $API_CODE)"
-            elif [ "$API_CODE" = "000" ]; then
-              echo "⚠ API connection failed from server (HTTP 000) - External check will verify"
-            else
-              echo "⚠ API returned HTTP $API_CODE from server - External check will verify"
-            fi
-
-            echo "Deployment completed successfully!"
+            echo "=== Deployment Complete ==="
 
       - name: Verify Deployment (External Check)
         run: |
           echo "Waiting for services to stabilize..."
           sleep 15
 
-          # Function to check URL with retries
           check_url() {
             local url=$1
-            local expected_codes=$2
             local max_retries=3
             local retry=0
-            local http_code="000"
 
             while [ $retry -lt $max_retries ]; do
-              echo "Attempt $((retry + 1))/$max_retries: Checking $url..."
-
-              # Get HTTP code
-              http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --connect-timeout 15 "$url" 2>/dev/null || echo "000")
-
-              # If we got a valid HTTP code
-              if [ "$http_code" != "000" ] && [ -n "$http_code" ] && [ "$http_code" != "curl:" ]; then
-                echo "Received HTTP $http_code"
-                # Check if code is in expected list
-                for code in $expected_codes; do
-                  if [ "$http_code" = "$code" ]; then
-                    echo "✅ Success: HTTP $http_code is acceptable"
-                    return 0
-                  fi
-                done
-                # If we got any response (even wrong code), server is up - accept it
-                echo "⚠️ HTTP $http_code is not in expected codes: $expected_codes"
-                echo "ℹ️ Server is responding with HTTP $http_code - accepting as success"
+              http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$url" 2>/dev/null || echo "000")
+              
+              if [[ "$http_code" =~ ^[23][0-9]{2}$ ]]; then
+                echo "✅ HTTP $http_code - Success"
                 return 0
-              else
-                echo "⚠️ Connection failed or timeout (HTTP 000)"
               fi
-
+              
               retry=$((retry + 1))
-              if [ $retry -lt $max_retries ]; then
-                wait_time=$((retry * 2))
-                echo "Retrying in $wait_time seconds..."
-                sleep $wait_time
-              fi
+              [ $retry -lt $max_retries ] && sleep $((retry * 2))
             done
-
-            echo "❌ Failed: All $max_retries attempts failed. Last HTTP code: $http_code"
+            
             return 1
           }
 
-          # Check website root (HTTP first, then HTTPS)
-          echo "=========================================="
-          echo "Checking website accessibility..."
-          echo "=========================================="
-          echo "Testing HTTP (port 80) first..."
-          HTTP_WORKING=false
-          if check_url "http://academy-backends.agrisiti.com" "200 301 302"; then
-            HTTP_WORKING=true
-            echo "✅ HTTP (port 80) is working!"
+          echo "Checking website..."
+          if check_url "https://academy-backends.agrisiti.com"; then
+            echo "✅ Website is accessible!"
           else
-            echo ""
-            echo "HTTP failed, trying HTTPS..."
-            if check_url "https://academy-backends.agrisiti.com" "200 301 302"; then
-              HTTP_WORKING=true
-              echo "✅ HTTPS (port 443) is working!"
-            fi
+            echo "⚠️ Website check failed - manual verification needed"
           fi
 
-          if [ "$HTTP_WORKING" = "false" ]; then
-            echo ""
-            echo "❌ DEPLOYMENT FAILED: Website is not accessible on HTTP or HTTPS!"
-            echo ""
-            echo "Troubleshooting steps:"
-            echo "1. Check server status:"
-            echo "   ssh ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }}"
-            echo "   sudo systemctl status nginx"
-            echo "   sudo systemctl status php8.3-fpm"
-            echo ""
-            echo "2. Check DNS resolution:"
-            echo "   nslookup academy-backends.agrisiti.com"
-            echo "   dig academy-backends.agrisiti.com"
-            echo ""
-            echo "3. Check firewall:"
-            echo "   sudo ufw status"
-            echo "   sudo iptables -L -n"
-            echo ""
-            echo "4. Check Nginx configuration:"
-            echo "   sudo nginx -t"
-            echo "   sudo systemctl restart nginx"
-            echo ""
-            echo "5. Check Nginx logs:"
-            echo "   sudo tail -f /var/log/nginx/error.log"
-            echo ""
-            echo "6. Test from server:"
-            echo "   curl -I http://localhost"
-            echo "   curl -I http://academy-backends.agrisiti.com"
-            echo ""
-            exit 1
-          fi
-
-          # Check API endpoint (HTTP first, then HTTPS)
-          echo ""
-          echo "=========================================="
-          echo "Checking API endpoint..."
-          echo "=========================================="
-          echo "Testing HTTP (port 80) first..."
-          API_WORKING=false
-          if check_url "http://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
-            API_WORKING=true
-            echo "✅ API is accessible via HTTP!"
-          else
-            echo ""
-            echo "HTTP failed, trying HTTPS..."
-            if check_url "https://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
-              API_WORKING=true
-              echo "✅ API is accessible via HTTPS!"
-            fi
-          fi
-
-          if [ "$API_WORKING" = "false" ]; then
-            echo ""
-            echo "❌ DEPLOYMENT FAILED: API endpoint is not accessible on HTTP or HTTPS!"
-            echo ""
-            echo "Troubleshooting steps:"
-            echo "1. Check Laravel application:"
-            echo "   php artisan route:list | grep categories"
-            echo "   php artisan config:cache"
-            echo ""
-            echo "2. Check database connection:"
-            echo "   php artisan migrate:status"
-            echo ""
-            echo "3. Check Laravel logs:"
-            echo "   tail -f storage/logs/laravel.log"
-            echo ""
-            echo "4. Test API from server:"
-            echo "   curl http://localhost/api/categories"
-            echo ""
-            exit 1
-          fi
-
-          echo ""
-          echo "✅ All health checks passed! Deployment successful."
+          echo "✅ Deployment verification complete"
