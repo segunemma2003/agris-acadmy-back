@@ -127,6 +127,11 @@ jobs:
             echo "Step 9: Setting writable directory permissions..."
             sudo chmod -R 775 /var/www/laravel/storage
             sudo chmod -R 775 /var/www/laravel/bootstrap/cache
+            
+            # Ensure logs directory specifically is writable
+            sudo chmod 775 /var/www/laravel/storage/logs
+            sudo chmod 666 /var/www/laravel/storage/logs/laravel.log 2>/dev/null || true
+            
             sudo chmod -R 755 /var/www/laravel/public
             sudo chmod -R o+r /var/www/laravel/public
 
@@ -191,6 +196,11 @@ jobs:
             sudo -u www-data php artisan view:clear || true
             sudo -u www-data php artisan route:clear || true
             sudo rm -f bootstrap/cache/*.php || true
+            
+            # Re-ensure storage logs permissions after cache clear
+            echo "Re-ensuring storage/logs permissions..."
+            sudo chmod 775 /var/www/laravel/storage/logs
+            sudo chmod 666 /var/www/laravel/storage/logs/laravel.log 2>/dev/null || true
 
             # 15. VERIFY PERMISSIONS
             echo "Step 15: Verifying permissions..."
