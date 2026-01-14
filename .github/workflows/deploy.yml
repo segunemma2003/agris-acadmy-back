@@ -137,10 +137,17 @@ jobs:
             sudo chown www-data:www-data .env
             sudo chmod 644 .env
 
-            # Helper function to update .env
+            # Uncomment all commented database lines
+            echo "Uncommenting database configuration in .env..."
+            sudo sed -i 's/^# DB_/DB_/g' .env
+
+            # Helper function to update .env (handles both commented and uncommented lines)
             update_env() {
               local key=$1
               local value=$2
+              # First uncomment if commented
+              sudo sed -i "s/^# ${key}=/${key}=/g" .env
+              # Then update the value
               sudo sed -i "s|^${key}=.*|${key}=${value}|g" .env
             }
 
@@ -161,7 +168,7 @@ jobs:
             
             # Verify .env was updated correctly
             echo "Verifying .env database configuration:"
-            grep "^DB_" .env | head -5
+            sudo grep "^DB_" .env
 
             # 11. CREATE DATABASE IF IT DOESN'T EXIST
             echo "Step 11: Ensuring database exists..."
