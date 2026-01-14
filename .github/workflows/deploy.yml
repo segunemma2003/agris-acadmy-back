@@ -1,10 +1,10 @@
-name: Deploy to AWS EC2
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, master]
   pull_request:
-    branches: [main]
+    branches: [main, develop, master]
 
 jobs:
   test:
@@ -57,10 +57,13 @@ jobs:
       - name: Execute tests
         run: php artisan test
 
+      - name: Check code style
+        run: vendor/bin/pint --test || true
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     steps:
       - uses: actions/checkout@v3
