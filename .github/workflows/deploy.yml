@@ -245,21 +245,26 @@ jobs:
       - name: Verify Deployment (External Check)
         run: |
           echo "Waiting for services to stabilize..."
-          sleep 10
+          sleep 15
 
-          # Function to check URL with retries
+          # Function to check URL with retries and detailed diagnostics
           check_url() {
             local url=$1
             local expected_codes=$2
-            local max_retries=3
+            local max_retries=5
             local retry=0
             local http_code="000"
+            local curl_error=""
 
             while [ $retry -lt $max_retries ]; do
               echo "Attempt $((retry + 1))/$max_retries: Checking $url..."
-              http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 10 "$url" 2>/dev/null || echo "000")
 
-              if [ "$http_code" != "000" ]; then
+              # Try HTTPS first
+              http_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --connect-timeout 15 "$url" 2>&1 | tail -1)
+              curl_error=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --connect-timeout 15 "$url" 2>&1 | head -1 || echo "")
+
+              # If we got a valid HTTP code
+              if [ "$http_code" != "000" ] && [ -n "$http_code" ] && [ "$http_code" != "curl:" ]; then
                 echo "Received HTTP $http_code"
                 # Check if code is in expected list
                 for code in $expected_codes; do
@@ -269,14 +274,33 @@ jobs:
                   fi
                 done
                 echo "⚠️ HTTP $http_code is not in expected codes: $expected_codes"
+                # If we got a response (even wrong code), server is up
+                if [ "$http_code" != "000" ]; then
+                  echo "ℹ️ Server is responding, but with unexpected status code"
+                fi
               else
+                # Try to get more diagnostic info
                 echo "⚠️ Connection failed or timeout (HTTP 000)"
+                if [ -n "$curl_error" ] && [ "$curl_error" != "$http_code" ]; then
+                  echo "   Error details: $curl_error"
+                fi
+
+                # Try HTTP if HTTPS failed (for diagnostic purposes)
+                if [[ "$url" == https://* ]]; then
+                  http_url="${url/https:\/\//http:\/\/}"
+                  echo "   Trying HTTP version for diagnostics: $http_url"
+                  http_test=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 --connect-timeout 5 "$http_url" 2>/dev/null || echo "000")
+                  if [ "$http_test" != "000" ]; then
+                    echo "   ℹ️ HTTP works but HTTPS doesn't - SSL certificate may be missing or invalid"
+                  fi
+                fi
               fi
 
               retry=$((retry + 1))
               if [ $retry -lt $max_retries ]; then
-                echo "Retrying in 5 seconds..."
-                sleep 5
+                wait_time=$((retry * 3))
+                echo "Retrying in $wait_time seconds..."
+                sleep $wait_time
               fi
             done
 
@@ -289,13 +313,34 @@ jobs:
           echo "Checking website accessibility..."
           echo "=========================================="
           if ! check_url "https://academy-backends.agrisiti.com" "200 301 302"; then
+            echo ""
             echo "❌ DEPLOYMENT FAILED: Website is not accessible!"
-            echo "Please check:"
-            echo "  - Server is running"
-            echo "  - Nginx is running: sudo systemctl status nginx"
-            echo "  - PHP-FPM is running: sudo systemctl status php8.3-fpm"
-            echo "  - Firewall allows HTTP/HTTPS"
-            echo "  - DNS is pointing to correct server"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Check server status:"
+            echo "   ssh ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }}"
+            echo "   sudo systemctl status nginx"
+            echo "   sudo systemctl status php8.3-fpm"
+            echo ""
+            echo "2. Check DNS resolution:"
+            echo "   nslookup academy-backends.agrisiti.com"
+            echo "   dig academy-backends.agrisiti.com"
+            echo ""
+            echo "3. Check firewall:"
+            echo "   sudo ufw status"
+            echo "   sudo iptables -L -n"
+            echo ""
+            echo "4. Check SSL certificate:"
+            echo "   sudo certbot certificates"
+            echo "   sudo nginx -t"
+            echo ""
+            echo "5. Check Nginx logs:"
+            echo "   sudo tail -f /var/log/nginx/error.log"
+            echo ""
+            echo "6. Test from server:"
+            echo "   curl -I https://academy-backends.agrisiti.com"
+            echo "   curl -I http://localhost"
+            echo ""
             exit 1
           fi
 
@@ -305,11 +350,20 @@ jobs:
           echo "Checking API endpoint..."
           echo "=========================================="
           if ! check_url "https://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
+            echo ""
             echo "❌ DEPLOYMENT FAILED: API endpoint is not accessible!"
-            echo "Please check:"
-            echo "  - Laravel application is working"
-            echo "  - Routes are properly configured"
-            echo "  - Database connection is working"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Check Laravel application:"
+            echo "   php artisan route:list | grep categories"
+            echo "   php artisan config:cache"
+            echo ""
+            echo "2. Check database connection:"
+            echo "   php artisan migrate:status"
+            echo ""
+            echo "3. Check Laravel logs:"
+            echo "   tail -f storage/logs/laravel.log"
+            echo ""
             exit 1
           fi
 
