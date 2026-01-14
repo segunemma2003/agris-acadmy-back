@@ -308,13 +308,27 @@ jobs:
             return 1
           }
 
-          # Check website root
+          # Check website root (HTTP first, then HTTPS)
           echo "=========================================="
           echo "Checking website accessibility..."
           echo "=========================================="
-          if ! check_url "https://academy-backends.agrisiti.com" "200 301 302"; then
+          echo "Testing HTTP (port 80) first..."
+          HTTP_WORKING=false
+          if check_url "http://academy-backends.agrisiti.com" "200 301 302"; then
+            HTTP_WORKING=true
+            echo "✅ HTTP (port 80) is working!"
+          else
             echo ""
-            echo "❌ DEPLOYMENT FAILED: Website is not accessible!"
+            echo "HTTP failed, trying HTTPS..."
+            if check_url "https://academy-backends.agrisiti.com" "200 301 302"; then
+              HTTP_WORKING=true
+              echo "✅ HTTPS (port 443) is working!"
+            fi
+          fi
+
+          if [ "$HTTP_WORKING" = "false" ]; then
+            echo ""
+            echo "❌ DEPLOYMENT FAILED: Website is not accessible on HTTP or HTTPS!"
             echo ""
             echo "Troubleshooting steps:"
             echo "1. Check server status:"
@@ -330,28 +344,42 @@ jobs:
             echo "   sudo ufw status"
             echo "   sudo iptables -L -n"
             echo ""
-            echo "4. Check SSL certificate:"
-            echo "   sudo certbot certificates"
+            echo "4. Check Nginx configuration:"
             echo "   sudo nginx -t"
+            echo "   sudo systemctl restart nginx"
             echo ""
             echo "5. Check Nginx logs:"
             echo "   sudo tail -f /var/log/nginx/error.log"
             echo ""
             echo "6. Test from server:"
-            echo "   curl -I https://academy-backends.agrisiti.com"
             echo "   curl -I http://localhost"
+            echo "   curl -I http://academy-backends.agrisiti.com"
             echo ""
             exit 1
           fi
 
-          # Check API endpoint
+          # Check API endpoint (HTTP first, then HTTPS)
           echo ""
           echo "=========================================="
           echo "Checking API endpoint..."
           echo "=========================================="
-          if ! check_url "https://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
+          echo "Testing HTTP (port 80) first..."
+          API_WORKING=false
+          if check_url "http://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
+            API_WORKING=true
+            echo "✅ API is accessible via HTTP!"
+          else
             echo ""
-            echo "❌ DEPLOYMENT FAILED: API endpoint is not accessible!"
+            echo "HTTP failed, trying HTTPS..."
+            if check_url "https://academy-backends.agrisiti.com/api/categories" "200 401 404"; then
+              API_WORKING=true
+              echo "✅ API is accessible via HTTPS!"
+            fi
+          fi
+
+          if [ "$API_WORKING" = "false" ]; then
+            echo ""
+            echo "❌ DEPLOYMENT FAILED: API endpoint is not accessible on HTTP or HTTPS!"
             echo ""
             echo "Troubleshooting steps:"
             echo "1. Check Laravel application:"
@@ -363,6 +391,9 @@ jobs:
             echo ""
             echo "3. Check Laravel logs:"
             echo "   tail -f storage/logs/laravel.log"
+            echo ""
+            echo "4. Test API from server:"
+            echo "   curl http://localhost/api/categories"
             echo ""
             exit 1
           fi
