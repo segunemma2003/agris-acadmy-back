@@ -158,6 +158,10 @@ jobs:
             update_env "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
             
             echo "✓ .env recreated and updated"
+            
+            # Verify .env was updated correctly
+            echo "Verifying .env database configuration:"
+            grep "^DB_" .env | head -5
 
             # 11. CREATE DATABASE IF IT DOESN'T EXIST
             echo "Step 11: Ensuring database exists..."
