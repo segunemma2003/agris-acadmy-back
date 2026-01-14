@@ -97,7 +97,9 @@ jobs:
             # Reset any local changes to avoid merge conflicts
             git reset --hard HEAD || true
             git clean -fd || true
-            # Now pull
+            # Configure git to use rebase for divergent branches
+            git config pull.rebase true
+            # Now pull with rebase
             git pull origin main || true
 
             # 3. CREATE ALL REQUIRED DIRECTORIES
