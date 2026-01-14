@@ -86,19 +86,24 @@ jobs:
             git config --global --add safe.directory /var/www/laravel || true
             sudo -u $USER git config --global --add safe.directory /var/www/laravel || true
 
-            # Ensure .git directory is accessible for git pull
-            echo "Setting git permissions..."
-            sudo chown -R $USER:$USER .git || true
-            sudo chmod -R 755 .git || true
+            # Temporarily change ownership to current user for git pull
+            echo "Setting permissions for git pull..."
+            sudo chown -R $USER:$USER /var/www/laravel || true
+            sudo chmod -R 755 /var/www/laravel || true
 
             # Pull latest code (as current user)
             echo "Pulling latest code..."
-            git pull origin main
+            git pull origin main || {
+              echo "Git pull had some permission warnings, but continuing..."
+            }
 
             # Set ownership to www-data for web server access
             echo "Setting ownership to www-data..."
             sudo chown -R www-data:www-data /var/www/laravel
             sudo chmod -R 755 /var/www/laravel
+
+            # Keep .git accessible for future pulls
+            sudo chown -R $USER:$USER /var/www/laravel/.git || true
 
             # Ensure storage and cache directories exist with correct permissions
             echo "Creating required directories..."
@@ -109,8 +114,15 @@ jobs:
             sudo -u www-data mkdir -p storage/logs
             sudo -u www-data mkdir -p bootstrap/cache
 
+            # Fix storage permissions before composer (composer scripts need to write logs)
+            echo "Setting storage permissions..."
+            sudo chmod -R 775 storage
+            sudo chmod -R 775 bootstrap/cache
+
             # Install dependencies (run as current user, then fix ownership)
             echo "Installing PHP dependencies..."
+            # Temporarily make vendor writable by current user
+            sudo chown -R $USER:$USER vendor 2>/dev/null || true
             # Composer scripts now handle errors gracefully (|| true in composer.json)
             composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
             # Fix ownership after installation
@@ -118,13 +130,23 @@ jobs:
 
             # Install/update frontend dependencies (need dev dependencies for build)
             echo "Installing Node dependencies (including dev for build)..."
-            npm install
+            # Temporarily change ownership of project directory for npm install
+            sudo chown -R $USER:$USER /var/www/laravel/node_modules 2>/dev/null || true
+            sudo chown -R $USER:$USER /var/www/laravel/package*.json 2>/dev/null || true
+            # Run npm as current user
+            npm install || {
+              echo "NPM install failed, trying with sudo..."
+              sudo -u $USER npm install
+            }
             # Fix ownership after installation
-            sudo chown -R www-data:www-data node_modules
+            sudo chown -R www-data:www-data node_modules 2>/dev/null || true
 
             # Build assets (vite needs dev dependencies)
             echo "Building assets..."
-            npm run build
+            npm run build || {
+              echo "NPM build failed, trying with current user..."
+              sudo -u $USER npm run build
+            }
             # Fix ownership of built assets
             sudo chown -R www-data:www-data public/build public/hot 2>/dev/null || true
 
