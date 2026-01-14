@@ -120,7 +120,11 @@ jobs:
             # 7. NOW CHANGE OWNERSHIP TO WWW-DATA (after all build operations)
             echo "Step 7: Setting ownership to www-data..."
             sudo chown -R www-data:www-data /var/www/laravel
-            sudo chown -R $USER:$USER /var/www/laravel/.git || true
+            
+            # Keep .git accessible to the deploy user for future pulls
+            echo "Making .git accessible to deploy user..."
+            sudo chown -R $USER:$USER /var/www/laravel/.git
+            sudo chmod -R 755 /var/www/laravel/.git
 
             # 8. FIX PERMISSIONS ON ALL DIRECTORIES AND FILES
             echo "Step 8: Setting directory and file permissions..."
