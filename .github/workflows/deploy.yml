@@ -38,9 +38,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: vendor
-          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-php8.3-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-php-
+            ${{ runner.os }}-php8.3-
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
@@ -75,11 +75,14 @@ jobs:
           script: |
             cd /var/www/laravel
 
+            # Verify PHP version
+            php -v
+
             # Pull latest code
             git pull origin main
 
             # Install dependencies
-            composer install --prefer-dist --no-dev --optimize-autoloader
+            composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
 
             # Install/update frontend dependencies
             npm install
