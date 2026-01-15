@@ -236,6 +236,74 @@ jobs:
               echo "✓ Using local filesystem (public disk)"
             fi
 
+            # SMTP Email Configuration
+            echo "Configuring SMTP email settings..."
+            if [ -n "${{ secrets.MAIL_MAILER }}" ]; then
+              update_env "MAIL_MAILER" "${{ secrets.MAIL_MAILER }}"
+            else
+              # Default to smtp if not set
+              update_env "MAIL_MAILER" "smtp"
+            fi
+
+            if [ -n "${{ secrets.MAIL_HOST }}" ]; then
+              update_env "MAIL_HOST" "${{ secrets.MAIL_HOST }}"
+            fi
+
+            if [ -n "${{ secrets.MAIL_PORT }}" ]; then
+              update_env "MAIL_PORT" "${{ secrets.MAIL_PORT }}"
+            else
+              # Default SMTP port
+              update_env "MAIL_PORT" "587"
+            fi
+
+            if [ -n "${{ secrets.MAIL_USERNAME }}" ]; then
+              update_env "MAIL_USERNAME" "${{ secrets.MAIL_USERNAME }}"
+            fi
+
+            if [ -n "${{ secrets.MAIL_PASSWORD }}" ]; then
+              update_env "MAIL_PASSWORD" "${{ secrets.MAIL_PASSWORD }}"
+            fi
+
+            if [ -n "${{ secrets.MAIL_ENCRYPTION }}" ]; then
+              update_env "MAIL_ENCRYPTION" "${{ secrets.MAIL_ENCRYPTION }}"
+            else
+              # Default to tls for SMTP
+              update_env "MAIL_ENCRYPTION" "tls"
+            fi
+
+            if [ -n "${{ secrets.MAIL_FROM_ADDRESS }}" ]; then
+              update_env "MAIL_FROM_ADDRESS" "${{ secrets.MAIL_FROM_ADDRESS }}"
+            else
+              # Default to admin email
+              update_env "MAIL_FROM_ADDRESS" "admin@agrisiti.com"
+            fi
+
+            if [ -n "${{ secrets.MAIL_FROM_NAME }}" ]; then
+              update_env "MAIL_FROM_NAME" "${{ secrets.MAIL_FROM_NAME }}"
+            else
+              # Default to app name
+              update_env "MAIL_FROM_NAME" "Agrisiti Academy"
+            fi
+
+            echo "✓ SMTP email configuration added"
+
+            # Transcription API Configuration
+            echo "Configuring transcription API settings..."
+            if [ -n "${{ secrets.ASSEMBLYAI_API_KEY }}" ]; then
+              update_env "ASSEMBLYAI_API_KEY" "${{ secrets.ASSEMBLYAI_API_KEY }}"
+              echo "✓ AssemblyAI API key configured"
+            fi
+            
+            if [ -n "${{ secrets.DEEPGRAM_API_KEY }}" ]; then
+              update_env "DEEPGRAM_API_KEY" "${{ secrets.DEEPGRAM_API_KEY }}"
+              echo "✓ Deepgram API key configured"
+            fi
+            
+            if [ -n "${{ secrets.GOOGLE_TRANSLATE_API_KEY }}" ]; then
+              update_env "GOOGLE_TRANSLATE_API_KEY" "${{ secrets.GOOGLE_TRANSLATE_API_KEY }}"
+              echo "✓ Google Translate API key configured"
+            fi
+
             echo "✓ .env recreated and updated"
 
             # Verify .env was updated correctly
@@ -251,6 +319,10 @@ jobs:
             sudo -u www-data php artisan migrate --force || {
               echo "⚠️ Migration warning - continuing deployment"
             }
+
+            # 12.5. CREATE ADMIN USER (if not exists)
+            echo "Step 12.5: Ensuring admin user exists..."
+            sudo -u www-data php artisan tinker --execute="use App\Models\User; use Illuminate\Support\Facades\Hash; \$admin = User::firstOrCreate(['email' => 'admin@agrisiti.com'], ['name' => 'Admin User', 'password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true]); if (\$admin->wasRecentlyCreated) { echo '✓ Admin user created: admin@agrisiti.com' . PHP_EOL; } else { echo '✓ Admin user already exists: admin@agrisiti.com' . PHP_EOL; }" || echo "⚠️ Admin user creation skipped"
 
             # 13. CREATE STORAGE LINK
             echo "Step 13: Creating storage link..."

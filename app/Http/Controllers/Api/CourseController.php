@@ -85,7 +85,7 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
-        
+
         $course->load([
             'category',
             'tutor:id,name,bio,avatar',
@@ -117,7 +117,7 @@ class CourseController extends Controller
             ->pluck('recommendedCourse');
 
         $course->recommended_courses = $recommendedCourses;
-        
+
         // Add enrollment status
         $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
         $course->is_enrolled = $isEnrolled;

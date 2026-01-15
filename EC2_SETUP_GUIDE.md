@@ -374,19 +374,19 @@ Add:
 
 ## Step 14: Set Up Queue Workers (Optional)
 
-If using Laravel queues, install Supervisor:
+**See `SUPERVISOR_SETUP.md` for detailed instructions.**
+
+Quick setup:
 
 ```bash
+# Install Supervisor
 sudo apt install -y supervisor
-```
 
-Create supervisor config:
-
-```bash
+# Create config
 sudo nano /etc/supervisor/conf.d/laravel-worker.conf
 ```
 
-Add:
+Add configuration (see `SUPERVISOR_SETUP.md` for full details):
 
 ```ini
 [program:laravel-worker]
@@ -403,13 +403,15 @@ stdout_logfile=/var/www/laravel/storage/logs/worker.log
 stopwaitsecs=3600
 ```
 
-Start supervisor:
+Start workers:
 
 ```bash
 sudo supervisorctl reread
 sudo supervisorctl update
 sudo supervisorctl start laravel-worker:*
 ```
+
+**For complete setup guide, troubleshooting, and advanced configuration, see `SUPERVISOR_SETUP.md`**
 
 ---
 
