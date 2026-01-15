@@ -69,6 +69,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Tests/Quizzes
     Route::get('/courses/{course}/modules/{module}/test', [TestController::class, 'show']);
     Route::post('/courses/{course}/modules/{module}/tests/{test}/submit', [TestController::class, 'submit']);
+    
+    // Topic Tests (Lesson Tests)
+    Route::get('/courses/{course}/modules/{module}/topics/{topic}/test', [TestController::class, 'showTopicTest']);
+    Route::post('/courses/{course}/modules/{module}/topics/{topic}/tests/{test}/submit', [TestController::class, 'submitTopicTest']);
 
     // Assignments
     Route::get('/courses/{course}/assignments', [AssignmentController::class, 'index']);

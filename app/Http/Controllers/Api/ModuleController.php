@@ -52,6 +52,18 @@ class ModuleController extends Controller
             }])
             ->first();
 
+        // Load topic tests for each topic
+        if ($module->topics) {
+            $module->topics->each(function ($topic) {
+                $topic->test = $topic->test()
+                    ->where('is_active', true)
+                    ->with(['questions' => function ($q) {
+                        $q->orderBy('sort_order');
+                    }])
+                    ->first();
+            });
+        }
+
         // Get user's progress for topics in this module
         if ($user) {
             $topicIds = $module->topics->pluck('id');

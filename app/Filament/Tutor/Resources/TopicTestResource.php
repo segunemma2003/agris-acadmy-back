@@ -1,0 +1,158 @@
+<?php
+
+namespace App\Filament\Tutor\Resources;
+
+use App\Filament\Tutor\Resources\TopicTestResource\Pages;
+use App\Filament\Tutor\Resources\TopicTestResource\RelationManagers;
+use App\Models\TopicTest;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
+
+class TopicTestResource extends Resource
+{
+    protected static ?string $model = TopicTest::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    protected static ?string $navigationLabel = 'Topic Tests';
+
+    protected static ?string $navigationGroup = 'Course Management';
+
+    protected static ?int $navigationSort = 7;
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Section::make('Test Details')
+                    ->schema([
+                        Forms\Components\Select::make('course_id')
+                            ->label('Course')
+                            ->relationship('course', 'title', fn ($query) => $query->accessibleByTutor(Auth::id()))
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(fn ($state, callable $set) => $set('module_id', null)),
+                        Forms\Components\Select::make('module_id')
+                            ->label('Module')
+                            ->relationship('module', 'title', fn ($query, $get) => $query->where('course_id', $get('course_id')))
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(fn ($state, callable $set) => $set('topic_id', null)),
+                        Forms\Components\Select::make('topic_id')
+                            ->label('Topic (Lesson)')
+                            ->relationship('topic', 'title', fn ($query, $get) => $query->where('module_id', $get('module_id')))
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                        Forms\Components\TextInput::make('title')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\RichEditor::make('description')
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('passing_score')
+                            ->label('Passing Score (%)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(70)
+                            ->required(),
+                        Forms\Components\TextInput::make('time_limit_minutes')
+                            ->label('Time Limit (minutes)')
+                            ->numeric()
+                            ->default(60)
+                            ->required(),
+                        Forms\Components\Toggle::make('is_active')
+                            ->default(true),
+                    ])->columns(2),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+            ->columns([
+                Tables\Columns\TextColumn::make('course.title')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('module.title')
+                    ->label('Module')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('topic.title')
+                    ->label('Topic')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap(),
+                Tables\Columns\TextColumn::make('title')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap(),
+                Tables\Columns\TextColumn::make('questions_count')
+                    ->label('Questions')
+                    ->counts('questions')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('passing_score')
+                    ->label('Passing Score')
+                    ->suffix('%')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('time_limit_minutes')
+                    ->label('Time Limit')
+                    ->suffix(' min')
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->boolean()
+                    ->sortable(),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('course_id')
+                    ->label('Course')
+                    ->relationship('course', 'title', fn ($query) => $query->accessibleByTutor(Auth::id()))
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('module_id')
+                    ->label('Module')
+                    ->relationship('module', 'title')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Active'),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
+            ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\QuestionsRelationManager::class,
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListTopicTests::route('/'),
+            'create' => Pages\CreateTopicTest::route('/create'),
+            'edit' => Pages\EditTopicTest::route('/{record}/edit'),
+        ];
+    }
+}
