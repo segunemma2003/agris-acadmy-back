@@ -46,7 +46,7 @@ Copy and paste this configuration:
 ```ini
 [program:laravel-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/laravel/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+command=php /var/www/laravel/artisan queue:work database --sleep=3 --tries=3 --max-time=3600 --timeout=60 --max-jobs=1000 --memory=128
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -56,6 +56,8 @@ numprocs=2
 redirect_stderr=true
 stdout_logfile=/var/www/laravel/storage/logs/worker.log
 stopwaitsecs=3600
+stopasgroup=true
+killasgroup=true
 ```
 
 ### Configuration Explanation

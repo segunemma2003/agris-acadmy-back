@@ -353,17 +353,42 @@ jobs:
             sudo systemctl restart nginx
 
             # Restart queue workers (if using supervisor)
-            echo "Restarting queue workers..."
+            echo "Restarting queue workers gracefully..."
             if command -v supervisorctl &> /dev/null; then
+              # Gracefully stop workers (allow current jobs to finish)
+              echo "Stopping queue workers gracefully..."
+              sudo supervisorctl stop laravel-worker:* || true
+              sleep 5  # Wait for jobs to finish
+              
+              # Reload configuration
               sudo supervisorctl reread || true
               sudo supervisorctl update || true
-              sudo supervisorctl restart laravel-worker:* || true
+              
+              # Start workers
+              sudo supervisorctl start laravel-worker:* || true
               echo "✓ Queue workers restarted via Supervisor"
+              
+              # Verify workers are running
+              WORKER_COUNT=$(sudo supervisorctl status laravel-worker:* 2>/dev/null | grep -c "RUNNING" || echo "0")
+              if [ "$WORKER_COUNT" -gt 0 ]; then
+                echo "✓ $WORKER_COUNT queue worker(s) running"
+              else
+                echo "⚠️  Warning: No queue workers detected as running"
+              fi
             else
-              # If supervisor not available, process pending jobs once
+              # If supervisor not available, process pending jobs with proper retry handling
               echo "Supervisor not found, processing pending jobs..."
-              sudo -u www-data php artisan queue:work --once --tries=3 --timeout=60 || true
+              sudo -u www-data php artisan queue:work --once --tries=3 --timeout=60 --max-jobs=10 || true
               echo "✓ Processed pending jobs"
+            fi
+            
+            # Check for failed jobs and log count
+            echo "Checking failed jobs..."
+            FAILED_COUNT=$(cd /var/www/laravel && sudo -u www-data php artisan tinker --execute="echo DB::table('failed_jobs')->count();" 2>/dev/null | tail -1 || echo "0")
+            if [ "$FAILED_COUNT" -gt 0 ]; then
+              echo "⚠️  Warning: $FAILED_COUNT failed job(s) in queue. Review with: php artisan queue:failed"
+            else
+              echo "✓ No failed jobs"
             fi
 
             sleep 3
