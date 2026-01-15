@@ -17,10 +17,15 @@ class Course extends Model
         'slug',
         'short_description',
         'description',
+        'about',
+        'requirements',
+        'what_to_expect',
         'what_you_will_learn',
         'what_you_will_get',
         'image',
+        'preview_video_url',
         'materials_count',
+        'lessons_count',
         'tags',
         'rating',
         'rating_count',
@@ -29,6 +34,7 @@ class Course extends Model
         'is_free',
         'is_published',
         'is_featured',
+        'certificate_included',
         'duration_minutes',
         'level',
         'language',
@@ -47,6 +53,7 @@ class Course extends Model
             'is_free' => 'boolean',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
+            'certificate_included' => 'boolean',
         ];
     }
 
@@ -124,6 +131,16 @@ class Course extends Model
     public function recommendedCourses(): HasMany
     {
         return $this->hasMany(CourseRecommendation::class, 'recommended_course_id');
+    }
+
+    public function savedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'saved_courses');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(CourseComment::class);
     }
 
     // Scope for tutors to see accessible courses

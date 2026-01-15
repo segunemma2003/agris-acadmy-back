@@ -85,8 +85,37 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
+                            ->disk(env('FILESYSTEM_DISK', 'public'))
                             ->directory('courses')
+                            ->maxSize(2048) // 2MB
+                            ->imageResizeMode('cover')
+                            ->imageCropAspectRatio('16:9')
+                            ->imageResizeTargetWidth('1920')
+                            ->imageResizeTargetHeight('1080')
+                            ->helperText('Recommended: 1920×1080px (16:9). Max 2MB. Works for mobile, desktop, and web.')
                             ->columnSpanFull(),
+                        Forms\Components\TextInput::make('preview_video_url')
+                            ->label('Preview Video URL')
+                            ->url()
+                            ->maxLength(500)
+                            ->helperText('URL to the course preview video')
+                            ->columnSpanFull(),
+                        Forms\Components\RichEditor::make('about')
+                            ->label('About This Course')
+                            ->columnSpanFull(),
+                        Forms\Components\Textarea::make('requirements')
+                            ->label('Requirements')
+                            ->rows(3)
+                            ->helperText('What students need before taking this course')
+                            ->columnSpanFull(),
+                        Forms\Components\Textarea::make('what_to_expect')
+                            ->label('What to Expect')
+                            ->rows(3)
+                            ->helperText('What students can expect from this course')
+                            ->columnSpanFull(),
+                        Forms\Components\Toggle::make('certificate_included')
+                            ->label('Certificate Included')
+                            ->default(false),
                         Forms\Components\TagsInput::make('tags')
                             ->columnSpanFull(),
                         Forms\Components\Repeater::make('course_information')

@@ -162,5 +162,54 @@ class NoteController extends Controller
             'message' => 'Note deleted successfully'
         ]);
     }
+
+    /**
+     * Get notes for a specific topic/lesson
+     */
+    public function topicNotes(Request $request, Course $course, Module $module, Topic $topic)
+    {
+        $user = $request->user();
+
+        // Check if user is enrolled
+        $enrollment = $user->enrollments()
+            ->where('course_id', $course->id)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
+        }
+
+        // Check if module belongs to course
+        if ($module->course_id !== $course->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Module not found in this course'
+            ], 404);
+        }
+
+        // Check if topic belongs to module
+        if ($topic->module_id !== $module->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Topic not found in this module'
+            ], 404);
+        }
+
+        $notes = $user->notes()
+            ->where('course_id', $course->id)
+            ->where('topic_id', $topic->id)
+            ->with(['topic:id,title,module_id', 'topic.module:id,title'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $notes,
+            'message' => 'Topic notes retrieved successfully'
+        ]);
+    }
 }
 

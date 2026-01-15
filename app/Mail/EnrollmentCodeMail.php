@@ -4,12 +4,16 @@ namespace App\Mail;
 
 use App\Models\EnrollmentCode;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class EnrollmentCodeMail extends Mailable
+class EnrollmentCodeMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+
+    public $tries = 3;
+    public $backoff = [60, 300];
 
     public function __construct(
         public EnrollmentCode $enrollmentCode

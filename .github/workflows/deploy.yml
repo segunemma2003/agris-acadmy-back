@@ -84,11 +84,11 @@ jobs:
             # 1. SETUP GIT - Give ubuntu user full access for git operations
             echo "Step 1: Configuring git..."
             git config --global --add safe.directory /var/www/laravel || true
-            
+
             # Change ownership to ubuntu user with group ownership to both ubuntu and www-data
             sudo chown -R $USER:$USER /var/www/laravel
             sudo chmod -R 755 /var/www/laravel
-            
+
             # Make files group-writable so www-data can also use them
             sudo chmod -R g+w /var/www/laravel
 
@@ -127,11 +127,11 @@ jobs:
             echo "Step 7: Setting ownership for www-data..."
             # Change group to www-data but keep owner as ubuntu for git operations
             sudo chown -R $USER:www-data /var/www/laravel
-            
+
             # Set permissions: owner can read/write, group (www-data) can read/write
             sudo chmod -R 755 /var/www/laravel
             sudo chmod -R g+w /var/www/laravel
-            
+
             # Special handling for .git - keep ubuntu ownership
             sudo chown -R $USER:$USER /var/www/laravel/.git
             sudo chmod -R 755 /var/www/laravel/.git
@@ -141,7 +141,7 @@ jobs:
             echo "Step 8: Setting directory and file permissions..."
             sudo find /var/www/laravel -type d -exec chmod 755 {} \;
             sudo find /var/www/laravel -type f -exec chmod 644 {} \;
-            
+
             # Make everything group-writable for www-data
             sudo chmod -R g+w /var/www/laravel
 
@@ -149,11 +149,11 @@ jobs:
             echo "Step 9: Setting writable directory permissions..."
             sudo chmod -R 775 /var/www/laravel/storage
             sudo chmod -R 775 /var/www/laravel/bootstrap/cache
-            
+
             # Ensure logs directory specifically is writable
             sudo chmod 775 /var/www/laravel/storage/logs
             sudo chmod 666 /var/www/laravel/storage/logs/laravel.log 2>/dev/null || true
-            
+
             sudo chmod -R 755 /var/www/laravel/public
             sudo chmod -R o+r /var/www/laravel/public
 
@@ -198,6 +198,44 @@ jobs:
               update_env "QUEUE_CONNECTION" "database"
             fi
 
+            # S3 Configuration (for file uploads)
+            echo "Configuring filesystem settings..."
+            FILESYSTEM_DISK_VALUE="${{ secrets.FILESYSTEM_DISK }}"
+            if [ -z "$FILESYSTEM_DISK_VALUE" ]; then
+              # Default to 'public' if not set (local storage)
+              FILESYSTEM_DISK_VALUE="public"
+            fi
+            update_env "FILESYSTEM_DISK" "$FILESYSTEM_DISK_VALUE"
+
+            # Only set S3 credentials if FILESYSTEM_DISK is set to 's3' or AWS credentials are provided
+            if [ "$FILESYSTEM_DISK_VALUE" = "s3" ] || [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+              echo "Configuring S3 credentials..."
+              if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+                update_env "AWS_ACCESS_KEY_ID" "${{ secrets.AWS_ACCESS_KEY_ID }}"
+              fi
+              if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+                update_env "AWS_SECRET_ACCESS_KEY" "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+              fi
+              if [ -n "${{ secrets.AWS_DEFAULT_REGION }}" ]; then
+                update_env "AWS_DEFAULT_REGION" "${{ secrets.AWS_DEFAULT_REGION }}"
+              fi
+              if [ -n "${{ secrets.AWS_BUCKET }}" ]; then
+                update_env "AWS_BUCKET" "${{ secrets.AWS_BUCKET }}"
+              fi
+              if [ -n "${{ secrets.AWS_URL }}" ]; then
+                update_env "AWS_URL" "${{ secrets.AWS_URL }}"
+              fi
+              if [ -n "${{ secrets.AWS_ENDPOINT }}" ]; then
+                update_env "AWS_ENDPOINT" "${{ secrets.AWS_ENDPOINT }}"
+              fi
+              if [ -n "${{ secrets.AWS_USE_PATH_STYLE_ENDPOINT }}" ]; then
+                update_env "AWS_USE_PATH_STYLE_ENDPOINT" "${{ secrets.AWS_USE_PATH_STYLE_ENDPOINT }}"
+              fi
+              echo "✓ S3 configuration added"
+            else
+              echo "✓ Using local filesystem (public disk)"
+            fi
+
             echo "✓ .env recreated and updated"
 
             # Verify .env was updated correctly
@@ -225,7 +263,7 @@ jobs:
             sudo -u www-data php artisan view:clear || true
             sudo -u www-data php artisan route:clear || true
             sudo rm -f bootstrap/cache/*.php || true
-            
+
             # Re-ensure storage logs permissions after cache clear
             echo "Re-ensuring storage/logs permissions..."
             sudo chmod 775 /var/www/laravel/storage/logs

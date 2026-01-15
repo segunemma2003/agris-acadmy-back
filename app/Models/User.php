@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -70,6 +71,21 @@ class User extends Authenticatable
             ->withPivot('is_primary', 'sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');
+    }
+
+    public function savedCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'saved_courses');
+    }
+
+    public function lessonComments(): HasMany
+    {
+        return $this->hasMany(LessonComment::class);
+    }
+
+    public function courseComments(): HasMany
+    {
+        return $this->hasMany(CourseComment::class);
     }
 
     public function enrollments()

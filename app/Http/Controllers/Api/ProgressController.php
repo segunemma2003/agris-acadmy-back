@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\StudentProgress;
 use App\Models\Topic;
+use App\Mail\CourseCompletionMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class ProgressController extends Controller
 {
@@ -212,6 +215,14 @@ class ProgressController extends Controller
                     'status' => 'completed',
                     'completed_at' => now(),
                 ]);
+
+                // Send congratulatory email via queue
+                try {
+                    Mail::to($user->email)->queue(new CourseCompletionMail($user, $course, $enrollment));
+                } catch (\Exception $e) {
+                    // Log error but don't fail the completion process
+                    Log::error('Failed to queue course completion email to ' . $user->email . ': ' . $e->getMessage());
+                }
             }
         }
     }

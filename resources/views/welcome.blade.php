@@ -13,7 +13,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3E6866 0%, #50C1AE 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -31,11 +31,17 @@
             text-align: center;
         }
         
-        .logo {
-            font-size: 48px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
+        .logo-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .logo-img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
         }
         
         .subtitle {
@@ -71,46 +77,46 @@
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3E6866 0%, #50C1AE 100%);
             color: white;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 25px rgba(62, 104, 102, 0.4);
         }
         
         .btn-secondary {
             background: #f7f7f7;
-            color: #667eea;
-            border: 2px solid #667eea;
+            color: #3E6866;
+            border: 2px solid #3E6866;
         }
         
         .btn-secondary:hover {
-            background: #667eea;
+            background: #3E6866;
             color: white;
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 25px rgba(62, 104, 102, 0.3);
         }
         
         .btn-success {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #3E6866 0%, #50C1AE 100%);
             color: white;
         }
         
         .btn-success:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(17, 153, 142, 0.4);
+            box-shadow: 0 10px 25px rgba(80, 193, 174, 0.4);
         }
         
         .btn-warning {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #50C1AE 0%, #3E6866 100%);
             color: white;
         }
         
         .btn-warning:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(245, 87, 108, 0.4);
+            box-shadow: 0 10px 25px rgba(62, 104, 102, 0.4);
         }
         
         @media (max-width: 600px) {
@@ -118,8 +124,9 @@
                 padding: 40px 20px;
             }
             
-            .logo {
-                font-size: 36px;
+            .logo-img {
+                width: 80px;
+                height: 80px;
             }
             
             .subtitle {
@@ -135,7 +142,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">🌾 Agrisiti</div>
+        <div class="logo-container">
+            <img src="https://agrisiti.com/logo-without.svg" alt="Agrisiti Logo" class="logo-img">
+        </div>
         <div class="subtitle">Academy Portal</div>
         <div class="description">
             Welcome to Agrisiti Academy. Choose your panel to get started.

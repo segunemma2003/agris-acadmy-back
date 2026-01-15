@@ -10,8 +10,10 @@ class CourseController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        
         $query = Course::where('is_published', true)
-            ->with(['category', 'tutor:id,name,avatar', 'tutors:id,name,avatar']);
+            ->with(['category', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio']);
 
         // Category filter
         if ($request->has('category_id')) {
@@ -52,9 +54,18 @@ class CourseController extends Controller
         $perPage = $request->get('per_page', 20);
         $courses = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
+        // Add enrollment status and format image URLs
+        $enrolledCourseIds = $user ? $user->enrollments()->pluck('course_id') : collect();
+        
+        $formattedCourses = $courses->getCollection()->map(function ($course) use ($enrolledCourseIds) {
+            $course->is_enrolled = $enrolledCourseIds->contains($course->id);
+            $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
+            return $course;
+        });
+
         return response()->json([
             'success' => true,
-            'data' => $courses->items(),
+            'data' => $formattedCourses,
             'pagination' => [
                 'current_page' => $courses->currentPage(),
                 'last_page' => $courses->lastPage(),
@@ -67,19 +78,32 @@ class CourseController extends Controller
         ]);
     }
 
-    public function show(Course $course)
+    public function show(Request $request, Course $course)
     {
         if (!$course->is_published) {
             return response()->json(['message' => 'Course not found'], 404);
         }
 
+        $user = $request->user();
+        
         $course->load([
             'category',
             'tutor:id,name,bio,avatar',
             'tutors:id,name,bio,avatar',
-            'modules.topics',
+            'modules' => function ($query) {
+                $query->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->with(['topics' => function ($q) {
+                        $q->where('is_active', true)
+                            ->orderBy('sort_order');
+                    }]);
+            },
             'resources',
-            'reviews.user:id,name',
+            'reviews' => function ($query) {
+                $query->with('user:id,name,avatar')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10);
+            },
             'vrContent',
             'diyContent',
             'recommendations.recommendedCourse:id,title,image,slug',
@@ -93,8 +117,24 @@ class CourseController extends Controller
             ->pluck('recommendedCourse');
 
         $course->recommended_courses = $recommendedCourses;
+        
+        // Add enrollment status
+        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        $course->is_enrolled = $isEnrolled;
+        
+        // Format image URL
+        $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
+        
+        // Calculate lessons count
+        $course->lessons_count = $course->modules->sum(function ($module) {
+            return $module->topics->count();
+        });
 
-        return response()->json($course);
+        return response()->json([
+            'success' => true,
+            'data' => $course,
+            'message' => 'Course details retrieved successfully'
+        ]);
     }
 
     public function recommendedCourses(Request $request)
@@ -177,6 +217,12 @@ class CourseController extends Controller
             ], 404);
         }
 
+        $user = $request->user();
+        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        
+        // Calculate lessons count
+        $lessonsCount = $course->modules()->withCount('topics')->get()->sum('topics_count');
+        
         return response()->json([
             'success' => true,
             'data' => [
@@ -184,18 +230,38 @@ class CourseController extends Controller
                 'title' => $course->title,
                 'description' => $course->description,
                 'short_description' => $course->short_description,
+                'about' => $course->about,
+                'requirements' => $course->requirements,
+                'what_to_expect' => $course->what_to_expect,
                 'what_you_will_learn' => $course->what_you_will_learn,
                 'what_you_will_get' => $course->what_you_will_get,
                 'course_information' => $course->course_information,
+                'image_url' => $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null,
+                'preview_video_url' => $course->preview_video_url,
                 'level' => $course->level,
                 'duration_minutes' => $course->duration_minutes,
                 'language' => $course->language,
                 'rating' => $course->rating,
                 'rating_count' => $course->rating_count,
                 'enrollment_count' => $course->enrollment_count,
+                'lessons_count' => $lessonsCount,
+                'certificate_included' => $course->certificate_included ?? false,
                 'category' => $course->category,
-                'tutor' => $course->tutor()->select('id', 'name', 'bio', 'avatar')->first(),
-                'tutors' => $course->tutors()->select('id', 'name', 'bio', 'avatar')->get(),
+                'main_instructor' => $course->tutor ? [
+                    'id' => $course->tutor->id,
+                    'name' => $course->tutor->name,
+                    'bio' => $course->tutor->bio,
+                    'avatar' => $course->tutor->avatar,
+                ] : null,
+                'instructors' => $course->tutors->map(function ($tutor) {
+                    return [
+                        'id' => $tutor->id,
+                        'name' => $tutor->name,
+                        'bio' => $tutor->bio,
+                        'avatar' => $tutor->avatar,
+                    ];
+                }),
+                'is_enrolled' => $isEnrolled,
             ],
             'message' => 'Course information retrieved successfully'
         ]);

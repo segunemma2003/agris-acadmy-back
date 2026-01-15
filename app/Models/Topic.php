@@ -14,6 +14,9 @@ class Topic extends Model
         'description',
         'video_url',
         'transcript',
+        'transcript_english',
+        'transcript_hausa',
+        'transcription_completed',
         'write_up',
         'duration_minutes',
         'content_type',
@@ -27,6 +30,7 @@ class Topic extends Model
         return [
             'is_free' => 'boolean',
             'is_active' => 'boolean',
+            'transcription_completed' => 'boolean',
         ];
     }
 
@@ -59,6 +63,11 @@ class Topic extends Model
     public function test(): HasMany
     {
         return $this->hasMany(TopicTest::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(LessonComment::class);
     }
 
     // Update module's total_topics when topic is created/deleted

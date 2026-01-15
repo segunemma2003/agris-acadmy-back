@@ -118,8 +118,121 @@ class EnrollmentCodeResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('bulk_send_to_students')
+                        ->label('Send Codes to Selected Students')
+                        ->icon('heroicon-o-envelope')
+                        ->form([
+                            Forms\Components\Select::make('course_id')
+                                ->label('Course')
+                                ->relationship('course', 'title')
+                                ->required()
+                                ->searchable()
+                                ->preload(),
+                            Forms\Components\Select::make('tutor_id')
+                                ->label('Tutor')
+                                ->relationship('tutor', 'name', fn ($query) => $query->where('role', 'tutor'))
+                                ->required()
+                                ->searchable()
+                                ->preload()
+                                ->default(fn () => Auth::user()->role === 'tutor' ? Auth::id() : null),
+                            Forms\Components\Select::make('student_ids')
+                                ->label('Select Students')
+                                ->options(function () {
+                                    return \App\Models\User::where('role', 'student')
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id')
+                                        ->toArray();
+                                })
+                                ->multiple()
+                                ->required()
+                                ->searchable()
+                                ->preload()
+                                ->helperText('Select students to send enrollment codes to'),
+                            Forms\Components\DateTimePicker::make('expires_at')
+                                ->label('Expiration Date (Optional)')
+                                ->helperText('Leave empty for no expiration'),
+                        ])
+                        ->action(function (array $data) {
+                            $studentIds = $data['student_ids'] ?? [];
+                            
+                            if (empty($studentIds)) {
+                                Notification::make()
+                                    ->title('No students selected')
+                                    ->body('Please select at least one student.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $students = \App\Models\User::whereIn('id', $studentIds)
+                                ->where('role', 'student')
+                                ->get();
+
+                            if ($students->isEmpty()) {
+                                Notification::make()
+                                    ->title('No valid students found')
+                                    ->body('Selected users are not students.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $created = 0;
+                            $sent = 0;
+                            $errors = [];
+
+                            foreach ($students as $student) {
+                                try {
+                                    // Check if code already exists for this student and course
+                                    $existingCode = EnrollmentCode::where('course_id', $data['course_id'])
+                                        ->where('email', $student->email)
+                                        ->where('is_used', false)
+                                        ->first();
+
+                                    if ($existingCode) {
+                                        // Use existing code
+                                        $code = $existingCode;
+                                    } else {
+                                        // Create new code
+                                        $code = EnrollmentCode::create([
+                                            'course_id' => $data['course_id'],
+                                            'tutor_id' => $data['tutor_id'],
+                                            'user_id' => $student->id,
+                                            'email' => $student->email,
+                                            'code' => EnrollmentCode::generateCode(),
+                                            'expires_at' => $data['expires_at'] ?? null,
+                                            'is_used' => false,
+                                        ]);
+                                        $created++;
+                                    }
+
+                                    // Send email
+                                    try {
+                                        Mail::to($student->email)->queue(new \App\Mail\EnrollmentCodeMail($code));
+                                        $sent++;
+                                    } catch (\Exception $e) {
+                                        $errors[] = "Failed to send email to {$student->email}: " . $e->getMessage();
+                                        \Log::error('Failed to send enrollment code email to ' . $student->email . ': ' . $e->getMessage());
+                                    }
+                                } catch (\Exception $e) {
+                                    $errors[] = "Failed to create code for {$student->name}: " . $e->getMessage();
+                                    \Log::error('Failed to create enrollment code: ' . $e->getMessage());
+                                }
+                            }
+
+                            $message = "Created {$created} enrollment code(s) and sent {$sent} email(s)";
+                            if (!empty($errors)) {
+                                $message .= ". " . count($errors) . " error(s) occurred.";
+                            }
+
+                            Notification::make()
+                                ->title('Bulk enrollment codes sent')
+                                ->body($message)
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\BulkAction::make('bulk_create')
-                        ->label('Bulk Create & Send')
+                        ->label('Bulk Create & Send (Email List)')
                         ->icon('heroicon-o-envelope')
                         ->form([
                             Forms\Components\Select::make('course_id')
@@ -141,14 +254,6 @@ class EnrollmentCodeResource extends Resource
                                 ->required()
                                 ->rows(10)
                                 ->placeholder('email1@example.com, email2@example.com, email3@example.com'),
-                            Forms\Components\TextInput::make('count')
-                                ->label('Number of Codes per Email')
-                                ->numeric()
-                                ->default(1)
-                                ->minValue(1)
-                                ->maxValue(10)
-                                ->required()
-                                ->helperText('How many codes should each email receive?'),
                             Forms\Components\DateTimePicker::make('expires_at')
                                 ->label('Expiration Date (Optional)')
                                 ->helperText('Leave empty for no expiration'),
@@ -169,36 +274,51 @@ class EnrollmentCodeResource extends Resource
                                 return;
                             }
 
-                            $count = (int) ($data['count'] ?? 1);
                             $created = 0;
                             $sent = 0;
                             $errors = [];
 
                             foreach ($emails as $email) {
-                                for ($i = 0; $i < $count; $i++) {
-                                    try {
+                                try {
+                                    // Try to find student by email
+                                    $student = \App\Models\User::where('email', $email)
+                                        ->where('role', 'student')
+                                        ->first();
+
+                                    // Check if code already exists for this email and course
+                                    $existingCode = EnrollmentCode::where('course_id', $data['course_id'])
+                                        ->where('email', $email)
+                                        ->where('is_used', false)
+                                        ->first();
+
+                                    if ($existingCode) {
+                                        // Use existing code
+                                        $code = $existingCode;
+                                    } else {
+                                        // Create new code
                                         $code = EnrollmentCode::create([
                                             'course_id' => $data['course_id'],
                                             'tutor_id' => $data['tutor_id'],
+                                            'user_id' => $student ? $student->id : null,
                                             'email' => $email,
                                             'code' => EnrollmentCode::generateCode(),
                                             'expires_at' => $data['expires_at'] ?? null,
                                             'is_used' => false,
                                         ]);
                                         $created++;
-
-                                        // Send email
-                                        try {
-                                            Mail::to($email)->send(new \App\Mail\EnrollmentCodeMail($code));
-                                            $sent++;
-                                        } catch (\Exception $e) {
-                                            $errors[] = "Failed to send email to {$email}: " . $e->getMessage();
-                                            \Log::error('Failed to send enrollment code email to ' . $email . ': ' . $e->getMessage());
-                                        }
-                                    } catch (\Exception $e) {
-                                        $errors[] = "Failed to create code for {$email}: " . $e->getMessage();
-                                        \Log::error('Failed to create enrollment code: ' . $e->getMessage());
                                     }
+
+                                    // Send email
+                                    try {
+                                        Mail::to($email)->queue(new \App\Mail\EnrollmentCodeMail($code));
+                                        $sent++;
+                                    } catch (\Exception $e) {
+                                        $errors[] = "Failed to send email to {$email}: " . $e->getMessage();
+                                        \Log::error('Failed to send enrollment code email to ' . $email . ': ' . $e->getMessage());
+                                    }
+                                } catch (\Exception $e) {
+                                    $errors[] = "Failed to create code for {$email}: " . $e->getMessage();
+                                    \Log::error('Failed to create enrollment code: ' . $e->getMessage());
                                 }
                             }
 

@@ -39,7 +39,14 @@ class CategoryResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
+                            ->disk(env('FILESYSTEM_DISK', 'public'))
                             ->directory('categories')
+                            ->maxSize(512) // 500KB
+                            ->imageResizeMode('cover')
+                            ->imageCropAspectRatio('1:1')
+                            ->imageResizeTargetWidth('800')
+                            ->imageResizeTargetHeight('800')
+                            ->helperText('Recommended: 800×800px (1:1 square). Max 500KB.')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('sort_order')
                             ->numeric()

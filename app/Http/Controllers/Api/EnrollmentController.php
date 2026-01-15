@@ -64,6 +64,23 @@ class EnrollmentController extends Controller
             ], 400);
         }
 
+        // Validate that the code matches the user's email
+        // This ensures codes can only be used by the intended recipient
+        if ($enrollmentCode->email && $enrollmentCode->email !== $user->email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This enrollment code is not valid for your account. Please use the code sent to your email address.',
+            ], 403);
+        }
+
+        // If code has a user_id, validate it matches the authenticated user
+        if ($enrollmentCode->user_id && $enrollmentCode->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This enrollment code is not valid for your account.',
+            ], 403);
+        }
+
         // Create enrollment
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
@@ -221,6 +238,61 @@ class EnrollmentController extends Controller
             'success' => true,
             'data' => $enrollment,
             'message' => 'Enrollment details retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Get user's ongoing courses (alias for ongoingCourses)
+     */
+    public function myOngoingCourses(Request $request)
+    {
+        return $this->ongoingCourses($request);
+    }
+
+    /**
+     * Get user's saved courses
+     */
+    public function savedCourses(Request $request)
+    {
+        $user = $request->user();
+        
+        $savedCourses = $user->savedCourses()
+            ->with([
+                'category:id,name,slug',
+                'tutor:id,name,avatar,bio',
+                'tutors:id,name,avatar,bio'
+            ])
+            ->orderBy('saved_courses.created_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $savedCourses,
+            'message' => 'Saved courses retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Get courses user has certificates for
+     */
+    public function certifiedCourses(Request $request)
+    {
+        $user = $request->user();
+        
+        $certificates = $user->certificates()
+            ->with([
+                'course:id,title,image,slug,short_description',
+                'course.category:id,name,slug',
+                'course.tutor:id,name,avatar',
+                'course.tutors:id,name,avatar'
+            ])
+            ->orderBy('issued_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $certificates,
+            'message' => 'Certified courses retrieved successfully'
         ]);
     }
 }

@@ -14,7 +14,7 @@
             padding: 20px;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3E6866 0%, #50C1AE 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -27,7 +27,7 @@
         }
         .code-box {
             background: white;
-            border: 2px dashed #667eea;
+            border: 2px dashed #3E6866;
             padding: 20px;
             text-align: center;
             margin: 20px 0;
@@ -36,13 +36,13 @@
         .code {
             font-size: 24px;
             font-weight: bold;
-            color: #667eea;
+            color: #3E6866;
             letter-spacing: 2px;
         }
         .button {
             display: inline-block;
             padding: 12px 30px;
-            background: #667eea;
+            background: #50C1AE;
             color: white;
             text-decoration: none;
             border-radius: 5px;

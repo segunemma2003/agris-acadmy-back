@@ -5,10 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeStudentMail;
 use App\Models\User;
+use App\Models\Enrollment;
+use App\Models\Certificate;
+use App\Models\StudentProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -122,7 +127,37 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        $user = $request->user();
+        
+        $cacheKey = "user_{$user->id}_profile_stats";
+        
+        $stats = Cache::remember($cacheKey, 300, function () use ($user) {
+            $enrollments = $user->enrollments()->get();
+            
+            // Calculate total hours spent
+            $totalHours = StudentProgress::where('user_id', $user->id)
+                ->sum('watch_time_seconds') / 3600; // Convert seconds to hours
+            
+            // Get certificates count
+            $certificatesCount = $user->certificates()->count();
+            
+            // Get course stats
+            $ongoingCount = $enrollments->where('status', 'active')->count();
+            $completedCount = $enrollments->where('status', 'completed')->count();
+            
+            return [
+                'total_courses' => $enrollments->count(),
+                'ongoing_courses' => $ongoingCount,
+                'completed_courses' => $completedCount,
+                'total_hours_spent' => round($totalHours, 2),
+                'certificates_acquired' => $certificatesCount,
+            ];
+        });
+        
+        $userData = $user->toArray();
+        $userData['stats'] = $stats;
+        
+        return response()->json($userData);
     }
 
     public function updateProfile(Request $request)
@@ -219,6 +254,85 @@ class AuthController extends Controller
             'success' => false,
             'message' => 'Invalid or expired reset token. Please request a new password reset link.',
         ], 400);
+    }
+
+    /**
+     * Change password
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect',
+            ], 400);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully',
+        ]);
+    }
+
+    /**
+     * Delete account
+     */
+    public function deleteAccount(Request $request)
+    {
+        $request->validate([
+            'password' => 'required',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password is incorrect',
+            ], 400);
+        }
+
+        // Delete user (cascade will handle related records)
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Account deleted successfully',
+        ]);
+    }
+
+    /**
+     * Get user certificates
+     */
+    public function certificates(Request $request)
+    {
+        $user = $request->user();
+        
+        $cacheKey = "user_{$user->id}_certificates";
+        
+        $certificates = Cache::remember($cacheKey, 600, function () use ($user) {
+            return $user->certificates()
+                ->with('course:id,title,image,slug')
+                ->orderBy('issued_at', 'desc')
+                ->get();
+        });
+        
+        return response()->json([
+            'success' => true,
+            'data' => $certificates,
+            'message' => 'Certificates retrieved successfully'
+        ]);
     }
 }
 

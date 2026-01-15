@@ -8,11 +8,20 @@ use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::where('is_active', true)
-            ->orderBy('sort_order')
-            ->get();
+        $query = Category::where('is_active', true);
+
+        // Search filter
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('description', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        $categories = $query->orderBy('sort_order')->get();
 
         return response()->json([
             'success' => true,
@@ -81,6 +90,79 @@ class CategoryController extends Controller
             'success' => true,
             'data' => $categories,
             'message' => 'Featured courses per category retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Get courses by category
+     */
+    public function courses(Request $request, Category $category)
+    {
+        $user = $request->user();
+        
+        if (!$category->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category not found',
+            ], 404);
+        }
+
+        $query = $category->courses()
+            ->where('is_published', true)
+            ->with(['tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio']);
+
+        // Search filter
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('short_description', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('description', 'like', '%' . $searchTerm . '%')
+                  ->orWhereJsonContains('tags', $searchTerm);
+            });
+        }
+
+        // Level filter
+        if ($request->has('level')) {
+            $query->where('level', $request->level);
+        }
+
+        // Rating filter
+        if ($request->has('min_rating')) {
+            $query->where('rating', '>=', $request->min_rating);
+        }
+
+        // Duration filters
+        if ($request->has('min_duration')) {
+            $query->where('duration_minutes', '>=', $request->min_duration);
+        }
+
+        if ($request->has('max_duration')) {
+            $query->where('duration_minutes', '<=', $request->max_duration);
+        }
+
+        $perPage = $request->get('per_page', 20);
+        $courses = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        // Add enrollment status for authenticated users
+        if ($user) {
+            $enrolledCourseIds = $user->enrollments()->pluck('course_id');
+            $courses->getCollection()->transform(function ($course) use ($enrolledCourseIds) {
+                $course->is_enrolled = $enrolledCourseIds->contains($course->id);
+                return $course;
+            });
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $courses->items(),
+            'pagination' => [
+                'current_page' => $courses->currentPage(),
+                'last_page' => $courses->lastPage(),
+                'per_page' => $courses->perPage(),
+                'total' => $courses->total(),
+            ],
+            'message' => 'Category courses retrieved successfully'
         ]);
     }
 }
