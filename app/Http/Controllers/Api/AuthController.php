@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeStudentMail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
@@ -29,6 +31,15 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Send welcome email via queue (non-blocking)
+        // If email fails, registration still succeeds
+        try {
+            Mail::to($user->email)->queue(new WelcomeStudentMail($user));
+        } catch (\Exception $e) {
+            // Log error but don't fail registration
+            \Log::error('Failed to queue welcome email to ' . $user->email . ': ' . $e->getMessage());
+        }
 
         return response()->json([
             'success' => true,
