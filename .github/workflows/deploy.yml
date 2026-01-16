@@ -363,9 +363,24 @@ jobs:
             # Restart queue workers (if using supervisor)
             echo "Restarting queue workers gracefully..."
             if command -v supervisorctl &> /dev/null; then
+              # Check Supervisor status first
+              echo "Checking Supervisor status..."
+              if ! sudo systemctl is-active --quiet supervisor; then
+                echo "⚠️  Supervisor service is not running, starting it..."
+                sudo systemctl start supervisor || true
+                sleep 2
+              fi
+
+              # Check Supervisor config for errors
+              echo "Validating Supervisor configuration..."
+              if sudo supervisorctl reread 2>&1 | grep -q "error\|ERROR"; then
+                echo "⚠️  Supervisor configuration has errors - check /etc/supervisor/conf.d/"
+                echo "   This might cause issues but continuing deployment..."
+              fi
+
               # Gracefully stop workers (allow current jobs to finish)
               echo "Stopping queue workers gracefully..."
-              sudo supervisorctl stop laravel-worker:* || true
+              sudo supervisorctl stop laravel-worker:* 2>&1 || true
               sleep 5  # Wait for jobs to finish
 
               # Reload configuration
@@ -373,8 +388,11 @@ jobs:
               sudo supervisorctl update || true
 
               # Start workers
-              sudo supervisorctl start laravel-worker:* || true
-              echo "✓ Queue workers restarted via Supervisor"
+              echo "Starting queue workers..."
+              sudo supervisorctl start laravel-worker:* 2>&1 || {
+                echo "⚠️  Failed to start queue workers via Supervisor"
+                echo "   This won't block deployment, but queue processing may be affected"
+              }
 
               # Verify workers are running
               WORKER_COUNT=$(sudo supervisorctl status laravel-worker:* 2>/dev/null | grep -c "RUNNING" || echo "0")
@@ -382,6 +400,15 @@ jobs:
                 echo "✓ $WORKER_COUNT queue worker(s) running"
               else
                 echo "⚠️  Warning: No queue workers detected as running"
+                echo "   Check Supervisor logs: sudo tail -f /var/log/supervisor/supervisord.log"
+                echo "   Check worker logs: sudo tail -f /var/www/laravel/storage/logs/worker.log"
+              fi
+
+              # Check for Supervisor errors
+              if sudo supervisorctl status laravel-worker:* 2>&1 | grep -q "FATAL\|ERROR\|BACKOFF"; then
+                echo "⚠️  Supervisor workers have errors - this might affect the application"
+                echo "   Status:"
+                sudo supervisorctl status laravel-worker:* 2>&1 | head -5
               fi
             else
               # If supervisor not available, process pending jobs with proper retry handling
