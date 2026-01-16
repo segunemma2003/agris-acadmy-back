@@ -56,25 +56,27 @@ numprocs=2
 redirect_stderr=true
 stdout_logfile=/var/www/laravel/storage/logs/worker.log
 stopwaitsecs=3600
-stopasgroup=true
-killasgroup=true
 ```
 
 ### Configuration Explanation
 
 - **`process_name`**: Unique name for each worker process
 - **`command`**: The queue:work command with options:
+  - `database`: Queue connection name (database driver)
   - `--sleep=3`: Wait 3 seconds between jobs when queue is empty
-  - `--tries=3`: Retry failed jobs 3 times
+  - `--tries=3`: Retry failed jobs 3 times before marking as failed
   - `--max-time=3600`: Restart worker after 1 hour (prevents memory leaks)
+  - `--timeout=60`: Timeout for each job (60 seconds)
+  - `--max-jobs=1000`: Restart worker after processing 1000 jobs (prevents memory leaks)
+  - `--memory=128`: Restart worker if memory usage exceeds 128MB
 - **`autostart=true`**: Start workers automatically when Supervisor starts
 - **`autorestart=true`**: Restart workers if they crash
-- **`stopasgroup=true`**: Stop all processes in the group together
+- **`stopasgroup=true`**: Stop all processes in the group together (graceful shutdown)
 - **`killasgroup=true`**: Kill all processes in the group together
 - **`user=www-data`**: Run as www-data user (matches PHP-FPM)
 - **`numprocs=2`**: Run 2 worker processes (increase for higher load)
 - **`stdout_logfile`**: Log file location
-- **`stopwaitsecs=3600`**: Wait up to 1 hour for graceful shutdown
+- **`stopwaitsecs=3600`**: Wait up to 1 hour for graceful shutdown (allows jobs to finish)
 
 ### Step 5: Create Log Directory (if needed)
 
