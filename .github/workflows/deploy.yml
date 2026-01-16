@@ -161,8 +161,9 @@ jobs:
             echo "Step 10: Recreating .env file from .env.example..."
             sudo rm -f .env
             sudo cp .env.example .env
+            # Ensure .env is readable and writable by www-data
             sudo chown www-data:www-data .env
-            sudo chmod 644 .env
+            sudo chmod 664 .env  # Read/write for owner and group, read for others
 
             # Uncomment all commented database lines
             echo "Uncommenting database configuration in .env..."
@@ -174,8 +175,18 @@ jobs:
               local value=$2
               # First uncomment if commented
               sudo sed -i "s/^# ${key}=/${key}=/g" .env
-              # Then update the value
-              sudo sed -i "s|^${key}=.*|${key}=${value}|g" .env
+              # Check if value contains spaces, quotes, or special characters - if so, quote it
+              if [[ "$value" =~ [[:space:]] ]] || [[ "$value" =~ [\"\'\`\$] ]] || [[ "$value" =~ ^# ]]; then
+                # Value has spaces or special chars - escape quotes and wrap in double quotes
+                # Escape backslashes first, then escape double quotes
+                local escaped_value=$(printf '%s\n' "$value" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+                # Update with quoted value
+                sudo sed -i "s|^${key}=.*|${key}=\"${escaped_value}\"|g" .env
+              else
+                # No spaces or special chars - no quotes needed, but still escape for sed
+                local escaped_value=$(printf '%s\n' "$value" | sed 's/[[\.*^$()+?{|]/\\&/g')
+                sudo sed -i "s|^${key}=.*|${key}=${escaped_value}|g" .env
+              fi
             }
 
             echo "Updating .env with current values..."
@@ -193,7 +204,7 @@ jobs:
 
             # Set queue connection (default to database if not set)
             if ! grep -q "^QUEUE_CONNECTION=" .env 2>/dev/null; then
-              echo "QUEUE_CONNECTION=database" | sudo -u www-data tee -a .env > /dev/null
+              echo 'QUEUE_CONNECTION=database' | sudo -u www-data tee -a .env > /dev/null
             else
               update_env "QUEUE_CONNECTION" "database"
             fi
@@ -306,6 +317,26 @@ jobs:
 
             echo "✓ .env recreated and updated"
 
+            # CRITICAL: Ensure .env permissions are correct after all updates
+            echo "Ensuring .env file permissions are correct..."
+            sudo chown www-data:www-data .env
+            sudo chmod 664 .env  # Read/write for owner and group
+            # Verify .env is readable by www-data
+            if sudo -u www-data test -r .env; then
+              echo "✓ .env is readable by www-data"
+            else
+              echo "⚠️  WARNING: .env is NOT readable by www-data!"
+              sudo chmod 644 .env
+              sudo chmod g+r .env
+            fi
+            # Verify .env is writable by www-data (for future updates)
+            if sudo -u www-data test -w .env; then
+              echo "✓ .env is writable by www-data"
+            else
+              echo "⚠️  WARNING: .env is NOT writable by www-data!"
+              sudo chmod g+w .env
+            fi
+
             # Verify .env was updated correctly
             echo "Verifying .env database configuration:"
             sudo grep "^DB_" .env
@@ -348,6 +379,21 @@ jobs:
             echo "Re-ensuring storage/logs permissions..."
             sudo chmod 775 /var/www/laravel/storage/logs
             sudo chmod 666 /var/www/laravel/storage/logs/laravel.log 2>/dev/null || true
+
+            # CRITICAL: Re-ensure .env permissions after cache clear (in case bulk operations affected it)
+            echo "Re-ensuring .env file permissions after cache operations..."
+            sudo chown www-data:www-data .env
+            sudo chmod 664 .env
+            # Double-check it's readable and writable
+            sudo chmod g+r .env || true
+            sudo chmod g+w .env || true
+            # Final verification
+            if sudo -u www-data test -r .env && sudo -u www-data test -w .env; then
+              echo "✓ .env permissions verified: readable and writable by www-data"
+            else
+              echo "⚠️  WARNING: .env permission verification failed!"
+              sudo chmod 666 .env  # Fallback to full read/write
+            fi
 
             # 16. VERIFY PERMISSIONS
             echo "Step 16: Verifying permissions..."
