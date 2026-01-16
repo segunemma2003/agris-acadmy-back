@@ -328,8 +328,16 @@ jobs:
             echo "Step 13: Creating storage link..."
             sudo -u www-data php artisan storage:link || true
 
-            # 14. CLEAR ALL CACHES
-            echo "Step 14: Clearing caches..."
+            # 14. ENSURE CORS CONFIG EXISTS
+            echo "Step 14: Ensuring CORS configuration..."
+            if [ ! -f config/cors.php ]; then
+              echo "CORS config not found, publishing..."
+              sudo -u www-data php artisan config:publish cors || true
+            fi
+            echo "✓ CORS configuration verified"
+
+            # 15. CLEAR ALL CACHES
+            echo "Step 15: Clearing caches..."
             sudo -u www-data php artisan config:clear || true
             sudo -u www-data php artisan cache:clear || true
             sudo -u www-data php artisan view:clear || true
@@ -341,14 +349,14 @@ jobs:
             sudo chmod 775 /var/www/laravel/storage/logs
             sudo chmod 666 /var/www/laravel/storage/logs/laravel.log 2>/dev/null || true
 
-            # 15. VERIFY PERMISSIONS
-            echo "Step 15: Verifying permissions..."
+            # 16. VERIFY PERMISSIONS
+            echo "Step 16: Verifying permissions..."
             sudo -u www-data test -r /var/www/laravel/public/index.php && echo "✓ Readable" || echo "✗ Not readable"
             sudo -u www-data test -w /var/www/laravel/storage && echo "✓ Writable" || echo "✗ Not writable"
             [ -w /var/www/laravel/storage/logs ] && echo "✓ Logs writable" || echo "✗ Logs not writable"
 
-            # 16. RESTART SERVICES AND QUEUE WORKERS
-            echo "Step 16: Restarting services..."
+            # 17. RESTART SERVICES AND QUEUE WORKERS
+            echo "Step 17: Restarting services..."
             sudo systemctl restart php8.3-fpm
             sudo systemctl restart nginx
 
