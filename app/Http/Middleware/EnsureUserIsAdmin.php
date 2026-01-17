@@ -21,9 +21,9 @@ class EnsureUserIsAdmin
         // But we still need to allow login/auth routes to pass through
         $path = $request->path();
         $routeName = $request->route()?->getName() ?? '';
-        
+
         // Allow all authentication-related routes (login, logout, etc.)
-        if ($request->routeIs('filament.admin.auth.login') || 
+        if ($request->routeIs('filament.admin.auth.login') ||
             $request->routeIs('filament.admin.auth.*') ||
             $request->routeIs('filament.admin.*.login') ||
             str_contains($path, 'admin/login') ||
@@ -34,9 +34,20 @@ class EnsureUserIsAdmin
 
         // At this point, user should be authenticated (Authenticate middleware runs first)
         $user = Auth::guard('web')->user();
-        
+
+        // Debug logging
+        \Log::info('EnsureUserIsAdmin middleware running', [
+            'path' => $path,
+            'route' => $routeName,
+            'user_id' => $user?->id,
+            'user_email' => $user?->email,
+            'user_role' => $user?->role,
+            'user_is_active' => $user?->is_active,
+        ]);
+
         if (!$user) {
             // This shouldn't happen if Authenticate middleware worked, but just in case
+            \Log::warning('EnsureUserIsAdmin: No user found, redirecting to login');
             return redirect()->route('filament.admin.auth.login');
         }
 
@@ -65,6 +76,12 @@ class EnsureUserIsAdmin
             ]);
             abort(403, 'Unauthorized. Your account is inactive. Please contact support. Email: ' . $user->email);
         }
+
+        \Log::info('EnsureUserIsAdmin: Access granted', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'path' => $path,
+        ]);
 
         return $next($request);
     }
