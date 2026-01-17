@@ -17,6 +17,12 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Log that middleware is being called
+        Log::info('EnsureUserIsAdmin middleware START', [
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+        ]);
+
         // Allow access to login pages and authentication routes
         // We need to allow login/auth routes to pass through before checking authentication
         $path = $request->path();
