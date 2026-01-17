@@ -293,7 +293,7 @@ jobs:
               update_env "MAIL_FROM_NAME" "${{ secrets.MAIL_FROM_NAME }}"
             else
               # Default to app name
-              update_env "MAIL_FROM_NAME" "Agrisiti Academy"
+              update_env "MAIL_FROM_NAME" "Agrisiti-Academy"
             fi
 
             echo "✓ SMTP email configuration added"
