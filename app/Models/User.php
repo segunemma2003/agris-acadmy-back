@@ -146,7 +146,21 @@ class User extends Authenticatable
     // Helper methods
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === 'admin' && $this->is_active;
+    }
+
+    /**
+     * Check if user can access the admin panel
+     */
+    public function canAccessPanel(string $panel): bool
+    {
+        return match($panel) {
+            'admin' => $this->role === 'admin' && $this->is_active,
+            'tutor' => $this->role === 'tutor' && $this->is_active,
+            'tagdev' => $this->role === 'tagdev' && $this->is_active,
+            'supervisor' => $this->role === 'supervisor' && $this->is_active,
+            default => false,
+        };
     }
 
     public function isTutor(): bool
