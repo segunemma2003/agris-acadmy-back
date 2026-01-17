@@ -61,9 +61,9 @@ class TutorPanelProvider extends PanelProvider
             ->favicon(asset('images/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups([
-                'Course Management' => 'heroicon-o-academic-cap',
-                'Student Management' => 'heroicon-o-user-group',
-                'Communication' => 'heroicon-o-chat-bubble-left-right',
+                'Course Management', // 'heroicon-o-academic-cap',
+                'Student Management', // 'heroicon-o-user-group',
+                'Communication', // 'heroicon-o-chat-bubble-left-right',
             ])
             ->maxContentWidth('full')
             ->spa()
