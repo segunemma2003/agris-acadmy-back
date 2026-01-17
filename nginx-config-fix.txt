@@ -1,0 +1,51 @@
+# Add this to your Nginx config to prevent directory listing issues
+# Edit: sudo nano /etc/nginx/sites-enabled/laravel
+
+# Add after the "index index.php;" line:
+    autoindex off;
+
+# The location / block should look like this:
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+        autoindex off;
+    }
+
+# Full server block should be:
+server {
+    listen 443 ssl http2;
+    server_name academy-backends.agrisiti.com;
+    root /var/www/laravel/public;
+
+    ssl_certificate /etc/letsencrypt/live/academy-backends.agrisiti.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/academy-backends.agrisiti.com/privkey.pem;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    charset utf-8;
+    index index.php;
+    autoindex off;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+        autoindex off;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+
