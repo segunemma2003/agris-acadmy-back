@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserIsAdmin
@@ -17,8 +18,7 @@ class EnsureUserIsAdmin
     public function handle(Request $request, Closure $next): Response
     {
         // Allow access to login pages and authentication routes
-        // This middleware runs in authMiddleware, so it only runs after authentication
-        // But we still need to allow login/auth routes to pass through
+        // We need to allow login/auth routes to pass through before checking authentication
         $path = $request->path();
         $routeName = $request->route()?->getName() ?? '';
 
@@ -36,7 +36,7 @@ class EnsureUserIsAdmin
         $user = Auth::guard('web')->user();
 
         // Debug logging
-        \Log::info('EnsureUserIsAdmin middleware running', [
+        Log::info('EnsureUserIsAdmin middleware running', [
             'path' => $path,
             'route' => $routeName,
             'user_id' => $user?->id,
@@ -47,7 +47,7 @@ class EnsureUserIsAdmin
 
         if (!$user) {
             // This shouldn't happen if Authenticate middleware worked, but just in case
-            \Log::warning('EnsureUserIsAdmin: No user found, redirecting to login');
+            Log::warning('EnsureUserIsAdmin: No user found, redirecting to login');
             return redirect()->route('filament.admin.auth.login');
         }
 
@@ -56,7 +56,7 @@ class EnsureUserIsAdmin
 
         // Check if user has admin role
         if ($user->role !== 'admin') {
-            \Log::warning('Admin panel access denied - wrong role', [
+            Log::warning('Admin panel access denied - wrong role', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'role' => $user->role,
@@ -69,7 +69,7 @@ class EnsureUserIsAdmin
 
         // Check if user is active
         if (!$user->is_active) {
-            \Log::warning('Admin panel access denied - inactive account', [
+            Log::warning('Admin panel access denied - inactive account', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'path' => $path,
@@ -77,7 +77,7 @@ class EnsureUserIsAdmin
             abort(403, 'Unauthorized. Your account is inactive. Please contact support. Email: ' . $user->email);
         }
 
-        \Log::info('EnsureUserIsAdmin: Access granted', [
+        Log::info('EnsureUserIsAdmin: Access granted', [
             'user_id' => $user->id,
             'email' => $user->email,
             'path' => $path,
