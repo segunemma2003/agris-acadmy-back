@@ -191,16 +191,16 @@ jobs:
 
             echo "Updating .env with current values..."
             update_env "APP_NAME" "Agrisiti-Academy"
-            update_env "APP_ENV" "${{ secrets.APP_ENV }}"
+            # Use local environment to avoid production caching issues
+            update_env "APP_ENV" "local"
             update_env "APP_KEY" "${{ secrets.APP_KEY }}"
-            update_env "APP_DEBUG" "${{ secrets.APP_DEBUG }}"
+            # Set debug to false even in local for security
+            update_env "APP_DEBUG" "false"
             update_env "APP_URL" "https://academy-backends.agrisiti.com"
 
-            # Set session secure cookie for HTTPS in production
-            if [ "${{ secrets.APP_ENV }}" = "production" ]; then
-              update_env "SESSION_SECURE_COOKIE" "true"
-              update_env "SESSION_SAME_SITE" "lax"
-            fi
+            # Set session secure cookie for HTTPS
+            update_env "SESSION_SECURE_COOKIE" "true"
+            update_env "SESSION_SAME_SITE" "lax"
             update_env "DB_CONNECTION" "mysql"
             update_env "DB_HOST" "${{ secrets.DB_HOST }}"
             update_env "DB_PORT" "3306"
