@@ -351,9 +351,9 @@ jobs:
               echo "⚠️ Migration warning - continuing deployment"
             }
 
-            # 12.5. CREATE ADMIN USER (if not exists)
-            echo "Step 12.5: Ensuring admin user exists..."
-            sudo -u www-data php artisan tinker --execute="use App\Models\User; use Illuminate\Support\Facades\Hash; \$admin = User::firstOrCreate(['email' => 'admin@agrisiti.com'], ['name' => 'Admin User', 'password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true]); if (\$admin->wasRecentlyCreated) { echo '✓ Admin user created: admin@agrisiti.com' . PHP_EOL; } else { echo '✓ Admin user already exists: admin@agrisiti.com' . PHP_EOL; }" || echo "⚠️ Admin user creation skipped"
+            # 12.5. CREATE/UPDATE ADMIN USER
+            echo "Step 12.5: Ensuring admin user exists with correct password..."
+            sudo -u www-data php artisan tinker --execute="use App\Models\User; use Illuminate\Support\Facades\Hash; \$admin = User::firstOrCreate(['email' => 'admin@agrisiti.com'], ['name' => 'Admin User', 'password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true]); if (\$admin->wasRecentlyCreated) { echo '✓ Admin user created: admin@agrisiti.com' . PHP_EOL; } else { \$admin->update(['password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true, 'name' => 'Admin User']); echo '✓ Admin user updated: admin@agrisiti.com (password reset to admin123)' . PHP_EOL; }" || echo "⚠️ Admin user creation skipped"
 
             # 13. CREATE STORAGE LINK
             echo "Step 13: Creating storage link..."
