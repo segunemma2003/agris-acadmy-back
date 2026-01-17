@@ -17,10 +17,12 @@ class EnsureUserIsAdmin
     public function handle(Request $request, Closure $next): Response
     {
         // Allow access to login pages and authentication routes
+        $path = $request->path();
         if ($request->routeIs('filament.admin.auth.login') || 
             $request->routeIs('filament.admin.auth.*') ||
             $request->routeIs('filament.admin.*.login') ||
-            str_contains($request->path(), 'admin/login')) {
+            str_contains($path, 'admin/login') ||
+            str_contains($path, 'admin/auth')) {
             return $next($request);
         }
 
@@ -28,17 +30,20 @@ class EnsureUserIsAdmin
         
         // Check if user is authenticated
         if (!$user) {
-            abort(403, 'Unauthorized. Please log in.');
+            return redirect()->route('filament.admin.auth.login');
         }
+
+        // Refresh user from database to ensure we have latest data
+        $user->refresh();
 
         // Check if user has admin role
         if ($user->role !== 'admin') {
-            abort(403, 'Unauthorized. Admin access required. Your role: ' . ($user->role ?? 'none'));
+            abort(403, 'Unauthorized. Admin access required. Your role: ' . ($user->role ?? 'none') . '. Email: ' . ($user->email ?? 'unknown'));
         }
 
         // Check if user is active
         if (!$user->is_active) {
-            abort(403, 'Unauthorized. Your account is inactive. Please contact support.');
+            abort(403, 'Unauthorized. Your account is inactive. Please contact support. Email: ' . ($user->email ?? 'unknown'));
         }
 
         return $next($request);
