@@ -17,19 +17,26 @@ class EnsureUserIsAdmin
     public function handle(Request $request, Closure $next): Response
     {
         // Allow access to login pages and authentication routes
+        // This middleware runs in authMiddleware, so it only runs after authentication
+        // But we still need to allow login/auth routes to pass through
         $path = $request->path();
+        $routeName = $request->route()?->getName() ?? '';
+        
+        // Allow all authentication-related routes (login, logout, etc.)
         if ($request->routeIs('filament.admin.auth.login') || 
             $request->routeIs('filament.admin.auth.*') ||
             $request->routeIs('filament.admin.*.login') ||
             str_contains($path, 'admin/login') ||
-            str_contains($path, 'admin/auth')) {
+            str_contains($path, 'admin/auth') ||
+            str_contains($routeName, 'filament.admin.auth')) {
             return $next($request);
         }
 
-        $user = Auth::user();
+        // At this point, user should be authenticated (Authenticate middleware runs first)
+        $user = Auth::guard('web')->user();
         
-        // Check if user is authenticated
         if (!$user) {
+            // This shouldn't happen if Authenticate middleware worked, but just in case
             return redirect()->route('filament.admin.auth.login');
         }
 
@@ -38,12 +45,25 @@ class EnsureUserIsAdmin
 
         // Check if user has admin role
         if ($user->role !== 'admin') {
-            abort(403, 'Unauthorized. Admin access required. Your role: ' . ($user->role ?? 'none') . '. Email: ' . ($user->email ?? 'unknown'));
+            \Log::warning('Admin panel access denied - wrong role', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+                'path' => $path,
+                'route' => $routeName,
+            ]);
+            abort(403, 'Unauthorized. Admin access required. Your role: ' . $user->role . '. Email: ' . $user->email);
         }
 
         // Check if user is active
         if (!$user->is_active) {
-            abort(403, 'Unauthorized. Your account is inactive. Please contact support. Email: ' . ($user->email ?? 'unknown'));
+            \Log::warning('Admin panel access denied - inactive account', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'path' => $path,
+            ]);
+            abort(403, 'Unauthorized. Your account is inactive. Please contact support. Email: ' . $user->email);
         }
 
         return $next($request);
