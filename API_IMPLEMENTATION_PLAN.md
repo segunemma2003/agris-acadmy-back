@@ -69,3 +69,4 @@ AWS_URL=https://your_bucket.s3.region.amazonaws.com
 - Supports Hausa and English
 - Updates `transcript_english` and `transcript_hausa` fields
 
+

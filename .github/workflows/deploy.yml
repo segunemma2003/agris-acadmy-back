@@ -353,12 +353,7 @@ jobs:
 
             # 12.5. CREATE/UPDATE ADMIN USERS
             echo "Step 12.5: Ensuring admin users exist with correct password..."
-
-            # Create/Update first admin user
-            sudo -u www-data php artisan tinker --execute="use App\Models\User; use Illuminate\Support\Facades\Hash; \$admin = User::firstOrCreate(['email' => 'admin@agrisiti.com'], ['name' => 'Admin User', 'password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true]); if (\$admin->wasRecentlyCreated) { echo '✓ Admin user created: admin@agrisiti.com' . PHP_EOL; } else { \$admin->update(['password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true, 'name' => 'Admin User']); echo '✓ Admin user updated: admin@agrisiti.com (password reset to admin123)' . PHP_EOL; }" || echo "⚠️ Admin user creation skipped"
-
-            # Create/Update second admin user
-            sudo -u www-data php artisan tinker --execute="use App\Models\User; use Illuminate\Support\Facades\Hash; \$admin = User::firstOrCreate(['email' => 'admins@agrisiti.com'], ['name' => 'Admin User 2', 'password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true]); if (\$admin->wasRecentlyCreated) { echo '✓ Admin user created: admins@agrisiti.com' . PHP_EOL; } else { \$admin->update(['password' => Hash::make('admin123'), 'role' => 'admin', 'is_active' => true, 'name' => 'Admin User 2']); echo '✓ Admin user updated: admins@agrisiti.com (password reset to admin123)' . PHP_EOL; }" || echo "⚠️ Admin user creation skipped"
+            sudo -u www-data php create-admin-users.php || echo "⚠️ Admin user creation skipped"
 
             # 13. CREATE STORAGE LINK
             echo "Step 13: Creating storage link..."
