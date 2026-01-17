@@ -20,7 +20,6 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Support\Facades\FilamentView;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Auth;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -42,10 +41,6 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->profile()
-            ->canAccess(function () {
-                $user = Auth::user();
-                return $user && $user->role === 'admin' && $user->is_active;
-            })
             ->colors([
                 'primary' => Color::Green,
                 'gray' => Color::Slate,
