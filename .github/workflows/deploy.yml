@@ -194,8 +194,8 @@ jobs:
             # Use local environment to avoid production caching issues
             update_env "APP_ENV" "local"
             update_env "APP_KEY" "${{ secrets.APP_KEY }}"
-            # Set debug to false even in local for security
-            update_env "APP_DEBUG" "false"
+            # Set debug to true to see exact errors
+            update_env "APP_DEBUG" "true"
             update_env "APP_URL" "https://academy-backends.agrisiti.com"
 
             # Set session secure cookie for HTTPS
