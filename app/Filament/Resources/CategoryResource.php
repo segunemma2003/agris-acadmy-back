@@ -40,6 +40,7 @@ class CategoryResource extends Resource
                         Forms\Components\FileUpload::make('image')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->directory('categories')
                             ->maxSize(512) // 500KB
                             ->imageResizeMode('cover')

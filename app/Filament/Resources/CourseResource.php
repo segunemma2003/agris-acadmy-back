@@ -86,6 +86,7 @@ class CourseResource extends Resource
                         Forms\Components\FileUpload::make('image')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->directory('courses')
                             ->maxSize(2048) // 2MB
                             ->imageResizeMode('cover')

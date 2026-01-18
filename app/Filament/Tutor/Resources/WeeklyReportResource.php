@@ -94,6 +94,7 @@ class WeeklyReportResource extends Resource
                             ->label('Upload Images')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->multiple()
                             ->directory('weekly-reports')
                             ->columnSpanFull(),

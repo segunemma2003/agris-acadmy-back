@@ -52,6 +52,7 @@ class UserResource extends Resource
                         Forms\Components\FileUpload::make('avatar')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->directory('avatars')
                             ->maxSize(200) // 200KB
                             ->imageResizeMode('cover')

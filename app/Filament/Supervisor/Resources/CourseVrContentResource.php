@@ -48,6 +48,7 @@ class CourseVrContentResource extends Resource
                         Forms\Components\FileUpload::make('thumbnail')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->directory('vr-content')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('duration_minutes')

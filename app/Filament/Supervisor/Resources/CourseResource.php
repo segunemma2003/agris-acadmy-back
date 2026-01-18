@@ -74,6 +74,7 @@ class CourseResource extends Resource
                         Forms\Components\FileUpload::make('image')
                             ->image()
                             ->disk(config('filesystems.default'))
+                            ->visibility('public')
                             ->directory('courses')
                             ->columnSpanFull(),
                         Forms\Components\TagsInput::make('tags')
