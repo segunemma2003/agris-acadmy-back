@@ -66,3 +66,5 @@ if ($passwordCheck && $canAccess && $isAdmin && $authenticatedUser) {
     echo "\n❌ Some checks failed. Please review the output above.\n";
 }
 
+
+

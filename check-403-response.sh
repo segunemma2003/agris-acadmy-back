@@ -24,3 +24,5 @@ echo "3. Full response saved to /tmp/403_response.html"
 echo "$RESPONSE" > /tmp/403_response.html
 echo "   View with: cat /tmp/403_response.html"
 
+
+

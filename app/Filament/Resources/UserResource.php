@@ -51,7 +51,7 @@ class UserResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('avatar')
                             ->image()
-                            ->disk(env('FILESYSTEM_DISK', 'public'))
+                            ->disk(config('filesystems.default'))
                             ->directory('avatars')
                             ->maxSize(200) // 200KB
                             ->imageResizeMode('cover')

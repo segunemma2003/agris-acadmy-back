@@ -39,7 +39,7 @@ class CategoryResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
-                            ->disk(env('FILESYSTEM_DISK', 'public'))
+                            ->disk(config('filesystems.default'))
                             ->directory('categories')
                             ->maxSize(512) // 500KB
                             ->imageResizeMode('cover')

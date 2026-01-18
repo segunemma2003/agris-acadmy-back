@@ -49,3 +49,5 @@ echo "  2. No security modules blocking requests"
 echo "  3. Proper PHP-FPM configuration"
 echo "  4. File permissions on Laravel files"
 
+
+

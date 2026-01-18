@@ -56,3 +56,5 @@ echo "  1. Go to: http://127.0.0.1:8000/admin/login\n";
 echo "  2. Login with: testadmin@agrisiti.com / test123\n";
 echo "  3. Check if you can access the dashboard\n";
 
+
+

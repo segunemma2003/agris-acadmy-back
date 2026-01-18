@@ -77,7 +77,7 @@ class AssignmentController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $filePath = $file->store('assignments', 'public');
+            $filePath = $file->store('assignments', config('filesystems.default'));
             $fileName = $file->getClientOriginalName();
         }
 

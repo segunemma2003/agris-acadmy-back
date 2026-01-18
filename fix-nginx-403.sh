@@ -45,3 +45,5 @@ curl -s -o /dev/null -w "HTTP Code: %{http_code}\n" http://localhost/index.php
 echo ""
 echo "=== Check Complete ==="
 
+
+

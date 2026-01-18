@@ -73,6 +73,7 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
+                            ->disk(config('filesystems.default'))
                             ->directory('courses')
                             ->columnSpanFull(),
                         Forms\Components\TagsInput::make('tags')

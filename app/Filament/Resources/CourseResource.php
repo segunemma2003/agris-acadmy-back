@@ -85,7 +85,7 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
-                            ->disk(env('FILESYSTEM_DISK', 'public'))
+                            ->disk(config('filesystems.default'))
                             ->directory('courses')
                             ->maxSize(2048) // 2MB
                             ->imageResizeMode('cover')

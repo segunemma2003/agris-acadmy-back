@@ -70,3 +70,5 @@ AWS_URL=https://your_bucket.s3.region.amazonaws.com
 - Updates `transcript_english` and `transcript_hausa` fields
 
 
+
+

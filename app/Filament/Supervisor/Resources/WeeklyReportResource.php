@@ -93,6 +93,7 @@ class WeeklyReportResource extends Resource
                         Forms\Components\FileUpload::make('images')
                             ->label('Upload Images')
                             ->image()
+                            ->disk(config('filesystems.default'))
                             ->multiple()
                             ->directory('weekly-reports')
                             ->columnSpanFull(),
