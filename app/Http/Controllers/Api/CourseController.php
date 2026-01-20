@@ -125,17 +125,14 @@ class CourseController extends Controller
 
         $course->recommended_courses = $recommendedCourses;
 
-        // Add enrollment status - use EXACT same query as EnrollmentController::enroll()
-        // Copy from EnrollmentController line 32-34:
-        // $existingEnrollment = Enrollment::where('user_id', $user->id)
-        //     ->where('course_id', $course->id)
-        //     ->first();
+        // Add enrollment status - use the same approach as my-enrollments which works
+        // my-enrollments uses: $user->enrollments()->where(...)->get()
+        // So we'll use the relationship to check enrollment status
         if ($user) {
-            $existingEnrollment = Enrollment::where('user_id', $user->id)
+            // Use the user's enrollments relationship, same as my-enrollments endpoint
+            $isEnrolled = $user->enrollments()
                 ->where('course_id', $course->id)
-                ->first();
-
-            $isEnrolled = !is_null($existingEnrollment);
+                ->exists();
         } else {
             $isEnrolled = false;
         }
