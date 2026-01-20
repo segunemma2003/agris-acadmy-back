@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Module;
+use App\Models\Topic;
 use App\Models\StudentNote;
 use Illuminate\Http\Request;
 

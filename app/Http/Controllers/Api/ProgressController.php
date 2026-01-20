@@ -116,9 +116,9 @@ class ProgressController extends Controller
         ]);
     }
 
-    public function update(Request $request, StudentProgress $progress)
+    public function update(Request $request, StudentProgress $studentProgress)
     {
-        if ($progress->user_id !== $request->user()->id) {
+        if ($studentProgress->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -127,25 +127,25 @@ class ProgressController extends Controller
             'completion_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $progress->update([
-            'watch_time_seconds' => $request->watch_time_seconds ?? $progress->watch_time_seconds,
-            'completion_percentage' => $request->completion_percentage ?? $progress->completion_percentage,
+        $studentProgress->update([
+            'watch_time_seconds' => $request->watch_time_seconds ?? $studentProgress->watch_time_seconds,
+            'completion_percentage' => $request->completion_percentage ?? $studentProgress->completion_percentage,
             'last_accessed_at' => now(),
         ]);
 
-        if ($progress->completion_percentage >= 100) {
-            $progress->update([
+        if ($studentProgress->completion_percentage >= 100) {
+            $studentProgress->update([
                 'is_completed' => true,
                 'completed_at' => now(),
             ]);
         }
 
         // Update enrollment progress
-        $this->updateEnrollmentProgress($request->user(), $progress->course);
+        $this->updateEnrollmentProgress($request->user(), $studentProgress->course);
 
         return response()->json([
             'success' => true,
-            'data' => $progress,
+            'data' => $studentProgress,
             'message' => 'Progress updated successfully'
         ]);
     }

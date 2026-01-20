@@ -11,6 +11,13 @@ class CreateTopic extends CreateRecord
 {
     protected static string $resource = TopicResource::class;
 
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Set tutor_id when creating a topic
+        $data['tutor_id'] = Auth::id();
+        return $data;
+    }
+
     protected function afterCreate(): void
     {
         $topic = $this->record;

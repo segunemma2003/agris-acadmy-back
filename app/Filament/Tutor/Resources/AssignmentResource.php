@@ -102,8 +102,10 @@ class AssignmentResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn ($record) => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn ($record) => static::canDelete($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -120,6 +122,23 @@ class AssignmentResource extends Resource
             'create' => Pages\CreateAssignment::route('/create'),
             'edit' => Pages\EditAssignment::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return true; // Tutors can create assignments
+    }
+
+    public static function canEdit($record): bool
+    {
+        // Tutors can only edit assignments they created
+        return $record->tutor_id === Auth::id();
+    }
+
+    public static function canDelete($record): bool
+    {
+        // Tutors can only delete assignments they created
+        return $record->tutor_id === Auth::id();
     }
 }
 

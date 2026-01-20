@@ -10,6 +10,7 @@ class Topic extends Model
 {
     protected $fillable = [
         'module_id',
+        'tutor_id',
         'title',
         'description',
         'video_url',
@@ -38,6 +39,11 @@ class Topic extends Model
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);
+    }
+
+    public function tutor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tutor_id');
     }
 
     public function progress(): HasMany

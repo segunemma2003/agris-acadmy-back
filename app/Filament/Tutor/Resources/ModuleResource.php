@@ -53,6 +53,7 @@ class ModuleResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can view all modules for courses they have access to
         return $table
             ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
             ->columns([
@@ -113,6 +114,23 @@ class ModuleResource extends Resource
             'create' => Pages\CreateModule::route('/create'),
             'edit' => Pages\EditModule::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return true; // Tutors can create modules
+    }
+
+    public static function canEdit($record): bool
+    {
+        // All tutors can edit modules for courses they have access to
+        return $record->course && $record->course->accessibleByTutor(Auth::id());
+    }
+
+    public static function canDelete($record): bool
+    {
+        // All tutors can delete modules for courses they have access to
+        return $record->course && $record->course->accessibleByTutor(Auth::id());
     }
 }
 

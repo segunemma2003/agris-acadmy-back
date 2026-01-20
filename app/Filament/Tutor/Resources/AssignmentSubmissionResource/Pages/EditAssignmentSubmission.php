@@ -11,10 +11,17 @@ class EditAssignmentSubmission extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (isset($data['score']) && $data['status'] === 'pending') {
+        // Auto-set status to 'graded' if score is provided and status is still 'submitted'
+        if (isset($data['score']) && $data['score'] !== null && $data['status'] === 'submitted') {
             $data['status'] = 'graded';
             $data['graded_at'] = now();
         }
+        
+        // Set graded_at timestamp when status changes to 'graded'
+        if ($data['status'] === 'graded' && !isset($data['graded_at'])) {
+            $data['graded_at'] = now();
+        }
+        
         return $data;
     }
 }

@@ -79,8 +79,9 @@ class TopicTestResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can only view topic tests they created
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -129,8 +130,10 @@ class TopicTestResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn ($record) => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn ($record) => static::canDelete($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -154,5 +157,28 @@ class TopicTestResource extends Resource
             'create' => Pages\CreateTopicTest::route('/create'),
             'edit' => Pages\EditTopicTest::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return true; // Tutors can create topic tests
+    }
+
+    public static function canEdit($record): bool
+    {
+        // Tutors can only edit topic tests they created
+        if (!$record->tutor_id) {
+            return false; // Old records without tutor_id cannot be edited
+        }
+        return $record->tutor_id === Auth::id();
+    }
+
+    public static function canDelete($record): bool
+    {
+        // Tutors can only delete topic tests they created
+        if (!$record->tutor_id) {
+            return false; // Old records without tutor_id cannot be deleted
+        }
+        return $record->tutor_id === Auth::id();
     }
 }

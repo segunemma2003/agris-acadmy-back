@@ -10,6 +10,7 @@ class Module extends Model
 {
     protected $fillable = [
         'course_id',
+        'tutor_id',
         'title',
         'description',
         'total_topics',
@@ -28,6 +29,11 @@ class Module extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function tutor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tutor_id');
     }
 
     public function topics(): HasMany

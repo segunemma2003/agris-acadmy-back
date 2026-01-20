@@ -11,6 +11,7 @@ class CourseVrContent extends Model
 
     protected $fillable = [
         'course_id',
+        'tutor_id',
         'title',
         'description',
         'vr_url',
@@ -31,6 +32,11 @@ class CourseVrContent extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function tutor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tutor_id');
     }
 }
 

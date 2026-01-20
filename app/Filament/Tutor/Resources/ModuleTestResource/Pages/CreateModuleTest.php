@@ -11,6 +11,9 @@ class CreateModuleTest extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        // Set tutor_id when creating a test
+        $data['tutor_id'] = \Illuminate\Support\Facades\Auth::id();
+        
         // If module_id is set, automatically set course_id from the module
         if (isset($data['module_id']) && !isset($data['course_id'])) {
             $module = \App\Models\Module::find($data['module_id']);

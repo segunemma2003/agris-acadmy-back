@@ -23,15 +23,15 @@ class QuestionsRelationManager extends RelationManager
                 Forms\Components\Select::make('question_type')
                     ->label('Question Type')
                     ->options([
-                        'mcq' => 'MCQ (Multiple Choice)',
+                        'multiple_choice' => 'MCQ (Multiple Choice)',
                         'true_false' => 'True/False',
-                        'open' => 'Open',
+                        'short_answer' => 'Short Answer',
                     ])
-                    ->default('mcq')
+                    ->default('multiple_choice')
                     ->required()
                     ->reactive()
                     ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state !== 'mcq') {
+                        if ($state !== 'multiple_choice') {
                             $set('options', null);
                         }
                     }),
@@ -48,8 +48,8 @@ class QuestionsRelationManager extends RelationManager
                             ->required(),
                     ])
                     ->defaultItems(4)
-                    ->visible(fn ($get) => $get('question_type') === 'mcq')
-                    ->required(fn ($get) => $get('question_type') === 'mcq')
+                    ->visible(fn ($get) => $get('question_type') === 'multiple_choice')
+                    ->required(fn ($get) => $get('question_type') === 'multiple_choice')
                     ->columnSpanFull(),
                 Forms\Components\Select::make('correct_answer')
                     ->label('Correct Answer')
@@ -60,7 +60,7 @@ class QuestionsRelationManager extends RelationManager
                                 'false' => 'False',
                             ];
                         }
-                                        if ($get('question_type') === 'mcq') {
+                                        if ($get('question_type') === 'multiple_choice') {
                             $options = $get('options') ?? [];
                             $result = [];
                             $letters = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -79,7 +79,7 @@ class QuestionsRelationManager extends RelationManager
                 Forms\Components\TextInput::make('correct_answer')
                     ->label('Correct Answer')
                     ->required()
-                    ->visible(fn ($get) => $get('question_type') === 'open')
+                    ->visible(fn ($get) => $get('question_type') === 'short_answer')
                     ->columnSpanFull(),
                 Forms\Components\Textarea::make('explanation')
                     ->label('Explanation (optional)')
@@ -113,15 +113,15 @@ class QuestionsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('question_type')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match($state) {
-                        'mcq' => 'MCQ',
+                        'multiple_choice' => 'MCQ',
                         'true_false' => 'True/False',
-                        'open' => 'Open',
+                        'short_answer' => 'Short Answer',
                         default => $state,
                     })
                     ->color(fn ($state) => match($state) {
-                        'mcq' => 'primary',
+                        'multiple_choice' => 'primary',
                         'true_false' => 'success',
-                        'open' => 'warning',
+                        'short_answer' => 'warning',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('correct_answer')
@@ -133,9 +133,9 @@ class QuestionsRelationManager extends RelationManager
             ->filters([
                 Tables\Filters\SelectFilter::make('question_type')
                     ->options([
-                        'mcq' => 'MCQ',
+                        'multiple_choice' => 'MCQ',
                         'true_false' => 'True/False',
-                        'open' => 'Open',
+                        'short_answer' => 'Short Answer',
                     ]),
             ])
             ->headerActions([
@@ -168,11 +168,11 @@ class QuestionsRelationManager extends RelationManager
                                 Forms\Components\Select::make('question_type')
                                     ->label('Question Type')
                                     ->options([
-                                        'mcq' => 'MCQ (Multiple Choice)',
+                                        'multiple_choice' => 'MCQ (Multiple Choice)',
                                         'true_false' => 'True/False',
-                                        'open' => 'Open',
+                                        'short_answer' => 'Short Answer',
                                     ])
-                                    ->default('mcq')
+                                    ->default('multiple_choice')
                                     ->required()
                                     ->reactive(),
                                 Forms\Components\Textarea::make('question')
@@ -200,7 +200,7 @@ class QuestionsRelationManager extends RelationManager
                                                 'false' => 'False',
                                             ];
                                         }
-                                        if ($get('question_type') === 'mcq') {
+                                        if ($get('question_type') === 'multiple_choice') {
                                             $result = [];
                                             $options = ['A' => $get('option_a'), 'B' => $get('option_b'), 'C' => $get('option_c'), 'D' => $get('option_d')];
                                             foreach ($options as $letter => $value) {
@@ -218,7 +218,7 @@ class QuestionsRelationManager extends RelationManager
                                 Forms\Components\TextInput::make('correct_answer')
                                     ->label('Correct Answer')
                                     ->required()
-                                    ->visible(fn ($get) => $get('question_type') === 'open'),
+                                    ->visible(fn ($get) => $get('question_type') === 'short_answer'),
                                 Forms\Components\Textarea::make('explanation')
                                     ->label('Explanation (optional)')
                                     ->rows(1),
@@ -241,7 +241,7 @@ class QuestionsRelationManager extends RelationManager
                         foreach ($data['questions'] as $index => $questionData) {
                             // Convert options to array format for multiple choice
                             $optionsArray = null;
-                            if ($questionData['question_type'] === 'mcq') {
+                                        if ($questionData['question_type'] === 'multiple_choice') {
                                 $optionsArray = [];
                                 if (!empty($questionData['option_a'])) $optionsArray['A'] = $questionData['option_a'];
                                 if (!empty($questionData['option_b'])) $optionsArray['B'] = $questionData['option_b'];

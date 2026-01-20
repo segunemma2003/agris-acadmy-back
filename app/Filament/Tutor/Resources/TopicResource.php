@@ -191,5 +191,22 @@ class TopicResource extends Resource
             // Assignments can be managed through the form or separately
         ];
     }
+
+    public static function canCreate(): bool
+    {
+        return true; // Tutors can create topics
+    }
+
+    public static function canEdit($record): bool
+    {
+        // All tutors can edit topics for modules they have access to
+        return $record->module && $record->module->course && $record->module->course->accessibleByTutor(Auth::id());
+    }
+
+    public static function canDelete($record): bool
+    {
+        // All tutors can delete topics for modules they have access to
+        return $record->module && $record->module->course && $record->module->course->accessibleByTutor(Auth::id());
+    }
 }
 

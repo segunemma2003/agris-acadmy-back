@@ -126,12 +126,14 @@ class CourseController extends Controller
         $course->recommended_courses = $recommendedCourses;
 
         // Add enrollment status - use EXACT same query as EnrollmentController::enroll()
-        // EnrollmentController line 32-34 uses direct query: Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->first()
+        // EnrollmentController line 32-34 uses: Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->first()
         if ($user) {
-            // Use direct query to avoid relationship caching issues
-            $isEnrolled = Enrollment::where('user_id', $user->id)
+            // Use exact same query pattern as EnrollmentController - check if enrollment exists
+            $existingEnrollment = Enrollment::where('user_id', $user->id)
                 ->where('course_id', $course->id)
-                ->exists();
+                ->first();
+
+            $isEnrolled = $existingEnrollment !== null;
         } else {
             $isEnrolled = false;
         }

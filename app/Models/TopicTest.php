@@ -12,6 +12,7 @@ class TopicTest extends Model
         'topic_id',
         'module_id',
         'course_id',
+        'tutor_id',
         'title',
         'description',
         'passing_score',
@@ -41,6 +42,11 @@ class TopicTest extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function tutor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tutor_id');
     }
 
     public function questions(): HasMany

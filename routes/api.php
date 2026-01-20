@@ -72,7 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Progress
     Route::get('/courses/{course}/progress', [ProgressController::class, 'show']);
     Route::post('/topics/{topic}/complete', [ProgressController::class, 'complete']);
-    Route::put('/progress/{progress}', [ProgressController::class, 'update']);
+    Route::put('/progress/{studentProgress}', [ProgressController::class, 'update']);
     Route::post('/courses/{course}/modules/{module}/tests/{test}/complete-quiz', [ProgressController::class, 'completeQuiz']);
 
     // Notes

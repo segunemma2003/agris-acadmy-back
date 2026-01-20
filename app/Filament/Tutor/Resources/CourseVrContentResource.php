@@ -69,8 +69,9 @@ class CourseVrContentResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can only view VR content they created
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -106,8 +107,10 @@ class CourseVrContentResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn ($record) => static::canEdit($record)),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn ($record) => static::canDelete($record)),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -124,6 +127,29 @@ class CourseVrContentResource extends Resource
             'create' => Pages\CreateCourseVrContent::route('/create'),
             'edit' => Pages\EditCourseVrContent::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return true; // Tutors can create VR content
+    }
+
+    public static function canEdit($record): bool
+    {
+        // Tutors can only edit VR content they created
+        if (!$record->tutor_id) {
+            return false; // Old records without tutor_id cannot be edited
+        }
+        return $record->tutor_id === Auth::id();
+    }
+
+    public static function canDelete($record): bool
+    {
+        // Tutors can only delete VR content they created
+        if (!$record->tutor_id) {
+            return false; // Old records without tutor_id cannot be deleted
+        }
+        return $record->tutor_id === Auth::id();
     }
 }
 
