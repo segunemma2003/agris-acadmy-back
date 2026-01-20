@@ -76,6 +76,7 @@ class CourseResource extends Resource
                             ->disk(config('filesystems.default'))
                             ->visibility('public')
                             ->directory('courses')
+                            ->preserveFilenames()
                             ->columnSpanFull(),
                         Forms\Components\TagsInput::make('tags')
                             ->columnSpanFull(),

@@ -45,6 +45,7 @@ class CategoryResource extends Resource
                             ->maxSize(512) // 500KB
                             ->imageResizeMode('cover')
                             ->imageCropAspectRatio('1:1')
+                            ->preserveFilenames()
                             ->imageResizeTargetWidth('800')
                             ->imageResizeTargetHeight('800')
                             ->helperText('Recommended: 800×800px (1:1 square). Max 500KB.')

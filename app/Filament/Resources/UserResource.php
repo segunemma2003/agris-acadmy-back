@@ -55,6 +55,7 @@ class UserResource extends Resource
                             ->visibility('public')
                             ->directory('avatars')
                             ->maxSize(200) // 200KB
+                            ->preserveFilenames()
                             ->imageResizeMode('cover')
                             ->imageCropAspectRatio('1:1')
                             ->imageResizeTargetWidth('400')

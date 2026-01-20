@@ -50,6 +50,7 @@ class CourseVrContentResource extends Resource
                             ->disk(config('filesystems.default'))
                             ->visibility('public')
                             ->directory('vr-content')
+                            ->preserveFilenames()
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('duration_minutes')
                             ->label('Duration (minutes)')

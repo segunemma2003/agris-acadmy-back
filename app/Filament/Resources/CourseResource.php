@@ -93,6 +93,7 @@ class CourseResource extends Resource
                             ->imageCropAspectRatio('16:9')
                             ->imageResizeTargetWidth('1920')
                             ->imageResizeTargetHeight('1080')
+                            ->preserveFilenames()
                             ->helperText('Recommended: 1920×1080px (16:9). Max 2MB. Works for mobile, desktop, and web.')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('preview_video_url')

@@ -97,6 +97,7 @@ class WeeklyReportResource extends Resource
                             ->visibility('public')
                             ->multiple()
                             ->directory('weekly-reports')
+                            ->preserveFilenames()
                             ->columnSpanFull(),
                         Forms\Components\Repeater::make('video_links')
                             ->label('Video Links (Optional)')
