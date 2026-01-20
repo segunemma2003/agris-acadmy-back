@@ -85,7 +85,7 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
 
-                            ->disk("s3")
+                            ->disk('public')
                             ->visibility('public')
                             ->directory('courses')
                             ->maxSize(2048) // 2MB

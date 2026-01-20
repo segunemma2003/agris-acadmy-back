@@ -47,7 +47,7 @@ class CourseVrContentResource extends Resource
                             ->maxLength(255),
                         Forms\Components\FileUpload::make('thumbnail')
                             ->image()
-                            ->disk(config('filesystems.default'))
+                            ->disk('public')
                             ->visibility('public')
                             ->directory('vr-content')
                             ->preserveFilenames()

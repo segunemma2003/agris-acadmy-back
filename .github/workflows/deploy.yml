@@ -215,12 +215,15 @@ jobs:
               update_env "QUEUE_CONNECTION" "database"
             fi
 
-            # S3 Configuration (for file uploads) - Force S3
+            # Filesystem Configuration - Use local 'public' disk
             echo "Configuring filesystem settings..."
-            # Force S3 as default filesystem
-            update_env "FILESYSTEM_DISK" "s3"
-            
-            echo "Configuring S3 credentials..."
+            # Use local public disk (storage/app/public with storage:link)
+            update_env "FILESYSTEM_DISK" "public"
+            echo "✓ Filesystem set to 'public' (local storage)"
+
+            # Optional: Keep S3 credentials configured but not used as default
+            # This allows switching back to S3 later if needed
+            echo "Configuring S3 credentials (optional, not used by default)..."
             if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
               update_env "AWS_ACCESS_KEY_ID" "${{ secrets.AWS_ACCESS_KEY_ID }}"
             fi
@@ -242,8 +245,8 @@ jobs:
             if [ -n "${{ secrets.AWS_USE_PATH_STYLE_ENDPOINT }}" ]; then
               update_env "AWS_USE_PATH_STYLE_ENDPOINT" "${{ secrets.AWS_USE_PATH_STYLE_ENDPOINT }}"
             fi
-            echo "✓ S3 configuration added (forced)"
-            # Clear config cache to ensure S3 settings are loaded
+            echo "✓ S3 credentials configured (optional, not active)"
+            # Clear config cache
             sudo -u www-data php artisan config:clear || true
 
             # SMTP Email Configuration

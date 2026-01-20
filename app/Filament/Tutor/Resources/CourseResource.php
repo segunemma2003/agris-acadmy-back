@@ -80,7 +80,7 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
                             ->image()
-                            ->disk(config('filesystems.default'))
+                            ->disk('public')
                             ->visibility('public')
                             ->directory('courses')
                             ->preserveFilenames()
