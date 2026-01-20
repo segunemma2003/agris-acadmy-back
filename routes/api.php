@@ -31,6 +31,7 @@ Route::get('/featured-courses-public', [CategoryController::class, 'featuredCour
 // Courses (public)
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
+Route::get('/featured-courses', [CourseV2Controller::class, 'featured']); // Public featured courses endpoint
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -57,7 +58,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/recommended-courses', [CourseController::class, 'recommendedCourses']);
     Route::get('/daily-recommended-courses', [CourseV2Controller::class, 'dailyRecommended']);
     Route::get('/latest-courses', [CourseV2Controller::class, 'latest']);
-    Route::get('/featured-courses', [CourseV2Controller::class, 'featured']);
     Route::get('/courses/{course}/modules', [CourseController::class, 'modules']);
     Route::get('/courses/{course}/information', [CourseController::class, 'courseInformation']);
     Route::get('/courses/{course}/diy-content', [CourseController::class, 'diyContent']);

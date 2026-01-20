@@ -100,11 +100,12 @@ class CourseV2Controller extends Controller
     }
 
     /**
-     * Get featured courses with enrollment status
+     * Get featured courses (public endpoint - no auth required)
+     * If user is authenticated, includes enrollment status
      */
     public function featured(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user(); // Can be null if not authenticated
         
         $cacheKey = 'featured_courses';
         
