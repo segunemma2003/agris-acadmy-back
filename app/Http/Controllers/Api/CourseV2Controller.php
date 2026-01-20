@@ -175,11 +175,9 @@ class CourseV2Controller extends Controller
         });
         
         // Add enrollment status - query directly from database to avoid relationship cache issues
-        // Use the course ID from route parameter, not cached object
-        // Check for any enrollment (active, completed, or cancelled) - same as enrollment controller
-        // Use exact same query format as EnrollmentController::enroll()
+        // Use exact same query format as EnrollmentController::enroll() - use $course->id directly
         $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
-            ->where('course_id', $courseId)
+            ->where('course_id', $course->id)
             ->exists() : false;
         $courseData->is_enrolled = $isEnrolled;
         

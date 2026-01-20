@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
@@ -125,11 +126,18 @@ class CourseController extends Controller
         $course->recommended_courses = $recommendedCourses;
 
         // Add enrollment status - query directly from database to avoid relationship cache issues
-        // Use the course ID from route parameter, not the loaded object
-        // Use exact same query format as EnrollmentController::enroll()
-        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
-            ->where('course_id', $courseId)
-            ->exists() : false;
+        // Use exact same query format as EnrollmentController::enroll() - use $course->id directly
+        // Match exactly: Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->first()
+        if ($user) {
+            // Use exact same query as EnrollmentController - check if enrollment exists
+            $existingEnrollment = Enrollment::where('user_id', $user->id)
+                ->where('course_id', $course->id)
+                ->first();
+
+            $isEnrolled = $existingEnrollment !== null;
+        } else {
+            $isEnrolled = false;
+        }
         $course->is_enrolled = $isEnrolled;
 
         // Format image URL
