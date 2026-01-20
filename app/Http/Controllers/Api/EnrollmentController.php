@@ -43,59 +43,66 @@ class EnrollmentController extends Controller
             ], 400);
         }
 
-        // Validate enrollment code - REQUIRED
-        $enrollmentCode = EnrollmentCode::where('code', $request->enrollment_code)
-            ->where('course_id', $course->id)
-            ->where('is_used', false)
-            ->first();
+        // TEST CODE: Allow "20252025" for backend testing (bypasses all validation)
+        $isTestCode = $request->enrollment_code === '20252025';
+        
+        if (!$isTestCode) {
+            // Validate enrollment code - REQUIRED
+            $enrollmentCode = EnrollmentCode::where('code', $request->enrollment_code)
+                ->where('course_id', $course->id)
+                ->where('is_used', false)
+                ->first();
 
-        if (!$enrollmentCode) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid or already used enrollment code',
-            ], 400);
-        }
+            if (!$enrollmentCode) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or already used enrollment code',
+                ], 400);
+            }
 
-        // Check if code has expired
-        if ($enrollmentCode->expires_at && $enrollmentCode->expires_at->isPast()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Enrollment code has expired',
-            ], 400);
-        }
+            // Check if code has expired
+            if ($enrollmentCode->expires_at && $enrollmentCode->expires_at->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Enrollment code has expired',
+                ], 400);
+            }
 
-        // Validate that the code matches the user's email
-        // This ensures codes can only be used by the intended recipient
-        if ($enrollmentCode->email && $enrollmentCode->email !== $user->email) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This enrollment code is not valid for your account. Please use the code sent to your email address.',
-            ], 403);
-        }
+            // Validate that the code matches the user's email
+            // This ensures codes can only be used by the intended recipient
+            if ($enrollmentCode->email && $enrollmentCode->email !== $user->email) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This enrollment code is not valid for your account. Please use the code sent to your email address.',
+                ], 403);
+            }
 
-        // If code has a user_id, validate it matches the authenticated user
-        if ($enrollmentCode->user_id && $enrollmentCode->user_id !== $user->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This enrollment code is not valid for your account.',
-            ], 403);
+            // If code has a user_id, validate it matches the authenticated user
+            if ($enrollmentCode->user_id && $enrollmentCode->user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This enrollment code is not valid for your account.',
+                ], 403);
+            }
         }
 
         // Create enrollment
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
-            'enrollment_code' => $enrollmentCode->code,
+            'enrollment_code' => $isTestCode ? '20252025' : $enrollmentCode->code,
             'status' => 'active',
             'enrolled_at' => now(),
         ]);
 
-        // Mark code as used
-        $enrollmentCode->update([
-            'is_used' => true,
-            'user_id' => $user->id,
-            'used_at' => now(),
-        ]);
+        // Mark code as used (skip for test code)
+        if (!$isTestCode) {
+            $enrollmentCode->update([
+                'is_used' => true,
+                'user_id' => $user->id,
+                'used_at' => now(),
+            ]);
+        }
 
         // Update course enrollment count
         $course->increment('enrollment_count');
