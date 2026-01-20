@@ -106,6 +106,10 @@ class EnrollmentController extends Controller
 
         // Update course enrollment count
         $course->increment('enrollment_count');
+        
+        // Refresh user relationship to ensure enrollments are up to date
+        $user->refresh();
+        $user->load('enrollments');
 
         $enrollment->load(['course:id,title,image,slug,short_description,category_id', 'course.category:id,name,slug']);
 

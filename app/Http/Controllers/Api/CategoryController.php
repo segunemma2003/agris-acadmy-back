@@ -145,8 +145,9 @@ class CategoryController extends Controller
         $courses = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         // Add enrollment status for authenticated users
+        // Query enrollments directly from database to avoid relationship cache issues
         if ($user) {
-            $enrolledCourseIds = $user->enrollments()->pluck('course_id');
+            $enrolledCourseIds = \App\Models\Enrollment::where('user_id', $user->id)->pluck('course_id');
             $courses->getCollection()->transform(function ($course) use ($enrolledCourseIds) {
                 $course->is_enrolled = $enrolledCourseIds->contains($course->id);
                 return $course;

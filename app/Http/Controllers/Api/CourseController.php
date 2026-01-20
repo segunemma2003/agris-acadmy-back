@@ -55,7 +55,8 @@ class CourseController extends Controller
         $courses = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         // Add enrollment status and format image URLs
-        $enrolledCourseIds = $user ? $user->enrollments()->pluck('course_id') : collect();
+        // Query enrollments directly from database to avoid relationship cache issues
+        $enrolledCourseIds = $user ? \App\Models\Enrollment::where('user_id', $user->id)->pluck('course_id') : collect();
         
         $formattedCourses = $courses->getCollection()->map(function ($course) use ($enrolledCourseIds) {
             $course->is_enrolled = $enrolledCourseIds->contains($course->id);
@@ -118,8 +119,10 @@ class CourseController extends Controller
 
         $course->recommended_courses = $recommendedCourses;
 
-        // Add enrollment status
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Add enrollment status - query directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
         $course->is_enrolled = $isEnrolled;
         
         // Format image URL
@@ -142,7 +145,8 @@ class CourseController extends Controller
         $user = $request->user();
         
         // Get courses recommended for the user based on their enrollments
-        $enrolledCourseIds = $user->enrollments()->pluck('course_id');
+        // Query enrollments directly from database to avoid relationship cache issues
+        $enrolledCourseIds = \App\Models\Enrollment::where('user_id', $user->id)->pluck('course_id');
         
         // Get recommended courses from enrolled courses
         $recommendedFromEnrollments = Course::where('is_published', true)
@@ -186,7 +190,10 @@ class CourseController extends Controller
 
         // Check if user is enrolled (for protected content)
         $user = $request->user();
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Query enrollments directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
 
         $modules = $course->modules()
             ->where('is_active', true)
@@ -218,7 +225,10 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Query enrollments directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
         
         // Calculate lessons count
         $lessonsCount = $course->modules()->withCount('topics')->get()->sum('topics_count');
@@ -278,7 +288,10 @@ class CourseController extends Controller
 
         // Check if user is enrolled
         $user = $request->user();
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Query enrollments directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
 
         if (!$isEnrolled) {
             return response()->json([
@@ -310,7 +323,10 @@ class CourseController extends Controller
 
         // Check if user is enrolled
         $user = $request->user();
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Query enrollments directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
 
         if (!$isEnrolled) {
             return response()->json([

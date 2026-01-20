@@ -171,8 +171,10 @@ class CourseV2Controller extends Controller
             return $course;
         });
         
-        // Add enrollment status
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Add enrollment status - query directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
         $courseData->is_enrolled = $isEnrolled;
         
         // Add completion percentage if enrolled
@@ -290,7 +292,10 @@ class CourseV2Controller extends Controller
      */
     private function formatCourseWithEnrollment($course, $user)
     {
-        $isEnrolled = $user ? $user->enrollments()->where('course_id', $course->id)->exists() : false;
+        // Query enrollment directly from database to avoid relationship cache issues
+        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
         
         return [
             'id' => $course->id,
