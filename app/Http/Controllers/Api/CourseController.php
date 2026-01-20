@@ -12,7 +12,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
+
         $query = Course::where('is_published', true)
             ->with(['category', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio']);
 
@@ -59,7 +59,7 @@ class CourseController extends Controller
         // Query enrollments directly from database to avoid relationship cache issues
         // Use exact same query format as EnrollmentController::enroll()
         $enrolledCourseIds = $user ? Enrollment::where('user_id', $user->id)->pluck('course_id') : collect();
-        
+
         $formattedCourses = $courses->getCollection()->map(function ($course) use ($enrolledCourseIds) {
             $course->is_enrolled = $enrolledCourseIds->contains($course->id);
             $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
@@ -88,7 +88,7 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
-        
+
         // Get course ID before loading relationships to ensure we use the correct ID
         $courseId = $course->id;
 
@@ -131,10 +131,10 @@ class CourseController extends Controller
             ->where('course_id', $courseId)
             ->exists() : false;
         $course->is_enrolled = $isEnrolled;
-        
+
         // Format image URL
         $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
-        
+
         // Calculate lessons count
         $course->lessons_count = $course->modules->sum(function ($module) {
             return $module->topics->count();
@@ -150,12 +150,12 @@ class CourseController extends Controller
     public function recommendedCourses(Request $request)
     {
         $user = $request->user();
-        
+
         // Get courses recommended for the user based on their enrollments
         // Query enrollments directly from database to avoid relationship cache issues
         // Use exact same query format as EnrollmentController::enroll()
         $enrolledCourseIds = Enrollment::where('user_id', $user->id)->pluck('course_id');
-        
+
         // Get recommended courses from enrolled courses
         $recommendedFromEnrollments = Course::where('is_published', true)
             ->whereNotIn('id', $enrolledCourseIds)
@@ -237,12 +237,12 @@ class CourseController extends Controller
         // Query enrollments directly from database to avoid relationship cache issues
         // Use exact same query format as EnrollmentController::enroll()
         $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
-            ->where('course_id', $courseId)
+            ->where('course_id', $course->id)
             ->exists() : false;
-        
+
         // Calculate lessons count
         $lessonsCount = $course->modules()->withCount('topics')->get()->sum('topics_count');
-        
+
         return response()->json([
             'success' => true,
             'data' => [
