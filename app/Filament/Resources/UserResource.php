@@ -56,6 +56,9 @@ class UserResource extends Resource
                             ->directory('avatars')
                             ->maxSize(200) // 200KB
                             ->preserveFilenames()
+                            ->imagePreviewHeight('150')
+                            ->panelAspectRatio('1:1')
+                            ->avatar()
                             ->imageResizeMode('cover')
                             ->imageCropAspectRatio('1:1')
                             ->imageResizeTargetWidth('400')

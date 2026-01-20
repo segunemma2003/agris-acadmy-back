@@ -84,6 +84,8 @@ class CourseResource extends Resource
                             ->visibility('public')
                             ->directory('courses')
                             ->preserveFilenames()
+                            ->imagePreviewHeight('250')
+                            ->panelAspectRatio('16:9')
                             ->columnSpanFull(),
                         Forms\Components\TagsInput::make('tags')
                             ->columnSpanFull(),

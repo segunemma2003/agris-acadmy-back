@@ -48,6 +48,8 @@ class CategoryResource extends Resource
                             ->preserveFilenames()
                             ->imageResizeTargetWidth('800')
                             ->imageResizeTargetHeight('800')
+                            ->imagePreviewHeight('250')
+                            ->panelAspectRatio('1:1')
                             ->helperText('Recommended: 800×800px (1:1 square). Max 500KB.')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('sort_order')

@@ -84,8 +84,8 @@ class CourseResource extends Resource
                             ->defaultItems(3)
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('image')
-                            ->image()
-                            ->disk(config('filesystems.default'))
+
+                            ->disk("s3")
                             ->visibility('public')
                             ->directory('courses')
                             ->maxSize(2048) // 2MB
@@ -94,6 +94,9 @@ class CourseResource extends Resource
                             ->imageResizeTargetWidth('1920')
                             ->imageResizeTargetHeight('1080')
                             ->preserveFilenames()
+                            ->imagePreviewHeight('250')
+                            ->loadingIndicatorPosition('left')
+                            ->panelAspectRatio('16:9')
                             ->helperText('Recommended: 1920×1080px (16:9). Max 2MB. Works for mobile, desktop, and web.')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('preview_video_url')
