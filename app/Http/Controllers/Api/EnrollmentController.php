@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\EnrollmentCode;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class EnrollmentController extends Controller
 {
