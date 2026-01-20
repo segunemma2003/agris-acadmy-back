@@ -46,6 +46,7 @@ class Module extends Model
     }
 
     // Update total_topics when topics are added/removed
+    // Send email notifications when a new module is added
     protected static function boot()
     {
         parent::boot();
@@ -53,6 +54,63 @@ class Module extends Model
         static::saved(function ($module) {
             $module->updateTotalTopics();
         });
+
+        // Send email notification when a new module is created and is active
+        static::created(function ($module) {
+            if ($module->is_active) {
+                $module->notifyEnrolledStudents();
+            }
+        });
+
+        // Send email notification when a module is activated
+        static::updated(function ($module) {
+            if ($module->is_active && $module->wasChanged('is_active') && !$module->getOriginal('is_active')) {
+                $module->notifyEnrolledStudents();
+            }
+        });
+    }
+
+    /**
+     * Notify all enrolled students about the new module
+     */
+    public function notifyEnrolledStudents(): void
+    {
+        try {
+            $course = $this->course;
+            if (!$course) {
+                return;
+            }
+
+            // Get all active enrollments for this course
+            $enrollments = \App\Models\Enrollment::where('course_id', $course->id)
+                ->where('status', 'active')
+                ->with('user')
+                ->get();
+
+            foreach ($enrollments as $enrollment) {
+                if ($enrollment->user && $enrollment->user->email) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::to($enrollment->user->email)
+                            ->queue(new \App\Mail\NewModuleNotificationMail(
+                                $enrollment->user,
+                                $course,
+                                $this
+                            ));
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to queue new module notification email', [
+                            'user_id' => $enrollment->user->id,
+                            'module_id' => $this->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to notify enrolled students about new module', [
+                'module_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function updateTotalTopics(): void

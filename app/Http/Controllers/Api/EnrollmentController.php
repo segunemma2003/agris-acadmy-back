@@ -113,6 +113,15 @@ class EnrollmentController extends Controller
 
         $enrollment->load(['course:id,title,image,slug,short_description,category_id', 'course.category:id,name,slug']);
 
+        // Send enrollment confirmation email via queue (non-blocking)
+        // If email fails, enrollment still succeeds
+        try {
+            Mail::to($user->email)->queue(new \App\Mail\EnrollmentConfirmationMail($user, $course, $enrollment));
+        } catch (\Exception $e) {
+            // Log error but don't fail enrollment
+            \Log::error('Failed to queue enrollment confirmation email to ' . $user->email . ': ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Successfully enrolled in course',

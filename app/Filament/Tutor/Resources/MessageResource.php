@@ -35,12 +35,18 @@ class MessageResource extends Resource
                             ->required()
                             ->searchable()
                             ->preload(),
+                        Forms\Components\Toggle::make('send_to_all')
+                            ->label('Send to All Enrolled Students')
+                            ->default(false)
+                            ->reactive()
+                            ->helperText('If enabled, message will be sent to all students enrolled in the selected course'),
                         Forms\Components\Select::make('recipient_id')
-                            ->label('To')
+                            ->label('To (Individual)')
                             ->relationship('recipient', 'name', fn ($query) => $query->where('role', 'student'))
-                            ->required()
                             ->searchable()
-                            ->preload(),
+                            ->preload()
+                            ->visible(fn ($get) => !$get('send_to_all'))
+                            ->required(fn ($get) => !$get('send_to_all')),
                         Forms\Components\TextInput::make('subject')
                             ->required()
                             ->maxLength(255)
