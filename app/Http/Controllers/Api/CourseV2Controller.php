@@ -140,7 +140,10 @@ class CourseV2Controller extends Controller
 
         $user = $request->user();
         
-        $cacheKey = "course_{$course->id}_details";
+        // Get course ID before caching to ensure we use the correct ID
+        $courseId = $course->id;
+        
+        $cacheKey = "course_{$courseId}_details";
         
         $courseData = Cache::remember($cacheKey, 300, function () use ($course) {
             $course->load([
@@ -172,8 +175,11 @@ class CourseV2Controller extends Controller
         });
         
         // Add enrollment status - query directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
-            ->where('course_id', $course->id)
+        // Use the course ID from route parameter, not cached object
+        // Check for any enrollment (active, completed, or cancelled) - same as enrollment controller
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
+            ->where('course_id', $courseId)
             ->exists() : false;
         $courseData->is_enrolled = $isEnrolled;
         

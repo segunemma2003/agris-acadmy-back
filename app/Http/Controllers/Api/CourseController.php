@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\Enrollment;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
@@ -56,7 +57,8 @@ class CourseController extends Controller
 
         // Add enrollment status and format image URLs
         // Query enrollments directly from database to avoid relationship cache issues
-        $enrolledCourseIds = $user ? \App\Models\Enrollment::where('user_id', $user->id)->pluck('course_id') : collect();
+        // Use exact same query format as EnrollmentController::enroll()
+        $enrolledCourseIds = $user ? Enrollment::where('user_id', $user->id)->pluck('course_id') : collect();
         
         $formattedCourses = $courses->getCollection()->map(function ($course) use ($enrolledCourseIds) {
             $course->is_enrolled = $enrolledCourseIds->contains($course->id);
@@ -86,6 +88,9 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
+        
+        // Get course ID before loading relationships to ensure we use the correct ID
+        $courseId = $course->id;
 
         $course->load([
             'category',
@@ -120,8 +125,10 @@ class CourseController extends Controller
         $course->recommended_courses = $recommendedCourses;
 
         // Add enrollment status - query directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
-            ->where('course_id', $course->id)
+        // Use the course ID from route parameter, not the loaded object
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
+            ->where('course_id', $courseId)
             ->exists() : false;
         $course->is_enrolled = $isEnrolled;
         
@@ -146,7 +153,8 @@ class CourseController extends Controller
         
         // Get courses recommended for the user based on their enrollments
         // Query enrollments directly from database to avoid relationship cache issues
-        $enrolledCourseIds = \App\Models\Enrollment::where('user_id', $user->id)->pluck('course_id');
+        // Use exact same query format as EnrollmentController::enroll()
+        $enrolledCourseIds = Enrollment::where('user_id', $user->id)->pluck('course_id');
         
         // Get recommended courses from enrolled courses
         $recommendedFromEnrollments = Course::where('is_published', true)
@@ -191,7 +199,8 @@ class CourseController extends Controller
         // Check if user is enrolled (for protected content)
         $user = $request->user();
         // Query enrollments directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->exists() : false;
 
@@ -226,8 +235,9 @@ class CourseController extends Controller
 
         $user = $request->user();
         // Query enrollments directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
-            ->where('course_id', $course->id)
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
+            ->where('course_id', $courseId)
             ->exists() : false;
         
         // Calculate lessons count
@@ -289,7 +299,8 @@ class CourseController extends Controller
         // Check if user is enrolled
         $user = $request->user();
         // Query enrollments directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->exists() : false;
 
@@ -324,7 +335,8 @@ class CourseController extends Controller
         // Check if user is enrolled
         $user = $request->user();
         // Query enrollments directly from database to avoid relationship cache issues
-        $isEnrolled = $user ? \App\Models\Enrollment::where('user_id', $user->id)
+        // Use exact same query format as EnrollmentController::enroll()
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->exists() : false;
 
