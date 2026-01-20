@@ -31,7 +31,16 @@ class MessageResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title', fn ($query) => $query->accessibleByTutor(Auth::id()))
+                            ->relationship(
+                                'course', 
+                                'title', 
+                                fn ($query) => $query->where(function ($q) {
+                                    $tutorId = Auth::id();
+                                    $q->where('tutor_id', $tutorId)
+                                      ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                                      ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+                                })
+                            )
                             ->required()
                             ->searchable()
                             ->preload(),

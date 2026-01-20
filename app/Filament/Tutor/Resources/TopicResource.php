@@ -29,7 +29,18 @@ class TopicResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('module_id')
                             ->label('Module')
-                            ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+                            ->relationship(
+                                'module', 
+                                'title', 
+                                fn ($query) => $query->whereHas('course', function ($q) {
+                                    $tutorId = Auth::id();
+                                    $q->where(function ($subQ) use ($tutorId) {
+                                        $subQ->where('tutor_id', $tutorId)
+                                             ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                                             ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+                                    });
+                                })
+                            )
                             ->required()
                             ->searchable()
                             ->preload()

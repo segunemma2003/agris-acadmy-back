@@ -370,12 +370,28 @@ jobs:
             echo "✓ CORS configuration verified"
 
             # 15. CLEAR ALL CACHES
-            echo "Step 15: Clearing caches..."
+            echo "Step 15: Clearing all caches..."
+            # Laravel system caches
+            echo "Clearing Laravel system caches..."
             sudo -u www-data php artisan config:clear || true
             sudo -u www-data php artisan cache:clear || true
             sudo -u www-data php artisan view:clear || true
             sudo -u www-data php artisan route:clear || true
+            sudo -u www-data php artisan event:clear || true
+
+            # Filament caches (clear component and icon caches)
+            echo "Clearing Filament caches..."
+            sudo -u www-data php artisan filament:optimize-clear || true
+            sudo -u www-data php artisan filament:clear-cached-components || true
+
+            # Clear bootstrap cache files (including Filament cache)
             sudo rm -f bootstrap/cache/*.php || true
+            sudo rm -rf bootstrap/cache/filament || true
+
+            # Optimize clear (clears all optimization caches - comprehensive)
+            sudo -u www-data php artisan optimize:clear || true
+
+            echo "✓ All caches cleared (Laravel system + Filament components/icons)"
 
             # Re-ensure storage logs permissions after cache clear
             echo "Re-ensuring storage/logs permissions..."
