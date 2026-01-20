@@ -86,11 +86,16 @@ class EnrollmentController extends Controller
             }
         }
 
+        // For test code, generate a unique enrollment_code to avoid unique constraint violation
+        $finalEnrollmentCode = $isTestCode 
+            ? '20252025-' . $user->id . '-' . $course->id . '-' . time() 
+            : $enrollmentCode->code;
+
         // Create enrollment
         $enrollment = Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
-            'enrollment_code' => $isTestCode ? '20252025' : $enrollmentCode->code,
+            'enrollment_code' => $finalEnrollmentCode,
             'status' => 'active',
             'enrolled_at' => now(),
         ]);
