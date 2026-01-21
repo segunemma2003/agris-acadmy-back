@@ -64,7 +64,15 @@ class ModuleResource extends Resource
     {
         // Tutors can view all modules for courses they have access to
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->with('course')
+                ->whereHas('course', function ($q) {
+                    $tutorId = Auth::id();
+                    $q->where(function ($subQ) use ($tutorId) {
+                        $subQ->where('tutor_id', $tutorId)
+                             ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                             ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+                    });
+                }))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -142,13 +150,27 @@ class ModuleResource extends Resource
     public static function canEdit($record): bool
     {
         // All tutors can edit modules for courses they have access to
-        return $record->course && $record->course->accessibleByTutor(Auth::id());
+        if (!$record->course) {
+            return false;
+        }
+        $tutorId = Auth::id();
+        $course = $record->course;
+        return $course->tutor_id === $tutorId
+            || $course->tutors()->where('tutor_id', $tutorId)->exists()
+            || ($course->tutor && $course->tutor->role === 'admin');
     }
 
     public static function canDelete($record): bool
     {
         // All tutors can delete modules for courses they have access to
-        return $record->course && $record->course->accessibleByTutor(Auth::id());
+        if (!$record->course) {
+            return false;
+        }
+        $tutorId = Auth::id();
+        $course = $record->course;
+        return $course->tutor_id === $tutorId
+            || $course->tutors()->where('tutor_id', $tutorId)->exists()
+            || ($course->tutor && $course->tutor->role === 'admin');
     }
 }
 

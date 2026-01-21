@@ -75,7 +75,7 @@ class QuestionsRelationManager extends RelationManager
                     })
                     ->required()
                     ->reactive()
-                    ->visible(fn ($get) => in_array($get('question_type'), ['mcq', 'true_false'])),
+                    ->visible(fn ($get) => in_array($get('question_type'), ['multiple_choice', 'true_false'])),
                 Forms\Components\TextInput::make('correct_answer')
                     ->label('Correct Answer')
                     ->required()
@@ -159,8 +159,10 @@ class QuestionsRelationManager extends RelationManager
                         return $data;
                     }),
                 Tables\Actions\Action::make('bulk_create')
-                    ->label('Bulk Create Questions')
+                    ->label('Bulk Create Questions (Add Multiple)')
                     ->icon('heroicon-o-plus-circle')
+                    ->color('success')
+                    ->size('lg')
                     ->form([
                         Forms\Components\Repeater::make('questions')
                             ->label('Questions')
@@ -214,7 +216,7 @@ class QuestionsRelationManager extends RelationManager
                                     })
                                     ->required()
                                     ->reactive()
-                                    ->visible(fn ($get) => in_array($get('question_type'), ['mcq', 'true_false'])),
+                                    ->visible(fn ($get) => in_array($get('question_type'), ['multiple_choice', 'true_false'])),
                                 Forms\Components\TextInput::make('correct_answer')
                                     ->label('Correct Answer')
                                     ->required()
@@ -228,9 +230,11 @@ class QuestionsRelationManager extends RelationManager
                                     ->default(1)
                                     ->minValue(1),
                             ])
-                            ->defaultItems(5)
+                            ->defaultItems(10)
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string => $state['question'] ?? 'New Question')
+                            ->addActionLabel('Add Another Question')
+                            ->reorderable()
                             ->columnSpanFull(),
                     ])
                     ->action(function (array $data) {
@@ -241,7 +245,7 @@ class QuestionsRelationManager extends RelationManager
                         foreach ($data['questions'] as $index => $questionData) {
                             // Convert options to array format for multiple choice
                             $optionsArray = null;
-                                        if ($questionData['question_type'] === 'multiple_choice') {
+                            if ($questionData['question_type'] === 'multiple_choice') {
                                 $optionsArray = [];
                                 if (!empty($questionData['option_a'])) $optionsArray['A'] = $questionData['option_a'];
                                 if (!empty($questionData['option_b'])) $optionsArray['B'] = $questionData['option_b'];

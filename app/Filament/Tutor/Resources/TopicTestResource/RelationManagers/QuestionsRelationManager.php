@@ -158,8 +158,10 @@ class QuestionsRelationManager extends RelationManager
                         return $data;
                     }),
                 Tables\Actions\Action::make('bulk_create')
-                    ->label('Bulk Create Questions')
+                    ->label('Bulk Create Questions (Add Multiple)')
                     ->icon('heroicon-o-plus-circle')
+                    ->color('success')
+                    ->size('lg')
                     ->form([
                         Forms\Components\Repeater::make('questions')
                             ->label('Questions')
@@ -227,9 +229,11 @@ class QuestionsRelationManager extends RelationManager
                                     ->default(1)
                                     ->minValue(1),
                             ])
-                            ->defaultItems(5)
+                            ->defaultItems(10)
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string => $state['question'] ?? 'New Question')
+                            ->addActionLabel('Add Another Question')
+                            ->reorderable()
                             ->columnSpanFull(),
                     ])
                     ->action(function (array $data) {

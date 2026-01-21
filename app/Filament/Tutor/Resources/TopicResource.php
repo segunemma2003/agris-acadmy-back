@@ -30,8 +30,8 @@ class TopicResource extends Resource
                         Forms\Components\Select::make('module_id')
                             ->label('Module')
                             ->relationship(
-                                'module', 
-                                'title', 
+                                'module',
+                                'title',
                                 fn ($query) => $query->whereHas('course', function ($q) {
                                     $tutorId = Auth::id();
                                     $q->where(function ($subQ) use ($tutorId) {
@@ -132,8 +132,17 @@ class TopicResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can view all topics for modules in courses they have access to
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('module.course', fn ($q) => $q->accessibleByTutor(Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->with(['module.course'])
+                ->whereHas('module.course', function ($q) {
+                    $tutorId = Auth::id();
+                    $q->where(function ($subQ) use ($tutorId) {
+                        $subQ->where('tutor_id', $tutorId)
+                             ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                             ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+                    });
+                }))
             ->columns([
                 Tables\Columns\TextColumn::make('module.course.title')
                     ->label('Course')
@@ -168,7 +177,18 @@ class TopicResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('module_id')
                     ->label('Module')
-                    ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+                    ->relationship(
+                        'module',
+                        'title',
+                        fn ($query) => $query->whereHas('course', function ($q) {
+                            $tutorId = Auth::id();
+                            $q->where(function ($subQ) use ($tutorId) {
+                                $subQ->where('tutor_id', $tutorId)
+                                     ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
+                                     ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+                            });
+                        })
+                    )
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('content_type'),
@@ -211,13 +231,27 @@ class TopicResource extends Resource
     public static function canEdit($record): bool
     {
         // All tutors can edit topics for modules they have access to
-        return $record->module && $record->module->course && $record->module->course->accessibleByTutor(Auth::id());
+        if (!$record->module || !$record->module->course) {
+            return false;
+        }
+        $tutorId = Auth::id();
+        $course = $record->module->course;
+        return $course->tutor_id === $tutorId
+            || $course->tutors()->where('tutor_id', $tutorId)->exists()
+            || ($course->tutor && $course->tutor->role === 'admin');
     }
 
     public static function canDelete($record): bool
     {
         // All tutors can delete topics for modules they have access to
-        return $record->module && $record->module->course && $record->module->course->accessibleByTutor(Auth::id());
+        if (!$record->module || !$record->module->course) {
+            return false;
+        }
+        $tutorId = Auth::id();
+        $course = $record->module->course;
+        return $course->tutor_id === $tutorId
+            || $course->tutors()->where('tutor_id', $tutorId)->exists()
+            || ($course->tutor && $course->tutor->role === 'admin');
     }
 }
 
