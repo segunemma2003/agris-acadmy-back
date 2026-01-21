@@ -178,13 +178,7 @@ class CourseResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('category_id')
-                    ->label('Category')
-                    ->relationship('category', 'name'),
-                Tables\Filters\TernaryFilter::make('is_published')
-                    ->label('Published'),
-                Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                // No filters for tutors
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

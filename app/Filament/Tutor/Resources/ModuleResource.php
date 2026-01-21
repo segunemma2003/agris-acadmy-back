@@ -97,22 +97,7 @@ class ModuleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('course_id')
-                    ->label('Course')
-                    ->relationship(
-                        'course', 
-                        'title', 
-                        fn ($query) => $query->where(function ($q) {
-                            $tutorId = Auth::id();
-                            $q->where('tutor_id', $tutorId)
-                              ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                              ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                        })
-                    )
-                    ->searchable()
-                    ->preload(),
-                Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                // No filters for tutors
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
