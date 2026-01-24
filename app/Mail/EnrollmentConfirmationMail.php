@@ -50,3 +50,5 @@ class EnrollmentConfirmationMail extends Mailable implements ShouldQueue
     }
 }
 
+
+

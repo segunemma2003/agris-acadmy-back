@@ -77,3 +77,5 @@ If presigned URLs continue to have issues, we can configure Filament to upload t
 
 The headers you're seeing might be misleading - the actual file might be public even if the presigned URL shows "private" in the headers. Check if you can access the uploaded file directly via its S3 URL without authentication.
 
+
+

@@ -46,3 +46,5 @@ class NewModuleNotificationMail extends Mailable implements ShouldQueue
     }
 }
 
+
+
