@@ -43,9 +43,20 @@ return new class extends Migration
             DB::statement("CREATE INDEX users_is_active_index ON users(is_active);");
             DB::statement("PRAGMA foreign_keys=on;");
         } else {
-            // For MySQL/PostgreSQL, modify the enum and update existing records
+            // For MySQL/PostgreSQL, update existing records FIRST, then modify the enum
+            // This prevents "Data truncated" errors when modifying enum with existing invalid values
+            // Check if there are any supervisor records first
+            $supervisorCount = DB::table('users')->where('role', 'supervisor')->count();
+            
+            if ($supervisorCount > 0) {
+                // Update existing supervisor records to facilitator
+                DB::table('users')
+                    ->where('role', 'supervisor')
+                    ->update(['role' => 'facilitator']);
+            }
+            
+            // Now modify the enum (this will work because all supervisor records are now facilitator)
             DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'tutor', 'student', 'tagdev', 'facilitator') DEFAULT 'student'");
-            DB::statement("UPDATE users SET role = 'facilitator' WHERE role = 'supervisor'");
         }
     }
 

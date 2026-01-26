@@ -159,8 +159,8 @@
                 💻 TagDev Panel
             </a>
             
-            <a href="/supervisor" class="btn btn-warning">
-                👔 Supervisor Panel
+            <a href="/facilitator" class="btn btn-warning">
+                👔 Facilitator Panel
             </a>
         </div>
     </div>
