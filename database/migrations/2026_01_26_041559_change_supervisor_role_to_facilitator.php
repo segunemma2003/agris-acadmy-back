@@ -43,19 +43,27 @@ return new class extends Migration
             DB::statement("CREATE INDEX users_is_active_index ON users(is_active);");
             DB::statement("PRAGMA foreign_keys=on;");
         } else {
-            // For MySQL/PostgreSQL, update existing records FIRST, then modify the enum
-            // This prevents "Data truncated" errors when modifying enum with existing invalid values
-            // Check if there are any supervisor records first
-            $supervisorCount = DB::table('users')->where('role', 'supervisor')->count();
+            // For MySQL/PostgreSQL, we need to:
+            // 1. First add 'facilitator' to the enum (keeping 'supervisor' temporarily)
+            // 2. Update all supervisor records to facilitator
+            // 3. Then remove 'supervisor' from the enum
             
-            if ($supervisorCount > 0) {
-                // Update existing supervisor records to facilitator
-                DB::table('users')
-                    ->where('role', 'supervisor')
-                    ->update(['role' => 'facilitator']);
+            // Step 1: Add 'facilitator' to the enum (keep 'supervisor' for now)
+            try {
+                DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'tutor', 'student', 'tagdev', 'supervisor', 'facilitator') DEFAULT 'student'");
+            } catch (\Exception $e) {
+                // If enum already includes facilitator, that's fine - continue
+                if (strpos($e->getMessage(), 'facilitator') === false) {
+                    throw $e;
+                }
             }
             
-            // Now modify the enum (this will work because all supervisor records are now facilitator)
+            // Step 2: Update all supervisor records to facilitator
+            DB::table('users')
+                ->where('role', 'supervisor')
+                ->update(['role' => 'facilitator']);
+            
+            // Step 3: Remove 'supervisor' from the enum (now that all records are updated)
             DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'tutor', 'student', 'tagdev', 'facilitator') DEFAULT 'student'");
         }
     }
