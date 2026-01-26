@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeStudentMail;
+use App\Jobs\ProcessStudentRegistrationWithCSV;
 use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\Certificate;
@@ -37,13 +38,14 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Send welcome email via queue (non-blocking)
-        // If email fails, registration still succeeds
+        // Process registration with CSV check and send emails via queue (non-blocking)
+        // This will check CSV, update user info if found, and send appropriate emails
+        // If processing fails, registration still succeeds
         try {
-            Mail::to($user->email)->queue(new WelcomeStudentMail($user));
+            ProcessStudentRegistrationWithCSV::dispatch($user);
         } catch (\Exception $e) {
             // Log error but don't fail registration
-            \Log::error('Failed to queue welcome email to ' . $user->email . ': ' . $e->getMessage());
+            \Log::error('Failed to dispatch CSV processing job for ' . $user->email . ': ' . $e->getMessage());
         }
 
         return response()->json([

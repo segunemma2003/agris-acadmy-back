@@ -36,13 +36,17 @@ class UserResource extends Resource
                         Forms\Components\TextInput::make('phone')
                             ->tel()
                             ->maxLength(255),
+                        Forms\Components\TextInput::make('location')
+                            ->label('Location')
+                            ->helperText('Optional: State or location (e.g., Rivers, Lagos)')
+                            ->maxLength(255),
                         Forms\Components\Select::make('role')
                             ->options([
                                 'admin' => 'Admin',
                                 'tutor' => 'Tutor',
                                 'student' => 'Student',
                                 'tagdev' => 'TagDev',
-                                'supervisor' => 'Supervisor',
+                                'facilitator' => 'Facilitator',
                             ])
                             ->required()
                             ->default('student'),

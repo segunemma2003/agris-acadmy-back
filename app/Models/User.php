@@ -26,6 +26,8 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'gender',
+        'location',
         'bio',
         'avatar',
         'is_active',
@@ -169,7 +171,7 @@ class User extends Authenticatable
         $result = match($panel) {
             'tutor' => $this->role === 'tutor' && $this->is_active,
             'tagdev' => $this->role === 'tagdev' && $this->is_active,
-            'supervisor' => $this->role === 'supervisor' && $this->is_active,
+            'facilitator' => $this->role === 'facilitator' && $this->is_active,
             default => false,
         };
         

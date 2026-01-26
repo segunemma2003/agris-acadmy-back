@@ -3,10 +3,13 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Models\EnrollmentCode;
+use App\Models\Course;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class WelcomeStudentMail extends Mailable implements ShouldQueue
 {
@@ -18,14 +21,24 @@ class WelcomeStudentMail extends Mailable implements ShouldQueue
     public $maxExceptions = 2; // Max exceptions before marking as failed
 
     public function __construct(
-        public User $user
+        public User $user,
+        public ?EnrollmentCode $enrollmentCode = null,
+        public ?Course $course = null
     ) {}
 
     public function build()
     {
-        return $this->subject('Welcome to Agrisiti Academy! 🎓')
+        $subject = 'Welcome to Agrisiti Academy! 🎓';
+
+        if ($this->enrollmentCode && $this->course) {
+            $subject .= ' - Your Enrollment Code';
+        }
+
+        return $this->subject($subject)
             ->view('emails.welcome-student', [
                 'user' => $this->user,
+                'enrollmentCode' => $this->enrollmentCode,
+                'course' => $this->course,
             ]);
     }
 
@@ -35,7 +48,7 @@ class WelcomeStudentMail extends Mailable implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         // Log the failure but don't throw - allow job to be marked as failed gracefully
-        \Log::error('Welcome email failed to send', [
+        Log::error('Welcome email failed to send', [
             'user_id' => $this->user->id,
             'user_email' => $this->user->email,
             'error' => $exception->getMessage(),

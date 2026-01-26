@@ -34,18 +34,57 @@ class EnrollmentResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Student')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('course.title')
+                    ->label('Course')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'active' => 'success',
+                        'completed' => 'info',
+                        'cancelled' => 'danger',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('enrolled_at')
+                    ->label('Enrolled At')
+                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('completed_at')
+                    ->label('Completed At')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('enrollment_code')
+                    ->label('Enrollment Code')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'completed' => 'Completed',
+                        'cancelled' => 'Cancelled',
+                    ]),
+                Tables\Filters\SelectFilter::make('course_id')
+                    ->label('Course')
+                    ->relationship('course', 'title')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+                // No bulk actions - read-only
+            ])
+            ->defaultSort('enrolled_at', 'desc');
     }
 
     public static function getRelations(): array
@@ -59,6 +98,22 @@ class EnrollmentResource extends Resource
         return [
             'index' => Pages\ListEnrollments::route('/'),
             'view' => Pages\ViewEnrollment::route('/{record}'),
+            // No create/edit pages - read-only
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false; // Read-only
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false; // Read-only
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false; // Read-only
     }
 }

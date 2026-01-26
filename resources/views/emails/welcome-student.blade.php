@@ -109,6 +109,21 @@
                 <strong>Account Status:</strong> Active ✅
             </div>
             
+            @if(isset($enrollmentCode) && isset($course))
+            <div class="info-box" style="background-color: #e8f5e9; border-left-color: #4caf50;">
+                <strong style="color: #2e7d32; font-size: 18px;">🎁 Your Enrollment Code!</strong><br><br>
+                <p style="margin: 10px 0;">Congratulations! You've been selected to enroll in:</p>
+                <p style="font-size: 20px; font-weight: bold; color: #2e7d32; margin: 15px 0;">{{ $course->title }}</p>
+                <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; margin: 15px 0; text-align: center; border: 2px dashed #4caf50;">
+                    <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Your Enrollment Code:</p>
+                    <p style="margin: 0; font-size: 32px; font-weight: bold; color: #2e7d32; letter-spacing: 4px; font-family: 'Courier New', monospace;">{{ $enrollmentCode->code }}</p>
+                </div>
+                <p style="margin: 15px 0 0 0; color: #666; font-size: 14px;">
+                    Use this code to enroll in the course. The code will be valid until you use it.
+                </p>
+            </div>
+            @endif
+            
             <p><strong>What's Next?</strong></p>
             
             <div class="features">

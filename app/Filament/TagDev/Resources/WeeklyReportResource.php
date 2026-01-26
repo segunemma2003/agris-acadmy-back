@@ -168,6 +168,22 @@ class WeeklyReportResource extends Resource
         return [
             'index' => Pages\ListWeeklyReports::route('/'),
             'view' => Pages\ViewWeeklyReport::route('/{record}'),
+            // No create/edit pages - read-only
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false; // Read-only
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false; // Read-only
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false; // Read-only
     }
 }

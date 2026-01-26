@@ -13,7 +13,7 @@ class ListWeeklyReports extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            // No actions - read-only dashboard
         ];
     }
 }
