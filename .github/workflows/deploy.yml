@@ -207,7 +207,7 @@ jobs:
             update_env "DB_DATABASE" "${{ secrets.DB_DATABASE }}"
             update_env "DB_USERNAME" "${{ secrets.DB_USERNAME }}"
             update_env "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
-
+            update_env "SENDER_API_KEY" "${{ secrets.SENDER_API_KEY }}"
             # Set queue connection (default to database if not set)
             if ! grep -q "^QUEUE_CONNECTION=" .env 2>/dev/null; then
               echo 'QUEUE_CONNECTION=database' | sudo -u www-data tee -a .env > /dev/null
