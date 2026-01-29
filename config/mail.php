@@ -16,6 +16,7 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
@@ -52,6 +53,9 @@ return [
 
         'ses' => [
             'transport' => 'ses',
+        ],
+        'sender' => [
+            'transport' => 'sender',
         ],
 
         'postmark' => [
