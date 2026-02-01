@@ -68,6 +68,12 @@ class StudentResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('location')
+                    ->label('Location')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('enrollments_count')
                     ->label('Enrollments')
                     ->counts('enrollments')

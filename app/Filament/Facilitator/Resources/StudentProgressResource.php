@@ -92,6 +92,12 @@ class StudentProgressResource extends Resource
                     ->label('Student')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('user.location')
+                    ->label('Location')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
                     ->sortable(),
