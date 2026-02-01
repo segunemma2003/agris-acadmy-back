@@ -51,13 +51,9 @@ class StudentResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query
                 ->where('role', 'student')
-                ->where(function ($q) use ($facilitatorLocation) {
-                    if ($facilitatorLocation) {
-                        $q->where('location', $facilitatorLocation);
-                    } else {
-                        $q->whereNull('location')->orWhere('location', '');
-                    }
-                })
+                ->whereNotNull('location')
+                ->where('location', '!=', '')
+                ->where('location', $facilitatorLocation)
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
@@ -130,12 +126,12 @@ class StudentResource extends Resource
             return false;
         }
         
-        // Exact location match
-        if ($facilitatorLocation) {
-            return $record->location === $facilitatorLocation;
+        // Facilitators can only see students with a location that matches theirs
+        // Students without location are hidden from facilitators
+        if (empty($facilitatorLocation) || empty($record->location)) {
+            return false;
         }
         
-        // If facilitator has no location, only show students with no location
-        return empty($record->location);
+        return $record->location === $facilitatorLocation;
     }
 }
