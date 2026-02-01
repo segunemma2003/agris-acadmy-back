@@ -141,19 +141,9 @@ class CourseResource extends Resource
 
     public static function table(Table $table): Table
     {
-        // Show courses where tutor is primary tutor, additional tutor, or course was created by admin
-        // All tutors can see all courses they have access to
+        // Tutors can view all courses
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['category', 'tutor', 'tutors'])
-                ->where(function ($q) {
-                    $tutorId = Auth::id();
-                    // Primary tutor
-                    $q->where('tutor_id', $tutorId)
-                      // Additional tutor
-                      ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                      // Course created by admin
-                      ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                }))
+            ->modifyQueryUsing(fn ($query) => $query->with(['category', 'tutor', 'tutors']))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->circular(),
@@ -232,16 +222,8 @@ class CourseResource extends Resource
     public static function canView($record): bool
     {
         $user = Auth::user();
-        if (!$user || $user->role !== 'tutor') {
-            return false;
-        }
-
-        $tutorId = $user->id;
-        
-        // Check if tutor has access to this course
-        return $record->tutor_id === $tutorId
-            || $record->tutors()->where('tutor_id', $tutorId)->exists()
-            || ($record->tutor && $record->tutor->role === 'admin');
+        // Tutors can view all courses
+        return $user && $user->role === 'tutor';
     }
 }
 

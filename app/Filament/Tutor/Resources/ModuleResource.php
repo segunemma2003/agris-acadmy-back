@@ -30,16 +30,7 @@ class ModuleResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship(
-                                'course', 
-                                'title', 
-                                fn ($query) => $query->where(function ($q) {
-                                    $tutorId = Auth::id();
-                                    $q->where('tutor_id', $tutorId)
-                                      ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                                      ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                                })
-                            )
+                            ->relationship('course', 'title')
                             ->required()
                             ->searchable()
                             ->preload()
@@ -62,17 +53,9 @@ class ModuleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        // Tutors can view all modules for courses they have access to
+        // Tutors can view all modules
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('course')
-                ->whereHas('course', function ($q) {
-                    $tutorId = Auth::id();
-                    $q->where(function ($subQ) use ($tutorId) {
-                        $subQ->where('tutor_id', $tutorId)
-                             ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                             ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                    });
-                }))
+            ->modifyQueryUsing(fn ($query) => $query->with('course'))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -100,14 +83,9 @@ class ModuleResource extends Resource
                 // No filters for tutors
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('sort_order');
     }
 
@@ -122,40 +100,36 @@ class ModuleResource extends Resource
     {
         return [
             'index' => Pages\ListModules::route('/'),
-            'create' => Pages\CreateModule::route('/create'),
-            'edit' => Pages\EditModule::route('/{record}/edit'),
+            'view' => Pages\ViewModule::route('/{record}'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->role === 'tutor';
     }
 
     public static function canCreate(): bool
     {
-        return true; // Tutors can create modules
+        return false; // Tutors cannot create modules
     }
 
     public static function canEdit($record): bool
     {
-        // All tutors can edit modules for courses they have access to
-        if (!$record->course) {
-            return false;
-        }
-        $tutorId = Auth::id();
-        $course = $record->course;
-        return $course->tutor_id === $tutorId
-            || $course->tutors()->where('tutor_id', $tutorId)->exists()
-            || ($course->tutor && $course->tutor->role === 'admin');
+        return false; // Tutors cannot edit modules
     }
 
     public static function canDelete($record): bool
     {
-        // All tutors can delete modules for courses they have access to
-        if (!$record->course) {
-            return false;
-        }
-        $tutorId = Auth::id();
-        $course = $record->course;
-        return $course->tutor_id === $tutorId
-            || $course->tutors()->where('tutor_id', $tutorId)->exists()
-            || ($course->tutor && $course->tutor->role === 'admin');
+        return false; // Tutors cannot delete modules
+    }
+
+    public static function canView($record): bool
+    {
+        $user = Auth::user();
+        // Tutors can view all modules
+        return $user && $user->role === 'tutor';
     }
 }
 

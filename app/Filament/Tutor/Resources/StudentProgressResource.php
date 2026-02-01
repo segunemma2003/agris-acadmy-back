@@ -35,16 +35,7 @@ class StudentProgressResource extends Resource
                             ->preload(),
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship(
-                                'course', 
-                                'title', 
-                                fn ($query) => $query->where(function ($q) {
-                                    $tutorId = Auth::id();
-                                    $q->where('tutor_id', $tutorId)
-                                      ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                                      ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                                })
-                            )
+                            ->relationship('course', 'title')
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -100,7 +91,7 @@ class StudentProgressResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                    ->relationship('course', 'title')
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('is_completed')
