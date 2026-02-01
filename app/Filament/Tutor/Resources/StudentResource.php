@@ -46,11 +46,9 @@ class StudentResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can view all students
         return $table
-            ->modifyQueryUsing(fn ($query) => $query
-                ->where('role', 'student')
-                ->whereHas('enrollments.course', fn ($q) => $q->accessibleByTutor(Auth::id()))
-            )
+            ->modifyQueryUsing(fn ($query) => $query->where('role', 'student'))
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
                     ->circular(),

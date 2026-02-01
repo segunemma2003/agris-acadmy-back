@@ -62,8 +62,8 @@ class StudentProgressResource extends Resource
 
     public static function table(Table $table): Table
     {
+        // Tutors can view all student progress
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Student')
