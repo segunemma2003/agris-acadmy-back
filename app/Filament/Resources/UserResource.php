@@ -100,6 +100,9 @@ class UserResource extends Resource
                         'admin' => 'danger',
                         'tutor' => 'warning',
                         'student' => 'success',
+                        'tagdev' => 'info',
+                        'facilitator' => 'primary',
+                        default => 'gray',
                     }),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
@@ -114,6 +117,8 @@ class UserResource extends Resource
                         'admin' => 'Admin',
                         'tutor' => 'Tutor',
                         'student' => 'Student',
+                        'tagdev' => 'TagDev',
+                        'facilitator' => 'Facilitator',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),

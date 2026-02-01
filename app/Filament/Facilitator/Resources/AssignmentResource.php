@@ -29,7 +29,14 @@ class AssignmentResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('course', 'title', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                        $uq->where('location', $facilitatorLocation);
+                                    });
+                                });
+                            })
                             ->required()
                             ->searchable()
                             ->preload()
@@ -67,8 +74,16 @@ class AssignmentResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                        $uq->where('location', $facilitatorLocation);
+                    });
+                });
+            }))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -95,21 +110,22 @@ class AssignmentResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                    ->relationship('course', 'title', function ($query) use ($facilitatorLocation) {
+                        $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                            $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                $uq->where('location', $facilitatorLocation);
+                            });
+                        });
+                    })
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -117,13 +133,27 @@ class AssignmentResource extends Resource
     {
         return [
             'index' => Pages\ListAssignments::route('/'),
-            'create' => Pages\CreateAssignment::route('/create'),
-            'edit' => Pages\EditAssignment::route('/{record}/edit'),
+            'view' => Pages\ViewAssignment::route('/{record}'),
         ];
     }
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }

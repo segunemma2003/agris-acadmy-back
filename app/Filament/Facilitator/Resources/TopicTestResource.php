@@ -2,9 +2,8 @@
 
 namespace App\Filament\Facilitator\Resources;
 
-use App\Filament\Facilitator\Resources\ModuleResource\Pages;
-use App\Filament\Facilitator\Resources\ModuleResource\RelationManagers;
-use App\Models\Module;
+use App\Filament\Facilitator\Resources\TopicTestResource\Pages;
+use App\Models\TopicTest;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,21 +11,23 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 
-class ModuleResource extends Resource
+class TopicTestResource extends Resource
 {
-    protected static ?string $model = Module::class;
+    protected static ?string $model = TopicTest::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    protected static ?string $navigationLabel = 'Topic Tests';
 
     protected static ?string $navigationGroup = 'Course Management';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 8;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Module Details')
+                Forms\Components\Section::make('Test Details')
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
@@ -38,22 +39,36 @@ class ModuleResource extends Resource
                                     });
                                 });
                             })
-                            ->required()
-                            ->searchable()
-                            ->preload()
-                            ->reactive(),
+                            ->disabled()
+                            ->dehydrated(),
+                        Forms\Components\Select::make('module_id')
+                            ->label('Module')
+                            ->relationship('module', 'title')
+                            ->disabled()
+                            ->dehydrated(),
+                        Forms\Components\Select::make('topic_id')
+                            ->label('Topic (Lesson)')
+                            ->relationship('topic', 'title')
+                            ->disabled()
+                            ->dehydrated(),
                         Forms\Components\TextInput::make('title')
-                            ->required()
-                            ->maxLength(255),
+                            ->disabled()
+                            ->dehydrated(),
                         Forms\Components\RichEditor::make('description')
+                            ->disabled()
+                            ->dehydrated()
                             ->columnSpanFull(),
-                        Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
-                            ->numeric()
-                            ->default(0)
-                            ->required(),
+                        Forms\Components\TextInput::make('passing_score')
+                            ->label('Passing Score (%)')
+                            ->disabled()
+                            ->dehydrated(),
+                        Forms\Components\TextInput::make('time_limit_minutes')
+                            ->label('Time Limit (minutes)')
+                            ->disabled()
+                            ->dehydrated(),
                         Forms\Components\Toggle::make('is_active')
-                            ->default(true),
+                            ->disabled()
+                            ->dehydrated(),
                     ])->columns(2),
             ]);
     }
@@ -74,24 +89,34 @@ class ModuleResource extends Resource
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('module.title')
+                    ->label('Module')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('topic.title')
+                    ->label('Topic')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap(),
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable()
                     ->wrap(),
-                Tables\Columns\TextColumn::make('topics_count')
-                    ->label('Topics')
-                    ->counts('topics')
+                Tables\Columns\TextColumn::make('questions_count')
+                    ->label('Questions')
+                    ->counts('questions')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                Tables\Columns\TextColumn::make('passing_score')
+                    ->label('Passing Score')
+                    ->suffix('%')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('time_limit_minutes')
+                    ->label('Time Limit')
+                    ->suffix(' min')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
@@ -105,6 +130,11 @@ class ModuleResource extends Resource
                     })
                     ->searchable()
                     ->preload(),
+                Tables\Filters\SelectFilter::make('module_id')
+                    ->label('Module')
+                    ->relationship('module', 'title')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
@@ -112,21 +142,14 @@ class ModuleResource extends Resource
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([])
-            ->defaultSort('sort_order');
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            RelationManagers\TestRelationManager::class,
-        ];
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListModules::route('/'),
-            'view' => Pages\ViewModule::route('/{record}'),
+            'index' => Pages\ListTopicTests::route('/'),
+            'view' => Pages\ViewTopicTest::route('/{record}'),
         ];
     }
 

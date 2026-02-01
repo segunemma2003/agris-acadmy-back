@@ -32,7 +32,14 @@ class ModuleTestResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('course', 'title', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                        $uq->where('location', $facilitatorLocation);
+                                    });
+                                });
+                            })
                             ->required()
                             ->searchable()
                             ->preload()
@@ -69,8 +76,16 @@ class ModuleTestResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                        $uq->where('location', $facilitatorLocation);
+                    });
+                });
+            }))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -102,7 +117,13 @@ class ModuleTestResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                    ->relationship('course', 'title', function ($query) use ($facilitatorLocation) {
+                        $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                            $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                $uq->where('location', $facilitatorLocation);
+                            });
+                        });
+                    })
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('module_id')
@@ -114,14 +135,9 @@ class ModuleTestResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -136,13 +152,27 @@ class ModuleTestResource extends Resource
     {
         return [
             'index' => Pages\ListModuleTests::route('/'),
-            'create' => Pages\CreateModuleTest::route('/create'),
-            'edit' => Pages\EditModuleTest::route('/{record}/edit'),
+            'view' => Pages\ViewModuleTest::route('/{record}'),
         ];
     }
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }

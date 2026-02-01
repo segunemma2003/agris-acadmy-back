@@ -34,7 +34,7 @@ class StaffOnboardingQuiz extends Page implements HasForms
 
     public static function shouldRegisterNavigation(): bool
     {
-        return true;
+        return false;
     }
 
     public ?array $data = [];

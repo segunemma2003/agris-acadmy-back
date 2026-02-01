@@ -29,7 +29,16 @@ class AssignmentSubmissionResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('assignment_id')
                             ->label('Assignment')
-                            ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('assignment', 'title', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                                    $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                        $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                            $uq->where('location', $facilitatorLocation);
+                                        });
+                                    });
+                                });
+                            })
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -62,8 +71,16 @@ class AssignmentSubmissionResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('assignment', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('assignment.course', function ($q) use ($facilitatorLocation) {
+                $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                        $uq->where('location', $facilitatorLocation);
+                    });
+                });
+            }))
             ->columns([
                 Tables\Columns\TextColumn::make('assignment.title')
                     ->searchable()
@@ -93,13 +110,21 @@ class AssignmentSubmissionResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('assignment_id')
                     ->label('Assignment')
-                    ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                    ->relationship('assignment', 'title', function ($query) use ($facilitatorLocation) {
+                        $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                            $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                    $uq->where('location', $facilitatorLocation);
+                                });
+                            });
+                        });
+                    })
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('status'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->defaultSort('submitted_at', 'desc');
     }
@@ -108,12 +133,27 @@ class AssignmentSubmissionResource extends Resource
     {
         return [
             'index' => Pages\ListAssignmentSubmissions::route('/'),
-            'edit' => Pages\EditAssignmentSubmission::route('/{record}/edit'),
+            'view' => Pages\ViewAssignmentSubmission::route('/{record}'),
         ];
     }
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }

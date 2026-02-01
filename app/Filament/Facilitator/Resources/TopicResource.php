@@ -29,7 +29,16 @@ class TopicResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('module_id')
                             ->label('Module')
-                            ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+                            ->relationship('module', 'title', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                                    $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                        $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                            $uq->where('location', $facilitatorLocation);
+                                        });
+                                    });
+                                });
+                            })
                             ->required()
                             ->searchable()
                             ->preload()
@@ -121,8 +130,16 @@ class TopicResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->whereHas('module.course', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('module.course', function ($q) use ($facilitatorLocation) {
+                $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                        $uq->where('location', $facilitatorLocation);
+                    });
+                });
+            }))
             ->columns([
                 Tables\Columns\TextColumn::make('module.course.title')
                     ->label('Course')
@@ -157,7 +174,15 @@ class TopicResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('module_id')
                     ->label('Module')
-                    ->relationship('module', 'title', fn ($query) => $query->whereHas('course', fn ($q) => $q->where('tutor_id', Auth::id())))
+                    ->relationship('module', 'title', function ($query) use ($facilitatorLocation) {
+                        $query->whereHas('course', function ($q) use ($facilitatorLocation) {
+                            $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                    $uq->where('location', $facilitatorLocation);
+                                });
+                            });
+                        });
+                    })
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('content_type'),
@@ -165,14 +190,9 @@ class TopicResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('sort_order');
     }
 
@@ -180,8 +200,7 @@ class TopicResource extends Resource
     {
         return [
             'index' => Pages\ListTopics::route('/'),
-            'create' => Pages\CreateTopic::route('/create'),
-            'edit' => Pages\EditTopic::route('/{record}/edit'),
+            'view' => Pages\ViewTopic::route('/{record}'),
         ];
     }
 
@@ -194,6 +213,21 @@ class TopicResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }

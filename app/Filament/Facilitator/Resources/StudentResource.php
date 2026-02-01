@@ -46,10 +46,12 @@ class StudentResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
             ->modifyQueryUsing(fn ($query) => $query
                 ->where('role', 'student')
-                ->whereHas('enrollments.course', fn ($q) => $q->where('tutor_id', Auth::id()))
+                ->where('location', $facilitatorLocation)
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
@@ -91,6 +93,21 @@ class StudentResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }

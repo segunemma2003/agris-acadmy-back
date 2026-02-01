@@ -134,8 +134,14 @@ class CourseResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $facilitatorLocation = Auth::user()->location;
+        
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('enrollments', function ($q) use ($facilitatorLocation) {
+                $q->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                    $uq->where('location', $facilitatorLocation);
+                });
+            }))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->circular(),
@@ -169,14 +175,9 @@ class CourseResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array
@@ -193,17 +194,26 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ListCourses::route('/'),
-            // Facilitators cannot create courses - removed 'create' page
-            'edit' => Pages\EditCourse::route('/{record}/edit'),
+            'view' => Pages\ViewCourse::route('/{record}'),
         ];
     }
 
     public static function canViewAny(): bool
     {
-        return false; // Facilitators can only view Weekly Reports
+        return true;
     }
 
     public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
     {
         return false;
     }

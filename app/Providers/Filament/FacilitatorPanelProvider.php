@@ -57,6 +57,8 @@ class FacilitatorPanelProvider extends PanelProvider
             ->favicon(asset('images/favicon.ico'))
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups([
+                'Course Management',
+                'Student Management',
                 'Reports',
             ])
             ->maxContentWidth('full')
