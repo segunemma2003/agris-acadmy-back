@@ -54,7 +54,11 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\Select::make('tutors')
                             ->label('Additional Tutors')
-                            ->relationship('tutors', 'name', fn ($query) => $query->where('role', 'tutor')->where('id', '!=', Auth::id()))
+                            ->relationship('tutors', 'name', function ($query) {
+                                $tutorId = Auth::id();
+                                return $query->where('users.role', 'tutor')
+                                    ->where('users.id', '!=', $tutorId);
+                            })
                             ->multiple()
                             ->searchable()
                             ->preload()

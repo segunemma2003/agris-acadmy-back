@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class TutorTableStatsWidget extends BaseWidget
 {
-    protected static ?string $heading = 'My Courses Performance';
+    protected static ?string $heading = 'All Courses Performance';
 
     protected static ?int $sort = 3;
 
@@ -19,7 +19,6 @@ class TutorTableStatsWidget extends BaseWidget
         return $table
             ->query(
                 Course::query()
-                    ->where('tutor_id', Auth::id())
                     ->withCount('enrollments')
                     ->orderBy('enrollments_count', 'desc')
             )
