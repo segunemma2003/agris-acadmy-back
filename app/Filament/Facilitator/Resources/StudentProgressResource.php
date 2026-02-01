@@ -29,13 +29,25 @@ class StudentProgressResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('user_id')
                             ->label('Student')
-                            ->relationship('user', 'name', fn ($query) => $query->where('role', 'student'))
+                            ->relationship('user', 'name', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->where('role', 'student')
+                                             ->where('location', $facilitatorLocation);
+                            })
                             ->required()
                             ->searchable()
                             ->preload(),
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('course', 'title', function ($query) {
+                                $facilitatorLocation = Auth::user()->location;
+                                return $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
+                                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
+                                        $uq->where('role', 'student')
+                                           ->where('location', $facilitatorLocation);
+                                    });
+                                });
+                            })
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -66,13 +78,14 @@ class StudentProgressResource extends Resource
         
         return $table
             ->modifyQueryUsing(fn ($query) => $query->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                $uq->where('location', $facilitatorLocation);
-            })->whereHas('course', function ($q) use ($facilitatorLocation) {
-                $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
-                    $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                        $uq->where('location', $facilitatorLocation);
-                    });
-                });
+                $uq->where('role', 'student')
+                   ->where(function ($q) use ($facilitatorLocation) {
+                       if ($facilitatorLocation) {
+                           $q->where('location', $facilitatorLocation);
+                       } else {
+                           $q->whereNull('location')->orWhere('location', '');
+                       }
+                   });
             }))
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
@@ -102,9 +115,11 @@ class StudentProgressResource extends Resource
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
                     ->relationship('course', 'title', function ($query) use ($facilitatorLocation) {
+                        // Only show courses that have enrollments from students in facilitator's location
                         $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
                             $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                                $uq->where('location', $facilitatorLocation);
+                                $uq->where('role', 'student')
+                                   ->where('location', $facilitatorLocation);
                             });
                         });
                     })
@@ -141,5 +156,22 @@ class StudentProgressResource extends Resource
     public static function canDelete($record): bool
     {
         return false;
+    }
+
+    public static function canView($record): bool
+    {
+        if (!$record->user || $record->user->role !== 'student') {
+            return false;
+        }
+        
+        $facilitatorLocation = Auth::user()->location;
+        
+        // Exact location match
+        if ($facilitatorLocation) {
+            return $record->user->location === $facilitatorLocation;
+        }
+        
+        // If facilitator has no location, only show students with no location
+        return empty($record->user->location);
     }
 }

@@ -51,7 +51,13 @@ class StudentResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query
                 ->where('role', 'student')
-                ->where('location', $facilitatorLocation)
+                ->where(function ($q) use ($facilitatorLocation) {
+                    if ($facilitatorLocation) {
+                        $q->where('location', $facilitatorLocation);
+                    } else {
+                        $q->whereNull('location')->orWhere('location', '');
+                    }
+                })
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
@@ -109,5 +115,21 @@ class StudentResource extends Resource
     public static function canDelete($record): bool
     {
         return false;
+    }
+
+    public static function canView($record): bool
+    {
+        $facilitatorLocation = Auth::user()->location;
+        if ($record->role !== 'student') {
+            return false;
+        }
+        
+        // Exact location match
+        if ($facilitatorLocation) {
+            return $record->location === $facilitatorLocation;
+        }
+        
+        // If facilitator has no location, only show students with no location
+        return empty($record->location);
     }
 }
