@@ -58,8 +58,8 @@ class TagDevStatsWidget extends BaseWidget
         
         // Certificate Statistics
         $totalCertificates = Certificate::count();
-        $certificatesThisMonth = Certificate::whereMonth('issued_at', now()->month)
-            ->whereYear('issued_at', now()->year)
+        $certificatesThisMonth = Certificate::whereMonth('issued_date', now()->month)
+            ->whereYear('issued_date', now()->year)
             ->count();
         
         // Weekly Reports Statistics
