@@ -157,9 +157,7 @@ class WeeklyReportResource extends Resource
                     ->relationship('tutor', 'name')
                     ->searchable(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
+            ->actions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -167,8 +165,7 @@ class WeeklyReportResource extends Resource
     {
         return [
             'index' => Pages\ListWeeklyReports::route('/'),
-            'view' => Pages\ViewWeeklyReport::route('/{record}'),
-            // No create/edit pages - read-only
+            // No create/edit/view pages - read-only
         ];
     }
 

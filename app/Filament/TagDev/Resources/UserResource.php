@@ -66,9 +66,7 @@ class UserResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
+            ->actions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -82,8 +80,7 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
-            'view' => Pages\ViewUser::route('/{record}'),
-            // No create/edit pages - read-only
+            // No create/edit/view pages - read-only
         ];
     }
 

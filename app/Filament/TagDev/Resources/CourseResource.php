@@ -50,9 +50,7 @@ class CourseResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_published')
                     ->label('Published'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
+            ->actions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -66,7 +64,6 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ListCourses::route('/'),
-            'view' => Pages\ViewCourse::route('/{record}'),
         ];
     }
 

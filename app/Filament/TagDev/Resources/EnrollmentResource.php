@@ -78,9 +78,7 @@ class EnrollmentResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
+            ->actions([])
             ->bulkActions([
                 // No bulk actions - read-only
             ])
@@ -97,8 +95,7 @@ class EnrollmentResource extends Resource
     {
         return [
             'index' => Pages\ListEnrollments::route('/'),
-            'view' => Pages\ViewEnrollment::route('/{record}'),
-            // No create/edit pages - read-only
+            // No create/edit/view pages - read-only
         ];
     }
 
