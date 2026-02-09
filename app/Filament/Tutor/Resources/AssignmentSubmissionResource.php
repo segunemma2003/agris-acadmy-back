@@ -29,7 +29,7 @@ class AssignmentSubmissionResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('assignment_id')
                             ->label('Assignment')
-                            ->relationship('assignment', 'title')
+                            ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
                             ->required()
                             ->searchable()
                             ->preload()
@@ -114,7 +114,8 @@ class AssignmentSubmissionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['assignment.course', 'user']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['assignment.course', 'user'])
+                ->whereHas('assignment', fn ($q) => $q->where('tutor_id', Auth::id())))
             ->columns([
                 Tables\Columns\TextColumn::make('assignment.course.title')
                     ->label('Course')
@@ -159,12 +160,12 @@ class AssignmentSubmissionResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('assignment.course_id')
                     ->label('Course')
-                    ->relationship('assignment.course', 'title')
+                    ->relationship('assignment.course', 'title', fn ($query) => $query->whereHas('assignments', fn ($q) => $q->where('tutor_id', Auth::id())))
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('assignment_id')
                     ->label('Assignment')
-                    ->relationship('assignment', 'title')
+                    ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('status')
