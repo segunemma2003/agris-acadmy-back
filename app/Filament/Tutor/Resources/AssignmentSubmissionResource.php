@@ -29,7 +29,7 @@ class AssignmentSubmissionResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('assignment_id')
                             ->label('Assignment')
-                            ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                            ->relationship('assignment', 'title')
                             ->required()
                             ->searchable()
                             ->preload()
@@ -114,9 +114,13 @@ class AssignmentSubmissionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['assignment', 'user'])
-                ->whereHas('assignment', fn ($q) => $q->where('tutor_id', Auth::id())))
+            ->modifyQueryUsing(fn ($query) => $query->with(['assignment.course', 'user']))
             ->columns([
+                Tables\Columns\TextColumn::make('assignment.course.title')
+                    ->label('Course')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('assignment.title')
                     ->searchable()
                     ->sortable(),
@@ -153,9 +157,14 @@ class AssignmentSubmissionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('assignment.course_id')
+                    ->label('Course')
+                    ->relationship('assignment.course', 'title')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\SelectFilter::make('assignment_id')
                     ->label('Assignment')
-                    ->relationship('assignment', 'title', fn ($query) => $query->where('tutor_id', Auth::id()))
+                    ->relationship('assignment', 'title')
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('status')
