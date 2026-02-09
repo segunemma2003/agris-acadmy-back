@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\CourseResource\RelationManagers;
 
+use App\Models\CourseResource;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -142,13 +144,13 @@ class ResourcesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('file_name')
                     ->label('File Name')
                     ->limit(30)
-                    ->visible(fn ($record) => $record->resource_type === 'download'),
+                    ->visible(fn ($record) => $record && $record->resource_type === 'download'),
                 Tables\Columns\TextColumn::make('external_url')
                     ->label('URL')
                     ->limit(30)
-                    ->url(fn ($record) => $record->external_url)
+                    ->url(fn ($record) => $record?->external_url)
                     ->openUrlInNewTab()
-                    ->visible(fn ($record) => $record->resource_type === 'link'),
+                    ->visible(fn ($record) => $record && $record->resource_type === 'link'),
                 Tables\Columns\IconColumn::make('is_free')
                     ->label('Free')
                     ->boolean(),
@@ -177,6 +179,94 @@ class ResourcesRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
+                Tables\Actions\Action::make('bulk_upload')
+                    ->label('Bulk Upload Files')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('success')
+                    ->form([
+                        Forms\Components\FileUpload::make('files')
+                            ->label('Select Multiple Files')
+                            ->disk('public')
+                            ->visibility('public')
+                            ->directory('course-resources')
+                            ->maxSize(10240) // 10MB per file
+                            ->multiple()
+                            ->required()
+                            ->preserveFilenames()
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'application/msword',
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                'application/vnd.ms-excel',
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-powerpoint',
+                                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                                'text/plain',
+                                'image/jpeg',
+                                'image/png',
+                                'image/gif',
+                                'video/mp4',
+                                'video/quicktime',
+                                'application/zip',
+                                'application/x-rar-compressed',
+                            ])
+                            ->helperText('Select multiple files to upload. Max 10MB per file.'),
+                        Forms\Components\Toggle::make('is_free')
+                            ->label('Mark all as free resources')
+                            ->default(true),
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Mark all as active')
+                            ->default(true),
+                    ])
+                    ->action(function (array $data) {
+                        $ownerRecord = $this->getOwnerRecord();
+                        $files = $data['files'] ?? [];
+                        $created = 0;
+                        $maxSortOrder = $ownerRecord->resources()->max('sort_order') ?? 0;
+
+                        if (empty($files) || !is_array($files)) {
+                            Notification::make()
+                                ->title('No files selected')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        foreach ($files as $index => $filePath) {
+                            if (!$filePath) continue;
+
+                            $fileName = basename($filePath);
+                            $fullPath = storage_path('app/public/' . $filePath);
+                            
+                            $fileSize = null;
+                            $fileType = null;
+                            
+                            if (file_exists($fullPath)) {
+                                $fileSize = filesize($fullPath);
+                                $fileType = mime_content_type($fullPath) ?: 'application/octet-stream';
+                            }
+
+                            CourseResource::create([
+                                'course_id' => $ownerRecord->id,
+                                'title' => $fileName,
+                                'description' => null,
+                                'file_path' => $filePath,
+                                'file_name' => $fileName,
+                                'file_type' => $fileType,
+                                'file_size' => $fileSize,
+                                'resource_type' => 'download',
+                                'is_free' => $data['is_free'] ?? true,
+                                'is_active' => $data['is_active'] ?? true,
+                                'sort_order' => $maxSortOrder + $index + 1,
+                            ]);
+                            $created++;
+                        }
+
+                        Notification::make()
+                            ->title("Successfully uploaded {$created} file(s)")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

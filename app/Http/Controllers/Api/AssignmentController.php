@@ -29,7 +29,21 @@ class AssignmentController extends Controller
                 $query->where('user_id', $user->id);
             }])
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->map(function ($assignment) {
+                $submission = $assignment->submissions->first();
+                $assignment->is_submitted = $submission !== null;
+                $assignment->is_graded = $submission && in_array($submission->status, ['graded', 'returned']);
+                
+                // Format submission with file URL if exists
+                if ($submission && $submission->file_path) {
+                    $submission->file_url = $submission->file_url;
+                }
+                
+                $assignment->submission = $submission; // Single submission object instead of array
+                $assignment->unsetRelation('submissions'); // Remove the array
+                return $assignment;
+            });
 
         return response()->json($assignments);
     }
@@ -50,6 +64,18 @@ class AssignmentController extends Controller
         $assignment->load(['submissions' => function ($query) use ($user) {
             $query->where('user_id', $user->id);
         }]);
+
+        $submission = $assignment->submissions->first();
+        $assignment->is_submitted = $submission !== null;
+        $assignment->is_graded = $submission && in_array($submission->status, ['graded', 'returned']);
+        
+        // Format submission with file URL if exists
+        if ($submission && $submission->file_path) {
+            $submission->file_url = $submission->file_url;
+        }
+        
+        $assignment->submission = $submission; // Single submission object instead of array
+        $assignment->unsetRelation('submissions'); // Remove the array
 
         return response()->json($assignment);
     }
@@ -105,7 +131,16 @@ class AssignmentController extends Controller
         $submissions = $user->assignmentSubmissions()
             ->with(['assignment.course:id,title'])
             ->orderBy('submitted_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($submission) {
+                // Add file URL if exists
+                if ($submission->file_path) {
+                    $submission->file_url = $submission->file_url;
+                }
+                // Add helper fields
+                $submission->is_graded = in_array($submission->status, ['graded', 'returned']);
+                return $submission;
+            });
 
         return response()->json($submissions);
     }

@@ -38,6 +38,22 @@ class AssignmentSubmission extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Accessor for file URL
+    public function getFileUrlAttribute(): ?string
+    {
+        if (!$this->file_path) {
+            return null;
+        }
+
+        // If it's already a full URL, return as is
+        if (str_starts_with($this->file_path, 'http')) {
+            return $this->file_path;
+        }
+
+        // Otherwise, return the storage URL
+        return asset('storage/' . $this->file_path);
+    }
 }
 
 
