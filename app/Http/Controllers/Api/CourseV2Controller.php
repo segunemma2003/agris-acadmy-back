@@ -158,12 +158,24 @@ class CourseV2Controller extends Controller
                                 ->orderBy('sort_order');
                         }]);
                 },
+                'resources' => function ($query) {
+                    $query->where('is_active', true)
+                        ->orderBy('sort_order');
+                },
                 'reviews' => function ($query) {
                     $query->with('user:id,name,avatar')
                         ->orderBy('created_at', 'desc')
                         ->limit(10);
                 },
             ]);
+            
+            // Format resources with file URLs
+            $course->resources = $course->resources->map(function ($resource) {
+                if ($resource->file_path) {
+                    $resource->file_url = $resource->file_url;
+                }
+                return $resource;
+            });
             
             // Calculate total lessons
             $lessonsCount = $course->modules->sum(function ($module) {
@@ -253,12 +265,25 @@ class CourseV2Controller extends Controller
             return $modules;
         });
         
+        // Get course resources
+        $resources = $course->resources()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($resource) {
+                if ($resource->file_path) {
+                    $resource->file_url = $resource->file_url;
+                }
+                return $resource;
+            });
+
         return response()->json([
             'success' => true,
             'data' => [
                 'course_id' => $course->id,
                 'course_title' => $course->title,
-                'modules' => $curriculum
+                'modules' => $curriculum,
+                'resources' => $resources
             ],
             'message' => 'Course curriculum retrieved successfully'
         ]);

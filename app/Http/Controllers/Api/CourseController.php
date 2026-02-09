@@ -142,6 +142,14 @@ class CourseController extends Controller
         // Format image URL
         $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
 
+        // Format resources with file URLs
+        $course->resources = $course->resources->map(function ($resource) {
+            if ($resource->file_path) {
+                $resource->file_url = $resource->file_url;
+            }
+            return $resource;
+        });
+
         // Calculate lessons count
         $course->lessons_count = $course->modules->sum(function ($module) {
             return $module->topics->count();
@@ -357,7 +365,14 @@ class CourseController extends Controller
         $resources = $course->resources()
             ->where('is_active', true)
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->map(function ($resource) {
+                // Add file_url for download resources
+                if ($resource->file_path) {
+                    $resource->file_url = $resource->file_url;
+                }
+                return $resource;
+            });
 
         return response()->json([
             'success' => true,
