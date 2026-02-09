@@ -13,7 +13,6 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SavedCourseController;
-use App\Http\Controllers\Api\VideoCallBookingController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -114,15 +113,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/messages', [MessageController::class, 'store']);
     Route::get('/messages/{message}', [MessageController::class, 'show']);
     Route::put('/messages/{message}/read', [MessageController::class, 'markAsRead']);
-
-    // Video Call Bookings
-    Route::get('/tutors/{tutorId}/available-slots', [VideoCallBookingController::class, 'availableSlots']);
-    Route::post('/video-call-bookings', [VideoCallBookingController::class, 'store']);
-    Route::get('/video-call-bookings', [VideoCallBookingController::class, 'index']);
-    Route::get('/video-call-bookings/{booking}', [VideoCallBookingController::class, 'show']);
-    Route::put('/video-call-bookings/{booking}/status', [VideoCallBookingController::class, 'updateStatus']);
-    Route::post('/video-call-bookings/{booking}/extend', [VideoCallBookingController::class, 'extend']);
-    Route::post('/video-call-bookings/{booking}/cancel', [VideoCallBookingController::class, 'cancel']);
 });
 
 
