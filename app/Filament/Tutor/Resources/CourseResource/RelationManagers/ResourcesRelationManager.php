@@ -66,7 +66,7 @@ class ResourcesRelationManager extends RelationManager
                             ->disk('public')
                             ->visibility('public')
                             ->directory('course-resources')
-                            ->maxSize(10240) // 10MB
+                            ->maxSize(20480) // 20MB
                             ->preserveFilenames()
                             ->acceptedFileTypes([
                                 'application/pdf',
@@ -85,7 +85,7 @@ class ResourcesRelationManager extends RelationManager
                                 'application/zip',
                                 'application/x-rar-compressed',
                             ])
-                            ->helperText('Max file size: 10MB. Supported: PDF, Word, Excel, PowerPoint, Images, Videos, ZIP, RAR')
+                            ->helperText('Max file size: 20MB. Supported: PDF, Word, Excel, PowerPoint, Images, Videos, ZIP, RAR')
                             ->afterStateUpdated(function ($state, callable $set, $get) {
                                 if ($state && $get('resource_type') === 'download') {
                                     // Extract file name from path
@@ -189,7 +189,7 @@ class ResourcesRelationManager extends RelationManager
                             ->disk('public')
                             ->visibility('public')
                             ->directory('course-resources')
-                            ->maxSize(10240) // 10MB per file
+                            ->maxSize(20480) // 20MB per file
                             ->multiple()
                             ->required()
                             ->preserveFilenames()
@@ -210,7 +210,7 @@ class ResourcesRelationManager extends RelationManager
                                 'application/zip',
                                 'application/x-rar-compressed',
                             ])
-                            ->helperText('Select multiple files to upload. Max 10MB per file.'),
+                            ->helperText('Select multiple files to upload. Max 20MB per file.'),
                         Forms\Components\Toggle::make('is_free')
                             ->label('Mark all as free resources')
                             ->default(true),
