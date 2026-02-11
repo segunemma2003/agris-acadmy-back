@@ -56,7 +56,10 @@ class ViewMessage extends ViewRecord
                         ->success()
                         ->send();
 
-                    $this->refresh();
+                    // Refresh the record and reload replies
+                    $this->record->refresh();
+                    $this->record->load('replies.sender');
+                    $this->fillForm();
                 })
                 ->modalHeading('Reply to Message')
                 ->modalSubmitActionLabel('Send Reply'),

@@ -21,14 +21,14 @@ class TutorNotificationMail extends Mailable implements ShouldQueue
     public function __construct(
         public User $recipient,
         public Course $course,
-        public string $subject,
+        public string $emailSubject,
         public string $message,
         public User $tutor
     ) {}
 
     public function build()
     {
-        return $this->subject($this->subject)
+        return $this->subject($this->emailSubject)
             ->view('emails.tutor-notification', [
                 'recipient' => $this->recipient,
                 'course' => $this->course,
