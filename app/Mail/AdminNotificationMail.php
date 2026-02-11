@@ -19,14 +19,14 @@ class AdminNotificationMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public User $recipient,
-        public string $subject,
+        public string $emailSubject,
         public string $message,
         public ?User $sender = null
     ) {}
 
     public function build()
     {
-        return $this->subject($this->subject)
+        return $this->subject($this->emailSubject)
             ->view('emails.admin-notification', [
                 'recipient' => $this->recipient,
                 'message' => $this->message,
