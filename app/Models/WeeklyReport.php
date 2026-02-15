@@ -9,6 +9,7 @@ class WeeklyReport extends Model
 {
     protected $fillable = [
         'tutor_id',
+        'facilitator_id',
         'course_id',
         'report_week_start',
         'report_week_end',
@@ -51,4 +52,9 @@ class WeeklyReport extends Model
     {
         return $this->belongsTo(Course::class);
     }
+}
+
+public function facilitator()
+{
+    return $this->belongsTo(\App\Models\User::class, 'facilitator_id');
 }
