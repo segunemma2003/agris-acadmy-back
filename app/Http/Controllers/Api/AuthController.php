@@ -209,21 +209,41 @@ class AuthController extends Controller
             'email' => 'required|email|exists:users,email',
         ]);
 
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        try {
+            $status = Password::sendResetLink(
+                $request->only('email')
+            );
 
-        if ($status === Password::RESET_LINK_SENT) {
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password reset link has been sent to your email address.',
+                ]);
+            }
+
+            // Handle throttling
+            if ($status === Password::RESET_THROTTLED) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please wait before retrying. You can request a password reset once per minute.',
+                ], 429);
+            }
+
             return response()->json([
-                'success' => true,
-                'message' => 'Password reset link has been sent to your email address.',
+                'success' => false,
+                'message' => 'Unable to send password reset link. Please try again later.',
+            ], 400);
+        } catch (\Exception $e) {
+            \Log::error('Password reset link sending failed', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
             ]);
-        }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Unable to send password reset link. Please try again later.',
-        ], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while sending the password reset link. Please try again later.',
+            ], 500);
+        }
     }
 
     /**
@@ -232,39 +252,66 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
+            'token' => 'required|string',
+            'email' => 'required|email|exists:users,email',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->password = Hash::make($password);
-                $user->save();
+        try {
+            $status = Password::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user, $password) {
+                    $user->password = Hash::make($password);
+                    $user->save();
+                }
+            );
+
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password has been reset successfully. You can now login with your new password.',
+                ]);
             }
-        );
 
-        if ($status === Password::PASSWORD_RESET) {
+            // Handle specific error cases
+            if ($status === Password::INVALID_TOKEN) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid reset token. Please request a new password reset link.',
+                ], 400);
+            }
+
+            if ($status === Password::INVALID_USER) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No user found with this email address.',
+                ], 404);
+            }
+
             return response()->json([
-                'success' => true,
-                'message' => 'Password has been reset successfully. You can now login with your new password.',
+                'success' => false,
+                'message' => 'Invalid or expired reset token. Please request a new password reset link.',
+            ], 400);
+        } catch (\Exception $e) {
+            \Log::error('Password reset failed', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
             ]);
-        }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid or expired reset token. Please request a new password reset link.',
-        ], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while resetting your password. Please try again later.',
+            ], 500);
+        }
     }
 
     /**
-     * Change password
+     * Change password (for authenticated users)
      */
     public function changePassword(Request $request)
     {
         $request->validate([
-            'current_password' => 'required',
+            'current_password' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -277,14 +324,34 @@ class AuthController extends Controller
             ], 400);
         }
 
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
+        // Check if new password is same as current password
+        if (Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New password must be different from your current password',
+            ], 400);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Password changed successfully',
-        ]);
+        try {
+            $user->update([
+                'password' => Hash::make($request->password),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Password change failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while changing your password. Please try again later.',
+            ], 500);
+        }
     }
 
     /**
