@@ -31,7 +31,7 @@ Accept: application/json
 
 **Endpoint:** `POST /api/forgot-password`
 
-**Description:** Request a password reset link to be sent to the user's email address.
+**Description:** Request a password reset token to be sent to the user's email address.
 
 **Authentication:** Not required (public endpoint)
 
@@ -50,7 +50,7 @@ Accept: application/json
 ```json
 {
   "success": true,
-  "message": "Password reset link has been sent to your email address."
+  "message": "Password reset token has been sent to your email address."
 }
 ```
 
@@ -128,11 +128,11 @@ console.log(data);
 ```
 
 **Notes:**
-- The password reset link will be sent to the user's email address
-- The reset link expires in 60 minutes
+- A password reset token will be sent to the user's email address
+- The token expires in 60 minutes
 - Users can only request a password reset once per minute (throttled)
-- The reset link contains a token that must be used with the reset password endpoint
-- The email will contain a link to your frontend application with the token as a query parameter
+- The email will contain the reset token that the user needs to copy and enter in the app
+- The user must enter the token, their email, and new password in the reset password screen
 
 ---
 
@@ -140,7 +140,7 @@ console.log(data);
 
 **Endpoint:** `POST /api/reset-password`
 
-**Description:** Reset the user's password using the token received from the forgot password email.
+**Description:** Reset the user's password using the token received from the forgot password email. The user must provide the token, email, and new password.
 
 **Authentication:** Not required (public endpoint)
 
@@ -249,7 +249,8 @@ console.log(data);
 - The token is valid for 60 minutes from the time it was generated
 - After successfully resetting the password, the user should be redirected to the login screen
 - The token can only be used once
-- If the token is expired or invalid, the user must request a new password reset link
+- If the token is expired or invalid, the user must request a new password reset token
+- The user must manually enter the token from the email along with their email and new password
 
 ---
 
@@ -385,12 +386,15 @@ console.log(data);
 1. **User clicks "Forgot Password"** on the login screen
 2. **User enters email address** and submits
 3. **App calls:** `POST /api/forgot-password` with email
-4. **User receives email** with reset link containing token
-5. **User clicks link** in email (opens app or web page)
-6. **App extracts token** from URL query parameter
-7. **User enters new password** and confirms
-8. **App calls:** `POST /api/reset-password` with token, email, and new password
-9. **Password is reset** and user can login with new password
+4. **User receives email** containing the reset token
+5. **User opens the app** and navigates to reset password screen
+6. **User manually enters:**
+   - Token from email
+   - Email address
+   - New password
+   - Confirm new password
+7. **App calls:** `POST /api/reset-password` with token, email, password, and password_confirmation
+8. **Password is reset** and user can login with new password
 
 ### Scenario 2: User Wants to Change Password (Logged In)
 
@@ -439,7 +443,7 @@ const ForgotPasswordScreen = () => {
 
       if (data.success) {
         Alert.alert('Success', data.message);
-        // Navigate to check email screen
+        // Navigate to check email screen or show success message
       } else {
         Alert.alert('Error', data.message);
       }
@@ -473,14 +477,12 @@ const ForgotPasswordScreen = () => {
 
 ```javascript
 // ResetPasswordScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Button, Alert } from 'react-native';
-import { useRoute } from '@react-navigation/native';
 
 const ResetPasswordScreen = () => {
-  const route = useRoute();
-  const { token, email } = route.params; // Extract from deep link or navigation params
-
+  const [token, setToken] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [loading, setLoading] = useState(false);
@@ -529,6 +531,19 @@ const ResetPasswordScreen = () => {
 
   return (
     <View>
+      <TextInput
+        placeholder="Reset Token (from email)"
+        value={token}
+        onChangeText={setToken}
+        autoCapitalize="none"
+      />
+      <TextInput
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
       <TextInput
         placeholder="New Password"
         value={password}
@@ -644,43 +659,35 @@ const ChangePasswordScreen = () => {
 
 ---
 
-## Deep Linking Configuration
+## Email Format
 
-For mobile apps, you'll need to configure deep linking to handle password reset emails:
+The password reset email will contain:
+- A greeting with the user's name
+- Instructions to use the token in the app
+- The reset token displayed prominently
+- Expiration information (60 minutes)
+- Security notice
 
-### iOS (Info.plist)
-```xml
-<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>agrisiti</string>
-    </array>
-  </dict>
-</array>
+**Example Email Content:**
 ```
+Hello John Doe!
 
-### Android (AndroidManifest.xml)
-```xml
-<intent-filter>
-  <action android:name="android.intent.action.VIEW" />
-  <category android:name="android.intent.category.DEFAULT" />
-  <category android:name="android.intent.category.BROWSABLE" />
-  <data android:scheme="agrisiti" />
-</intent-filter>
-```
+You are receiving this email because we received a password reset request for your account.
 
-### Email Link Format
-The email will contain a link like:
-```
-https://your-frontend-url.com/reset-password?token=xxxxx&email=user@example.com
+Use the following token to reset your password:
+
+Token: abc123xyz789token456
+
+Enter this token along with your email and new password in the app to complete the password reset.
+
+This password reset token will expire in 60 minutes.
+
+If you did not request a password reset, no further action is required.
+
+Regards, Agrisiti Academy Team
 ```
 
-Or for deep linking:
-```
-agrisiti://reset-password?token=xxxxx&email=user@example.com
-```
+**Note:** The user must manually copy the token from the email and enter it in the reset password screen of the mobile app.
 
 ---
 

@@ -231,17 +231,17 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Unable to send password reset link. Please try again later.',
+                'message' => 'Unable to send password reset token. Please try again later.',
             ], 400);
         } catch (\Exception $e) {
-            \Log::error('Password reset link sending failed', [
+            \Log::error('Password reset token sending failed', [
                 'email' => $request->email,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while sending the password reset link. Please try again later.',
+                'message' => 'An error occurred while sending the password reset token. Please try again later.',
             ], 500);
         }
     }
@@ -277,7 +277,7 @@ class AuthController extends Controller
             if ($status === Password::INVALID_TOKEN) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Invalid reset token. Please request a new password reset link.',
+                    'message' => 'Invalid reset token. Please request a new password reset token.',
                 ], 400);
             }
 
@@ -290,7 +290,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired reset token. Please request a new password reset link.',
+                'message' => 'Invalid or expired reset token. Please request a new password reset token.',
             ], 400);
         } catch (\Exception $e) {
             \Log::error('Password reset failed', [

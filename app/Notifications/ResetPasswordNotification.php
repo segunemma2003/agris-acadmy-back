@@ -42,14 +42,14 @@ class ResetPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $resetUrl = env('FRONTEND_URL', env('APP_URL', 'http://localhost')) . '/reset-password?token=' . $this->token . '&email=' . urlencode($notifiable->email);
-
         return (new MailMessage)
             ->subject('Reset Your Password - Agrisiti Academy')
             ->greeting('Hello ' . $notifiable->name . '!')
             ->line('You are receiving this email because we received a password reset request for your account.')
-            ->action('Reset Password', $resetUrl)
-            ->line('This password reset link will expire in 60 minutes.')
+            ->line('Use the following token to reset your password:')
+            ->line('**Token: ' . $this->token . '**')
+            ->line('Enter this token along with your email and new password in the app to complete the password reset.')
+            ->line('This password reset token will expire in 60 minutes.')
             ->line('If you did not request a password reset, no further action is required.')
             ->salutation('Regards, Agrisiti Academy Team');
     }
