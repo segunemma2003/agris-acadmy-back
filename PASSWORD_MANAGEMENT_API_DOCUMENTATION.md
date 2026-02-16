@@ -140,14 +140,14 @@ console.log(data);
 
 **Endpoint:** `POST /api/reset-password`
 
-**Description:** Reset the user's password using the token received from the forgot password email. The user must provide the token, email, and new password.
+**Description:** Reset the user's password using the 6-character code received from the forgot password email. The user must provide the code, email, and new password.
 
 **Authentication:** Not required (public endpoint)
 
 **Request Body:**
 ```json
 {
-  "token": "reset_token_from_email",
+  "token": "ABC123",
   "email": "user@example.com",
   "password": "NewSecurePassword123!",
   "password_confirmation": "NewSecurePassword123!"
@@ -155,7 +155,7 @@ console.log(data);
 ```
 
 **Validation Rules:**
-- `token`: Required, must be a valid reset token from the email
+- `token`: Required, must be exactly 6 characters (alphanumeric, uppercase)
 - `email`: Required, must be a valid email format and exist in the users table
 - `password`: Required, must be at least 8 characters
 - `password_confirmation`: Required, must match the password field
@@ -170,19 +170,19 @@ console.log(data);
 
 **Error Responses:**
 
-**400 Bad Request - Invalid Token:**
+**400 Bad Request - Invalid Code:**
 ```json
 {
   "success": false,
-  "message": "Invalid reset token. Please request a new password reset link."
+  "message": "Invalid reset code. Please check and try again."
 }
 ```
 
-**400 Bad Request - Expired Token:**
+**400 Bad Request - Expired Code:**
 ```json
 {
   "success": false,
-  "message": "Invalid or expired reset token. Please request a new password reset link."
+  "message": "Reset code has expired. Please request a new password reset code."
 }
 ```
 
@@ -218,7 +218,7 @@ curl -X POST https://academy-backends.agrisiti.com/api/reset-password \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
-    "token": "reset_token_from_email",
+    "token": "ABC123",
     "email": "user@example.com",
     "password": "NewSecurePassword123!",
     "password_confirmation": "NewSecurePassword123!"
@@ -234,7 +234,7 @@ const response = await fetch('https://academy-backends.agrisiti.com/api/reset-pa
     'Accept': 'application/json'
   },
   body: JSON.stringify({
-    token: 'reset_token_from_email',
+    token: 'ABC123',
     email: 'user@example.com',
     password: 'NewSecurePassword123!',
     password_confirmation: 'NewSecurePassword123!'
@@ -246,11 +246,13 @@ console.log(data);
 ```
 
 **Notes:**
-- The token is valid for 60 minutes from the time it was generated
+- The code is exactly 6 characters (uppercase letters and numbers)
+- The code is valid for 60 minutes from the time it was generated
 - After successfully resetting the password, the user should be redirected to the login screen
-- The token can only be used once
-- If the token is expired or invalid, the user must request a new password reset token
-- The user must manually enter the token from the email along with their email and new password
+- The code can only be used once
+- If the code is expired or invalid, the user must request a new password reset code
+- The user must manually enter the code from the email along with their email and new password
+- The code is case-insensitive (automatically converted to uppercase)
 
 ---
 
@@ -386,14 +388,14 @@ console.log(data);
 1. **User clicks "Forgot Password"** on the login screen
 2. **User enters email address** and submits
 3. **App calls:** `POST /api/forgot-password` with email
-4. **User receives email** containing the reset token
+4. **User receives email** containing a 6-character reset code (e.g., "ABC123")
 5. **User opens the app** and navigates to reset password screen
 6. **User manually enters:**
-   - Token from email
+   - 6-character code from email
    - Email address
    - New password
    - Confirm new password
-7. **App calls:** `POST /api/reset-password` with token, email, password, and password_confirmation
+7. **App calls:** `POST /api/reset-password` with token (code), email, password, and password_confirmation
 8. **Password is reset** and user can login with new password
 
 ### Scenario 2: User Wants to Change Password (Logged In)
@@ -532,10 +534,11 @@ const ResetPasswordScreen = () => {
   return (
     <View>
       <TextInput
-        placeholder="Reset Token (from email)"
+        placeholder="Reset Code (6 characters from email)"
         value={token}
-        onChangeText={setToken}
-        autoCapitalize="none"
+        onChangeText={(text) => setToken(text.toUpperCase().slice(0, 6))}
+        autoCapitalize="characters"
+        maxLength={6}
       />
       <TextInput
         placeholder="Email"
@@ -674,20 +677,23 @@ Hello John Doe!
 
 You are receiving this email because we received a password reset request for your account.
 
-Use the following token to reset your password:
+Use the following code to reset your password:
 
-Token: abc123xyz789token456
+Code: ABC123
 
-Enter this token along with your email and new password in the app to complete the password reset.
+Enter this code along with your email and new password in the app to complete the password reset.
 
-This password reset token will expire in 60 minutes.
+This password reset code will expire in 60 minutes.
 
 If you did not request a password reset, no further action is required.
 
 Regards, Agrisiti Academy Team
 ```
 
-**Note:** The user must manually copy the token from the email and enter it in the reset password screen of the mobile app.
+**Note:** 
+- The code is exactly 6 characters (uppercase letters and numbers)
+- The user must manually copy the code from the email and enter it in the reset password screen of the mobile app
+- The code is case-insensitive (automatically converted to uppercase)
 
 ---
 
@@ -736,10 +742,11 @@ Regards, Agrisiti Academy Team
 - Check mail logs
 - Verify user email exists in database
 
-### Issue: Token invalid/expired
-- Token expires after 60 minutes
-- Token can only be used once
-- Request a new password reset link
+### Issue: Code invalid/expired
+- Code expires after 60 minutes
+- Code can only be used once
+- Code must be exactly 6 characters
+- Request a new password reset code
 
 ### Issue: Throttling error
 - Wait 60 seconds between requests

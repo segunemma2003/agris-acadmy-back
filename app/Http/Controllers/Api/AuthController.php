@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -201,7 +202,21 @@ class AuthController extends Controller
     }
 
     /**
-     * Send password reset link
+     * Generate a 6-character random code
+     */
+    private function generateResetCode(): string
+    {
+        // Generate 6-character alphanumeric code (uppercase letters and numbers)
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $code = '';
+        for ($i = 0; $i < 6; $i++) {
+            $code .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+        return $code;
+    }
+
+    /**
+     * Send password reset code
      */
     public function forgotPassword(Request $request)
     {
@@ -210,38 +225,62 @@ class AuthController extends Controller
         ]);
 
         try {
-            $status = Password::sendResetLink(
-                $request->only('email')
-            );
+            $email = $request->email;
+            $user = User::where('email', $email)->first();
 
-            if ($status === Password::RESET_LINK_SENT) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Password reset link has been sent to your email address.',
-                ]);
-            }
-
-            // Handle throttling
-            if ($status === Password::RESET_THROTTLED) {
+            if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Please wait before retrying. You can request a password reset once per minute.',
-                ], 429);
+                    'message' => 'No user found with this email address.',
+                ], 404);
             }
 
+            // Check throttling (60 seconds)
+            $existingToken = DB::table('password_reset_tokens')
+                ->where('email', $email)
+                ->first();
+
+            if ($existingToken) {
+                $createdAt = \Carbon\Carbon::parse($existingToken->created_at);
+                if ($createdAt->diffInSeconds(now()) < 60) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Please wait before retrying. You can request a password reset once per minute.',
+                    ], 429);
+                }
+            }
+
+            // Generate 6-character code
+            $code = $this->generateResetCode();
+
+            // Hash the code for storage (using bcrypt for security)
+            $hashedCode = Hash::make($code);
+
+            // Store or update the reset token
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                [
+                    'token' => $hashedCode,
+                    'created_at' => now(),
+                ]
+            );
+
+            // Send notification with the plain code
+            $user->notify(new \App\Notifications\ResetPasswordNotification($code));
+
             return response()->json([
-                'success' => false,
-                'message' => 'Unable to send password reset token. Please try again later.',
-            ], 400);
+                'success' => true,
+                'message' => 'Password reset code has been sent to your email address.',
+            ]);
         } catch (\Exception $e) {
-            \Log::error('Password reset token sending failed', [
+            \Log::error('Password reset code sending failed', [
                 'email' => $request->email,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while sending the password reset token. Please try again later.',
+                'message' => 'An error occurred while sending the password reset code. Please try again later.',
             ], 500);
         }
     }
@@ -252,46 +291,68 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token' => 'required|string',
+            'token' => 'required|string|size:6',
             'email' => 'required|email|exists:users,email',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
         try {
-            $status = Password::reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function ($user, $password) {
-                    $user->password = Hash::make($password);
-                    $user->save();
-                }
-            );
+            $email = $request->email;
+            $code = strtoupper($request->token); // Convert to uppercase for consistency
+            $password = $request->password;
 
-            if ($status === Password::PASSWORD_RESET) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Password has been reset successfully. You can now login with your new password.',
-                ]);
-            }
+            // Find the user
+            $user = User::where('email', $email)->first();
 
-            // Handle specific error cases
-            if ($status === Password::INVALID_TOKEN) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid reset token. Please request a new password reset token.',
-                ], 400);
-            }
-
-            if ($status === Password::INVALID_USER) {
+            if (!$user) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No user found with this email address.',
                 ], 404);
             }
 
+            // Get the reset token from database
+            $resetToken = DB::table('password_reset_tokens')
+                ->where('email', $email)
+                ->first();
+
+            if (!$resetToken) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired reset code. Please request a new password reset code.',
+                ], 400);
+            }
+
+            // Check if token is expired (60 minutes)
+            $createdAt = \Carbon\Carbon::parse($resetToken->created_at);
+            if ($createdAt->diffInMinutes(now()) > 60) {
+                // Delete expired token
+                DB::table('password_reset_tokens')->where('email', $email)->delete();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Reset code has expired. Please request a new password reset code.',
+                ], 400);
+            }
+
+            // Verify the code
+            if (!Hash::check($code, $resetToken->token)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid reset code. Please check and try again.',
+                ], 400);
+            }
+
+            // Reset the password
+            $user->password = Hash::make($password);
+            $user->save();
+
+            // Delete the used token
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+
             return response()->json([
-                'success' => false,
-                'message' => 'Invalid or expired reset token. Please request a new password reset token.',
-            ], 400);
+                'success' => true,
+                'message' => 'Password has been reset successfully. You can now login with your new password.',
+            ]);
         } catch (\Exception $e) {
             \Log::error('Password reset failed', [
                 'email' => $request->email,
