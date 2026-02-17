@@ -52,9 +52,9 @@ class WeeklyReport extends Model
     {
         return $this->belongsTo(Course::class);
     }
-}
 
-public function facilitator()
-{
-    return $this->belongsTo(\App\Models\User::class, 'facilitator_id');
+    public function facilitator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'facilitator_id');
+    }
 }
