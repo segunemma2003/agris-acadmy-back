@@ -71,12 +71,13 @@ class EnrollmentController extends Controller
 
             // Validate that the code matches the user's email
             // This ensures codes can only be used by the intended recipient
-            if ($enrollmentCode->email && $enrollmentCode->email !== $user->email) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This enrollment code is not valid for your account. Please use the code sent to your email address.',
-                ], 403);
-            }
+            // COMMENTED OUT: CSV email verification disabled - allowing any user to use any code
+            // if ($enrollmentCode->email && $enrollmentCode->email !== $user->email) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'This enrollment code is not valid for your account. Please use the code sent to your email address.',
+            //     ], 403);
+            // }
 
             // If code has a user_id, validate it matches the authenticated user
             if ($enrollmentCode->user_id && $enrollmentCode->user_id !== $user->id) {

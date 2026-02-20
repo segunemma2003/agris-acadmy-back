@@ -36,41 +36,55 @@ class ProcessStudentRegistrationWithCSV implements ShouldQueue
     public function handle(): void
     {
         try {
-            $csvPath = public_path('participant.csv');
-            
-            // Check if CSV file exists
-            if (!file_exists($csvPath)) {
-                Log::warning('participant.csv file not found, sending general welcome email', [
-                    'user_id' => $this->user->id,
-                    'email' => $this->user->email,
-                ]);
-                $this->sendGeneralWelcomeEmail();
-                return;
-            }
+            // COMMENTED OUT: CSV email verification disabled
+            // Instead, set default location to Lagos and send enrollment code
+            // $csvPath = public_path('participant.csv');
+            // 
+            // // Check if CSV file exists
+            // if (!file_exists($csvPath)) {
+            //     Log::warning('participant.csv file not found, sending general welcome email', [
+            //         'user_id' => $this->user->id,
+            //         'email' => $this->user->email,
+            //     ]);
+            //     $this->sendGeneralWelcomeEmail();
+            //     return;
+            // }
+            //
+            // // Read CSV file
+            // $csvData = $this->readCSV($csvPath);
+            // 
+            // // Find user's email in CSV (Column F, index 5)
+            // $userData = $this->findUserInCSV($this->user->email, $csvData);
+            // 
+            // if ($userData) {
+            //     // User found in CSV - update info and send enrollment code
+            //     $this->updateUserFromCSV($userData);
+            //     $this->sendWelcomeEmailWithEnrollmentCode();
+            // } else {
+            //     // User not found - send general welcome email
+            //     $this->sendGeneralWelcomeEmail();
+            // }
 
-            // Read CSV file
-            $csvData = $this->readCSV($csvPath);
+            // Set default location to Lagos
+            $this->user->update(['location' => 'Lagos']);
             
-            // Find user's email in CSV (Column F, index 5)
-            $userData = $this->findUserInCSV($this->user->email, $csvData);
+            Log::info('Set default location to Lagos for user', [
+                'user_id' => $this->user->id,
+                'email' => $this->user->email,
+                'location' => 'Lagos',
+            ]);
             
-            if ($userData) {
-                // User found in CSV - update info and send enrollment code
-                $this->updateUserFromCSV($userData);
-                $this->sendWelcomeEmailWithEnrollmentCode();
-            } else {
-                // User not found - send general welcome email
-                $this->sendGeneralWelcomeEmail();
-            }
+            // Send welcome email with enrollment code
+            $this->sendWelcomeEmailWithEnrollmentCode();
         } catch (\Exception $e) {
-            Log::error('Failed to process student registration with CSV', [
+            Log::error('Failed to process student registration', [
                 'user_id' => $this->user->id,
                 'email' => $this->user->email,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
             
-            // Fallback: send general welcome email even if CSV processing fails
+            // Fallback: send general welcome email even if processing fails
             try {
                 $this->sendGeneralWelcomeEmail();
             } catch (\Exception $emailException) {
