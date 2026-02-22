@@ -99,7 +99,7 @@ class EnrollmentCodeResource extends Resource
                     ->visible(fn ($record) => $record->email && !$record->is_used)
                     ->action(function (EnrollmentCode $record) {
                         try {
-                            Mail::to($record->email)->send(new \App\Mail\EnrollmentCodeMail($record));
+                            Mail::to($record->email)->queue(new \App\Mail\EnrollmentCodeMail($record));
                             Notification::make()
                                 ->title('Email sent successfully!')
                                 ->success()

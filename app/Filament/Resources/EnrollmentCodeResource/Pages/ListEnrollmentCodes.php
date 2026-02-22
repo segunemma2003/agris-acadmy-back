@@ -83,7 +83,7 @@ class ListEnrollmentCodes extends ListRecords
 
                             // Send email
                             try {
-                                Mail::to($email)->send(new \App\Mail\EnrollmentCodeMail($code));
+                                Mail::to($email)->queue(new \App\Mail\EnrollmentCodeMail($code));
                                 $sent++;
                             } catch (\Exception $e) {
                                 // Log error but continue

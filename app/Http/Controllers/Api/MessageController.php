@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AdminNotificationMail;
+use App\Mail\TutorNotificationMail;
 use App\Models\Course;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class MessageController extends Controller
 {
@@ -68,6 +73,38 @@ class MessageController extends Controller
             'subject' => $request->subject,
             'message' => $request->message,
         ]);
+
+        // Send same message to recipient's email
+        $recipient = User::find($request->recipient_id);
+        if ($recipient && $recipient->email) {
+            try {
+                $subject = $request->subject ?? 'Message from Agrisiti Academy';
+                $body = $request->message;
+                if ($user->role === 'student') {
+                    // Student messaging tutor/facilitator
+                    Mail::to($recipient->email)->queue(new AdminNotificationMail(
+                        $recipient,
+                        $subject,
+                        $body,
+                        $user
+                    ));
+                } else {
+                    // Tutor/facilitator messaging student
+                    Mail::to($recipient->email)->queue(new TutorNotificationMail(
+                        $recipient,
+                        $course,
+                        $subject,
+                        $body,
+                        $user
+                    ));
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send message email notification (API)', [
+                    'message_id' => $message->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']), 201);
     }

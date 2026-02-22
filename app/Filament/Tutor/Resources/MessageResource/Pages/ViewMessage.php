@@ -3,11 +3,16 @@
 namespace App\Filament\Tutor\Resources\MessageResource\Pages;
 
 use App\Filament\Tutor\Resources\MessageResource;
+use App\Mail\TutorNotificationMail;
 use App\Models\Message;
+use App\Models\User;
+use App\Models\Course;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class ViewMessage extends ViewRecord
 {
@@ -40,7 +45,7 @@ class ViewMessage extends ViewRecord
                         ? $parentMessage->recipient_id 
                         : $parentMessage->sender_id;
                     
-                    Message::create([
+                    $reply = Message::create([
                         'course_id' => $parentMessage->course_id,
                         'sender_id' => Auth::id(),
                         'recipient_id' => $recipientId,
@@ -49,6 +54,26 @@ class ViewMessage extends ViewRecord
                         'message' => $data['message'],
                         'is_read' => false,
                     ]);
+
+                    // Send same message to recipient's email
+                    $recipient = User::find($recipientId);
+                    $course = Course::find($parentMessage->course_id);
+                    if ($recipient && $recipient->email && $course) {
+                        try {
+                            Mail::to($recipient->email)->queue(new TutorNotificationMail(
+                                $recipient,
+                                $course,
+                                'Re: ' . $parentMessage->subject,
+                                strip_tags($data['message']),
+                                Auth::user()
+                            ));
+                        } catch (\Exception $e) {
+                            Log::error('Failed to send reply email notification', [
+                                'reply_id' => $reply->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
 
                     \Filament\Notifications\Notification::make()
                         ->title('Reply sent successfully')
