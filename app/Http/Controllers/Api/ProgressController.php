@@ -6,9 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\StudentProgress;
 use App\Models\Topic;
-use App\Mail\CourseCompletionMail;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class ProgressController extends Controller
@@ -209,20 +207,12 @@ class ProgressController extends Controller
         if ($enrollment) {
             $enrollment->update(['progress_percentage' => round($progressPercentage, 2)]);
 
-            // Mark as completed if 100%
+            // Mark as completed if 100% (no automatic email; admin sends "course finished" to all when ready)
             if ($progressPercentage >= 100 && $enrollment->status !== 'completed') {
                 $enrollment->update([
                     'status' => 'completed',
                     'completed_at' => now(),
                 ]);
-
-                // Send congratulatory email via queue
-                try {
-                    Mail::to($user->email)->queue(new CourseCompletionMail($user, $course, $enrollment));
-                } catch (\Exception $e) {
-                    // Log error but don't fail the completion process
-                    Log::error('Failed to queue course completion email to ' . $user->email . ': ' . $e->getMessage());
-                }
             }
         }
     }
