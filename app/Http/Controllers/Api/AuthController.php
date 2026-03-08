@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
@@ -462,6 +463,79 @@ class AuthController extends Controller
             'success' => true,
             'data' => $certificates,
             'message' => 'Certificates retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Upload profile picture
+     */
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
+        ]);
+
+        $user = $request->user();
+
+        // Delete old avatar if exists
+        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        // Store new avatar
+        $path = $request->file('avatar')->store('avatars', 'public');
+        
+        // Update user avatar
+        $user->update([
+            'avatar' => $path,
+        ]);
+
+        // Clear cache
+        Cache::forget("user_{$user->id}_profile_stats");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture uploaded successfully',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => asset('storage/' . $path),
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Delete profile picture
+     */
+    public function deleteAvatar(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $user->update([
+            'avatar' => null,
+        ]);
+
+        // Clear cache
+        Cache::forget("user_{$user->id}_profile_stats");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture deleted successfully',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => null,
+                ],
+            ],
         ]);
     }
 }

@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/password', [AuthController::class, 'changePassword']);
     Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
     Route::get('/user/certificates', [AuthController::class, 'certificates']);
+    Route::post('/user/profile/avatar', [AuthController::class, 'uploadAvatar']);
+    Route::delete('/user/profile/avatar', [AuthController::class, 'deleteAvatar']);
 
     // Enrollments
     Route::post('/enroll', [EnrollmentController::class, 'enroll']);
@@ -65,6 +67,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courses/{course}/curriculum', [CourseV2Controller::class, 'curriculum']);
     Route::get('/courses/{course}/completion', [CourseV2Controller::class, 'completion']);
     Route::get('/courses/{course}/reviews', [CourseV2Controller::class, 'reviews']);
+    Route::post('/courses/{course}/reviews', [CourseV2Controller::class, 'addReview']);
+    Route::put('/courses/{course}/reviews/{review}', [CourseV2Controller::class, 'updateReview']);
+    Route::delete('/courses/{course}/reviews/{review}', [CourseV2Controller::class, 'deleteReview']);
 
     // Modules
     Route::get('/courses/{course}/modules/{module}', [ModuleController::class, 'show']);
@@ -73,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courses/{course}/progress', [ProgressController::class, 'show']);
     Route::post('/topics/{topic}/complete', [ProgressController::class, 'complete']);
     Route::put('/progress/{studentProgress}', [ProgressController::class, 'update']);
+    Route::post('/progress/sync', [ProgressController::class, 'sync']);
     Route::post('/courses/{course}/modules/{module}/tests/{test}/complete-quiz', [ProgressController::class, 'completeQuiz']);
 
     // Notes
@@ -86,8 +92,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Comments
     Route::get('/courses/{course}/topics/{topic}/comments', [CommentController::class, 'lessonComments']);
     Route::post('/courses/{course}/topics/{topic}/comments', [CommentController::class, 'addLessonComment']);
+    Route::put('/courses/{course}/topics/{topic}/comments/{comment}', [CommentController::class, 'updateLessonComment']);
+    Route::delete('/courses/{course}/topics/{topic}/comments/{comment}', [CommentController::class, 'deleteLessonComment']);
     Route::get('/courses/{course}/comments', [CommentController::class, 'courseComments']);
     Route::post('/courses/{course}/comments', [CommentController::class, 'addCourseComment']);
+    Route::put('/courses/{course}/comments/{comment}', [CommentController::class, 'updateCourseComment']);
+    Route::delete('/courses/{course}/comments/{comment}', [CommentController::class, 'deleteCourseComment']);
 
     // Saved Courses
     Route::get('/saved-courses', [SavedCourseController::class, 'index']);

@@ -216,5 +216,63 @@ class ProgressController extends Controller
             }
         }
     }
+
+    /**
+     * Sync course progress (legacy endpoint for mobile app)
+     */
+    public function sync(Request $request)
+    {
+        $user = $request->user();
+        
+        $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'topic_id' => 'required|exists:topics,id',
+            'watch_time_seconds' => 'nullable|integer',
+            'completion_percentage' => 'nullable|numeric|min:0|max:100',
+            'is_completed' => 'nullable|boolean',
+        ]);
+
+        $course = Course::findOrFail($request->course_id);
+        $topic = Topic::findOrFail($request->topic_id);
+
+        // Check if user is enrolled
+        $enrollment = $user->enrollments()
+            ->where('course_id', $course->id)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not enrolled in this course'
+            ], 403);
+        }
+
+        // Create or update progress
+        $progress = StudentProgress::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'topic_id' => $topic->id,
+            ],
+            [
+                'course_id' => $course->id,
+                'watch_time_seconds' => $request->watch_time_seconds ?? 0,
+                'completion_percentage' => $request->completion_percentage ?? 0,
+                'is_completed' => $request->is_completed ?? false,
+                'last_accessed_at' => now(),
+                'completed_at' => ($request->is_completed ?? false) ? now() : null,
+            ]
+        );
+
+        // Update enrollment progress
+        $this->updateEnrollmentProgress($user, $course);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Progress synced successfully',
+            'data' => [
+                'progress' => $progress,
+            ],
+        ]);
+    }
 }
 

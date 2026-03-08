@@ -397,4 +397,146 @@ class CourseV2Controller extends Controller
             'message' => 'Course reviews retrieved successfully'
         ]);
     }
+
+    /**
+     * Add course review
+     */
+    public function addReview(Request $request, Course $course)
+    {
+        $user = $request->user();
+        
+        // Check if user is enrolled
+        $isEnrolled = $user->enrollments()->where('course_id', $course->id)->exists();
+        if (!$isEnrolled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must be enrolled in this course to submit a review'
+            ], 403);
+        }
+        
+        // Check if user already reviewed
+        $existingReview = \App\Models\CourseReview::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->first();
+        
+        if ($existingReview) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already reviewed this course'
+            ], 400);
+        }
+        
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'review' => 'nullable|string|max:2000',
+        ]);
+        
+        $review = \App\Models\CourseReview::create([
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'rating' => $validated['rating'],
+            'review' => $validated['review'] ?? null,
+            'is_verified_purchase' => true, // User is enrolled
+            'is_approved' => false, // May need admin approval
+        ]);
+        
+        // Update course rating
+        $this->updateCourseRating($course);
+        
+        // Clear cache
+        Cache::forget("course_{$course->id}_reviews_page_10");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Review submitted successfully',
+            'data' => $review->load('user:id,name,avatar')
+        ], 201);
+    }
+
+    /**
+     * Update course review
+     */
+    public function updateReview(Request $request, Course $course, $reviewId)
+    {
+        $user = $request->user();
+        
+        $review = \App\Models\CourseReview::where('id', $reviewId)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$review) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Review not found'
+            ], 404);
+        }
+        
+        $validated = $request->validate([
+            'rating' => 'sometimes|integer|min:1|max:5',
+            'review' => 'nullable|string|max:2000',
+        ]);
+        
+        $review->update($validated);
+        
+        // Update course rating
+        $this->updateCourseRating($course);
+        
+        // Clear cache
+        Cache::forget("course_{$course->id}_reviews_page_10");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Review updated successfully',
+            'data' => $review->load('user:id,name,avatar')
+        ]);
+    }
+
+    /**
+     * Delete course review
+     */
+    public function deleteReview(Request $request, Course $course, $reviewId)
+    {
+        $user = $request->user();
+        
+        $review = \App\Models\CourseReview::where('id', $reviewId)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$review) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Review not found'
+            ], 404);
+        }
+        
+        $review->delete();
+        
+        // Update course rating
+        $this->updateCourseRating($course);
+        
+        // Clear cache
+        Cache::forget("course_{$course->id}_reviews_page_10");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Review deleted successfully'
+        ]);
+    }
+
+    /**
+     * Update course rating based on reviews
+     */
+    private function updateCourseRating(Course $course)
+    {
+        $reviews = $course->reviews()->where('is_approved', true);
+        $rating = $reviews->avg('rating');
+        $ratingCount = $reviews->count();
+        
+        $course->update([
+            'rating' => round($rating, 2),
+            'rating_count' => $ratingCount,
+        ]);
+    }
 }

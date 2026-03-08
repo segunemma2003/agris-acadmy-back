@@ -132,4 +132,146 @@ class CommentController extends Controller
             'message' => 'Comment added successfully'
         ], 201);
     }
+
+    /**
+     * Update lesson comment
+     */
+    public function updateLessonComment(Request $request, Course $course, Topic $topic, $commentId)
+    {
+        $user = $request->user();
+        
+        $comment = LessonComment::where('id', $commentId)
+            ->where('topic_id', $topic->id)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comment not found'
+            ], 404);
+        }
+        
+        $request->validate([
+            'comment' => 'required|string|max:2000',
+        ]);
+        
+        $comment->update([
+            'comment' => $request->comment,
+        ]);
+        
+        // Clear cache
+        Cache::forget("lesson_{$topic->id}_comments");
+        
+        return response()->json([
+            'success' => true,
+            'data' => $comment->load('user:id,name,avatar'),
+            'message' => 'Comment updated successfully'
+        ]);
+    }
+
+    /**
+     * Delete lesson comment
+     */
+    public function deleteLessonComment(Request $request, Course $course, Topic $topic, $commentId)
+    {
+        $user = $request->user();
+        
+        $comment = LessonComment::where('id', $commentId)
+            ->where('topic_id', $topic->id)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comment not found'
+            ], 404);
+        }
+        
+        // Delete replies first
+        LessonComment::where('parent_id', $comment->id)->delete();
+        
+        $comment->delete();
+        
+        // Clear cache
+        Cache::forget("lesson_{$topic->id}_comments");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment deleted successfully'
+        ]);
+    }
+
+    /**
+     * Update course comment
+     */
+    public function updateCourseComment(Request $request, Course $course, $commentId)
+    {
+        $user = $request->user();
+        
+        $comment = CourseComment::where('id', $commentId)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comment not found'
+            ], 404);
+        }
+        
+        $request->validate([
+            'comment' => 'required|string|max:2000',
+        ]);
+        
+        $comment->update([
+            'comment' => $request->comment,
+        ]);
+        
+        // Clear cache
+        Cache::forget("course_{$course->id}_comments");
+        
+        return response()->json([
+            'success' => true,
+            'data' => $comment->load('user:id,name,avatar'),
+            'message' => 'Comment updated successfully'
+        ]);
+    }
+
+    /**
+     * Delete course comment
+     */
+    public function deleteCourseComment(Request $request, Course $course, $commentId)
+    {
+        $user = $request->user();
+        
+        $comment = CourseComment::where('id', $commentId)
+            ->where('course_id', $course->id)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comment not found'
+            ], 404);
+        }
+        
+        // Delete replies first
+        CourseComment::where('parent_id', $comment->id)->delete();
+        
+        $comment->delete();
+        
+        // Clear cache
+        Cache::forget("course_{$course->id}_comments");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment deleted successfully'
+        ]);
+    }
 }
