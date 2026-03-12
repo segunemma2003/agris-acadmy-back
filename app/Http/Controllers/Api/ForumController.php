@@ -57,8 +57,15 @@ class ForumController extends Controller
         $validated = $request->validate([
             'category' => ['nullable', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'image_url' => ['nullable', 'string', 'max:2048'],
+            'image' => ['nullable', 'image', 'max:4096'], // up to 4MB
         ]);
+
+        $imageUrl = null;
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('forum-posts', 'public');
+            $imageUrl = \Storage::disk('public')->url($path);
+        }
 
         $post = ForumPost::create([
             'user_id' => $user->id,
@@ -67,7 +74,7 @@ class ForumController extends Controller
             'is_verified' => (bool)($user->is_verified ?? false),
             'category' => $validated['category'] ?? null,
             'content' => $validated['content'],
-            'image_url' => $validated['image_url'] ?? null,
+            'image_url' => $imageUrl,
         ]);
 
         return response()->json([
