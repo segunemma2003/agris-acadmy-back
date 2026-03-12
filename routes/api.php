@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SavedCourseController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ForumController;
+use App\Http\Controllers\Api\TranscriptController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
