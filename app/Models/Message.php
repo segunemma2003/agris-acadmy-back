@@ -52,6 +52,41 @@ class Message extends Model
     {
         return $this->hasMany(Message::class, 'parent_id')->orderBy('created_at', 'asc');
     }
+
+    /**
+     * Boot method to create notifications on message events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Create notification when a message is sent
+        static::created(function ($message) {
+            $recipient = $message->recipient;
+            $sender = $message->sender;
+            $course = $message->course;
+
+            if ($recipient && $sender && $course) {
+                \App\Services\NotificationService::create(
+                    $recipient,
+                    'message_sent',
+                    'New Message Received',
+                    $sender->role === 'admin' 
+                        ? "You have received a message from {$sender->name} regarding {$course->title}"
+                        : "You have received a message from {$sender->name} regarding {$course->title}",
+                    'message',
+                    $message->id,
+                    [
+                        'course_id' => $course->id,
+                        'course_title' => $course->title,
+                        'sender_id' => $sender->id,
+                        'sender_name' => $sender->name,
+                        'subject' => $message->subject,
+                    ]
+                );
+            }
+        });
+    }
 }
 
 

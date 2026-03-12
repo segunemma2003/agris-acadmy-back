@@ -156,7 +156,7 @@ class Course extends Model
         });
     }
 
-    // Auto-generate slug
+    // Auto-generate slug and create notifications
     protected static function boot()
     {
         parent::boot();
@@ -164,6 +164,48 @@ class Course extends Model
         static::creating(function ($course) {
             if (empty($course->slug)) {
                 $course->slug = Str::slug($course->title);
+            }
+        });
+
+        // Create notification when a new course is published
+        static::created(function ($course) {
+            if ($course->is_published) {
+                // Notify all students about new course
+                \App\Services\NotificationService::createForRole(
+                    'student',
+                    'course_added',
+                    'New Course Available',
+                    "A new course '{$course->title}' has been added and is now available for enrollment.",
+                    'course',
+                    $course->id,
+                    [
+                        'course_id' => $course->id,
+                        'course_title' => $course->title,
+                        'course_slug' => $course->slug,
+                        'category_id' => $course->category_id,
+                    ]
+                );
+            }
+        });
+
+        // Create notification when a course is published (status changed)
+        static::updated(function ($course) {
+            if ($course->is_published && $course->wasChanged('is_published') && !$course->getOriginal('is_published')) {
+                // Notify all students when course is published
+                \App\Services\NotificationService::createForRole(
+                    'student',
+                    'course_published',
+                    'New Course Published',
+                    "The course '{$course->title}' has been published and is now available for enrollment.",
+                    'course',
+                    $course->id,
+                    [
+                        'course_id' => $course->id,
+                        'course_title' => $course->title,
+                        'course_slug' => $course->slug,
+                        'category_id' => $course->category_id,
+                    ]
+                );
             }
         });
     }

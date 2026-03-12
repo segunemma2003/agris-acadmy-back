@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\ModuleController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SavedCourseController;
+use App\Http\Controllers\Api\NotificationController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -123,6 +125,52 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/messages', [MessageController::class, 'store']);
     Route::get('/messages/{message}', [MessageController::class, 'show']);
     Route::put('/messages/{message}/read', [MessageController::class, 'markAsRead']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::get('/notifications/{notification}', [NotificationController::class, 'show']);
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
+    Route::delete('/notifications/read/all', [NotificationController::class, 'deleteAllRead']);
+
+    // Pusher channel authorization
+    Route::post('/broadcasting/auth', function (Request $request) {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $channelName = $request->input('channel_name');
+        $socketId = $request->input('socket_id');
+
+        // Validate channel name format: private-course.{courseId}.user.{userId}
+        if (preg_match('/^private-course\.(\d+)\.user\.(\d+)$/', $channelName, $matches)) {
+            $courseId = $matches[1];
+            $userId = $matches[2];
+
+            // Verify user has access to this channel
+            if ($user->id != $userId) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            // Check if user is enrolled in the course
+            $enrollment = $user->enrollments()->where('course_id', $courseId)->first();
+            if (!$enrollment) {
+                return response()->json(['message' => 'Not enrolled in course'], 403);
+            }
+        } else {
+            return response()->json(['message' => 'Invalid channel name'], 400);
+        }
+
+        // Generate Pusher auth signature
+        $pusher = app(\Pusher\Pusher::class);
+        $auth = $pusher->authorizeChannel($channelName, $socketId);
+
+        return response()->json($auth);
+    });
 });
 
 

@@ -94,20 +94,48 @@ class Module extends Model
                 ->get();
 
             foreach ($enrollments as $enrollment) {
-                if ($enrollment->user && $enrollment->user->email) {
+                if ($enrollment->user) {
+                    // Create in-app notification
                     try {
-                        \Illuminate\Support\Facades\Mail::to($enrollment->user->email)
-                            ->queue(new \App\Mail\NewModuleNotificationMail(
-                                $enrollment->user,
-                                $course,
-                                $this
-                            ));
+                        \App\Services\NotificationService::create(
+                            $enrollment->user,
+                            'module_added',
+                            'New Module Added',
+                            "A new module '{$this->title}' has been added to '{$course->title}'. Check it out!",
+                            'module',
+                            $this->id,
+                            [
+                                'course_id' => $course->id,
+                                'course_title' => $course->title,
+                                'course_slug' => $course->slug,
+                                'module_id' => $this->id,
+                                'module_title' => $this->title,
+                            ]
+                        );
                     } catch (\Exception $e) {
-                        \Log::error('Failed to queue new module notification email', [
+                        \Log::error('Failed to create module notification', [
                             'user_id' => $enrollment->user->id,
                             'module_id' => $this->id,
                             'error' => $e->getMessage(),
                         ]);
+                    }
+
+                    // Send email notification (existing functionality)
+                    if ($enrollment->user->email) {
+                        try {
+                            \Illuminate\Support\Facades\Mail::to($enrollment->user->email)
+                                ->queue(new \App\Mail\NewModuleNotificationMail(
+                                    $enrollment->user,
+                                    $course,
+                                    $this
+                                ));
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to queue new module notification email', [
+                                'user_id' => $enrollment->user->id,
+                                'module_id' => $this->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
                     }
                 }
             }

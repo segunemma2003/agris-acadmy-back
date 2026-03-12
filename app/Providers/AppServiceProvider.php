@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Pusher\Pusher;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,6 +14,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Register Pusher instance
+        $this->app->singleton(Pusher::class, function ($app) {
+            return new Pusher(
+                config('services.pusher.key'),
+                config('services.pusher.secret'),
+                config('services.pusher.app_id'),
+                config('services.pusher.options')
+            );
+        });
     }
 
     /**

@@ -145,6 +145,11 @@ class User extends Authenticatable
         return $this->hasMany(StaffOnboardingVideoView::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     // Helper methods
     public function isAdmin(): bool
     {

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\MessageSent;
+use App\Events\MessageRead;
 use App\Http\Controllers\Controller;
 use App\Mail\AdminNotificationMail;
 use App\Mail\TutorNotificationMail;
@@ -74,6 +76,12 @@ class MessageController extends Controller
             'message' => $request->message,
         ]);
 
+        // Load relationships for broadcasting
+        $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']);
+
+        // Broadcast message sent event for real-time updates
+        broadcast(new MessageSent($message))->toOthers();
+
         // Send same message to recipient's email
         $recipient = User::find($request->recipient_id);
         if ($recipient && $recipient->email) {
@@ -123,6 +131,9 @@ class MessageController extends Controller
                 'is_read' => true,
                 'read_at' => now(),
             ]);
+            
+            // Broadcast message read event
+            broadcast(new MessageRead($message))->toOthers();
         }
 
         return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']));
@@ -140,6 +151,9 @@ class MessageController extends Controller
             'is_read' => true,
             'read_at' => now(),
         ]);
+
+        // Broadcast message read event
+        broadcast(new MessageRead($message))->toOthers();
 
         return response()->json($message);
     }
