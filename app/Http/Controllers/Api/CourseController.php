@@ -15,7 +15,9 @@ class CourseController extends Controller
         $user = $request->user();
 
         $query = Course::where('is_published', true)
-            ->with(['category', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio']);
+            ->with(['category', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio', 'modules' => function ($q) {
+                $q->where('is_active', true);
+            }]);
 
         // Category filter
         if ($request->has('category_id')) {
@@ -64,6 +66,12 @@ class CourseController extends Controller
         $formattedCourses = $courses->getCollection()->map(function ($course) use ($enrolledCourseIds) {
             $course->is_enrolled = $enrolledCourseIds->contains($course->id);
             $course->image_url = $course->image ? (str_starts_with($course->image, 'http') ? $course->image : asset('storage/' . $course->image)) : null;
+            // Add module count (use loaded relationship if available, otherwise query)
+            if ($course->relationLoaded('modules')) {
+                $course->modules_count = $course->modules->where('is_active', true)->count();
+            } else {
+                $course->modules_count = $course->modules()->where('is_active', true)->count();
+            }
             return $course;
         });
 

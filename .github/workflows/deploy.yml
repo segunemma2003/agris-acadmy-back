@@ -317,6 +317,33 @@ jobs:
               echo "✓ Google Translate API key configured"
             fi
 
+            # Pusher / Broadcasting Configuration
+            echo "Configuring Pusher broadcasting settings..."
+            # If Pusher credentials are present, configure broadcast driver and Pusher keys from GitHub Secrets
+            if [ -n "${{ secrets.PUSHER_APP_KEY }}" ] && [ -n "${{ secrets.PUSHER_APP_SECRET }}" ] && [ -n "${{ secrets.PUSHER_APP_ID }}" ]; then
+              update_env "BROADCAST_DRIVER" "pusher"
+              update_env "PUSHER_APP_ID" "${{ secrets.PUSHER_APP_ID }}"
+              update_env "PUSHER_APP_KEY" "${{ secrets.PUSHER_APP_KEY }}"
+              update_env "PUSHER_APP_SECRET" "${{ secrets.PUSHER_APP_SECRET }}"
+
+              # Optional: cluster and connection options
+              if [ -n "${{ secrets.PUSHER_APP_CLUSTER }}" ]; then
+                update_env "PUSHER_APP_CLUSTER" "${{ secrets.PUSHER_APP_CLUSTER }}"
+              fi
+              if [ -n "${{ secrets.PUSHER_HOST }}" ]; then
+                update_env "PUSHER_HOST" "${{ secrets.PUSHER_HOST }}"
+              fi
+              if [ -n "${{ secrets.PUSHER_PORT }}" ]; then
+                update_env "PUSHER_PORT" "${{ secrets.PUSHER_PORT }}"
+              fi
+              if [ -n "${{ secrets.PUSHER_SCHEME }}" ]; then
+                update_env "PUSHER_SCHEME" "${{ secrets.PUSHER_SCHEME }}"
+              fi
+              echo "✓ Pusher broadcasting configuration added"
+            else
+              echo "ℹ️  Pusher secrets not fully provided; skipping Pusher env configuration"
+            fi
+
             echo "✓ .env recreated and updated"
 
             # CRITICAL: Ensure .env permissions are correct after all updates
