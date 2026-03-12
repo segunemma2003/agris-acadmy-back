@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\SavedCourseController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ForumController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -134,6 +135,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
     Route::delete('/notifications/read/all', [NotificationController::class, 'deleteAllRead']);
+
+    // Community Forum
+    Route::get('/forum/posts', [ForumController::class, 'index']);
+    Route::post('/forum/posts', [ForumController::class, 'store']);
+    Route::get('/forum/posts/{post}', [ForumController::class, 'show']);
+    Route::get('/forum/posts/{post}/comments', [ForumController::class, 'comments']);
+    Route::post('/forum/posts/{post}/comments', [ForumController::class, 'addComment']);
+    Route::post('/forum/posts/{post}/like', [ForumController::class, 'toggleLike']);
+    Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike']);
 
     // Pusher channel authorization
     Route::post('/broadcasting/auth', function (Request $request) {
