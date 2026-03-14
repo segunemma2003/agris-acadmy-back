@@ -461,7 +461,7 @@ class AuthController extends Controller
         $certificates = Cache::remember($cacheKey, 600, function () use ($user) {
             return $user->certificates()
                 ->with('course:id,title,image,slug')
-                ->orderBy('issued_at', 'desc')
+                ->orderBy('issued_date', 'desc')
                 ->get();
         });
         
