@@ -16,9 +16,30 @@ use Illuminate\Support\Facades\Mail;
 
 class MessageController extends Controller
 {
-    public function index(Request $request, Course $course)
+    public function index(Request $request, Course $course = null)
     {
         $user = $request->user();
+        $courseId = $request->route('course') ? $course->id : $request->input('course_id', 0);
+
+        // Handle location-based messaging (course_id = 0)
+        if ($courseId == 0) {
+            // Get location-based messages where user is sender or recipient
+            $messages = Message::where('course_id', 0)
+                ->where(function ($query) use ($user) {
+                    $query->where('sender_id', $user->id)
+                        ->orWhere('recipient_id', $user->id);
+                })
+                ->with(['sender:id,name,avatar', 'recipient:id,name,avatar'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($messages);
+        }
+
+        // Course-based messaging
+        if (!$course) {
+            return response()->json(['message' => 'Course not found'], 404);
+        }
 
         // Check if user is enrolled
         $enrollment = $user->enrollments()
@@ -45,27 +66,90 @@ class MessageController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'course_id' => 'required|exists:courses,id',
+            'course_id' => 'required',
             'recipient_id' => 'required|exists:users,id',
             'subject' => 'nullable|string|max:255',
             'message' => 'required|string',
         ]);
 
         $user = $request->user();
+        $recipient = User::findOrFail($request->recipient_id);
+        
+        // Handle location-based messaging (course_id = 0)
+        if ($request->course_id == 0 || $request->course_id == '0') {
+            // Location-based facilitator messaging
+            if ($recipient->role !== 'facilitator') {
+                return response()->json([
+                    'message' => 'You can only message facilitators via location-based messaging'
+                ], 403);
+            }
+            
+            if (!$user->location || !$recipient->location || $user->location !== $recipient->location) {
+                return response()->json([
+                    'message' => 'You can only message facilitators in your location'
+                ], 403);
+            }
+            
+            // Create message with course_id = 0 for location-based messaging
+            $message = Message::create([
+                'course_id' => 0, // Special ID for location-based messaging
+                'sender_id' => $user->id,
+                'recipient_id' => $request->recipient_id,
+                'subject' => $request->subject,
+                'message' => $request->message,
+            ]);
+            
+            // Load relationships for broadcasting
+            $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']);
+            
+            // Broadcast message sent event for real-time updates
+            broadcast(new MessageSent($message))->toOthers();
+            
+            // Send email notification
+            if ($recipient && $recipient->email) {
+                try {
+                    $subject = $request->subject ?? 'Message from Agrisiti Academy';
+                    $body = $request->message;
+                    Mail::to($recipient->email)->queue(new AdminNotificationMail(
+                        $recipient,
+                        $subject,
+                        $body,
+                        $user
+                    ));
+                } catch (\Exception $e) {
+                    Log::error('Failed to send message email notification', [
+                        'message_id' => $message->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']), 201);
+        }
+        
+        // Course-based messaging
         $course = Course::findOrFail($request->course_id);
-
+        
         // Check if user is enrolled
         $enrollment = $user->enrollments()
             ->where('course_id', $course->id)
             ->first();
 
-        if (!$enrollment) {
-            return response()->json(['message' => 'You are not enrolled in this course'], 403);
-        }
+        // Allow messaging if:
+        // 1. User is enrolled in the course AND recipient is tutor/facilitator of the course
+        // 2. OR recipient is a facilitator in user's location (location-based messaging)
+        $isEnrolledAndRecipientIsTutor = $enrollment && 
+            ($course->tutor_id == $request->recipient_id || 
+             $course->tutors()->where('tutor_id', $request->recipient_id)->exists());
+        
+        $isLocationBasedFacilitator = $recipient->role === 'facilitator' && 
+            $user->location && 
+            $recipient->location === $user->location;
 
-        // Verify recipient is tutor of the course
-        if ($course->tutor_id != $request->recipient_id && $user->id != $course->tutor_id) {
-            return response()->json(['message' => 'Invalid recipient'], 400);
+        if (!$isEnrolledAndRecipientIsTutor && !$isLocationBasedFacilitator) {
+            return response()->json([
+                'message' => 'You can only message facilitators in your location or course instructors'
+            ], 403);
         }
 
         $message = Message::create([

@@ -128,6 +128,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages/{message}', [MessageController::class, 'show']);
     Route::put('/messages/{message}/read', [MessageController::class, 'markAsRead']);
 
+    // Facilitators and Instructors
+    Route::get('/facilitators', [App\Http\Controllers\Api\FacilitatorController::class, 'index']);
+    Route::get('/instructors', [App\Http\Controllers\Api\FacilitatorController::class, 'instructors']);
+
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
@@ -144,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/forum/posts/{post}/comments', [ForumController::class, 'comments']);
     Route::post('/forum/posts/{post}/comments', [ForumController::class, 'addComment']);
     Route::post('/forum/posts/{post}/like', [ForumController::class, 'toggleLike']);
+    Route::post('/forum/posts/{post}/share', [ForumController::class, 'share']);
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike']);
 
     // Pusher channel authorization

@@ -86,11 +86,22 @@ class ForumController extends Controller
     /**
      * Show a single forum post with comments.
      */
-    public function show(ForumPost $post): JsonResponse
+    public function show(Request $request, ForumPost $post): JsonResponse
     {
+        $user = $request->user();
+        
         $post->load(['comments' => function ($q) {
             $q->whereNull('parent_id')->latest();
         }]);
+
+        // Add is_liked status if user is authenticated
+        if ($user) {
+            $isLiked = \DB::table('forum_post_likes')
+                ->where('forum_post_id', $post->id)
+                ->where('user_id', $user->id)
+                ->exists();
+            $post->is_liked = $isLiked;
+        }
 
         return response()->json([
             'data' => $post,
@@ -131,12 +142,28 @@ class ForumController extends Controller
     /**
      * List comments for a forum post.
      */
-    public function comments(ForumPost $post): JsonResponse
+    public function comments(Request $request, ForumPost $post): JsonResponse
     {
+        $user = $request->user();
+        
         $comments = ForumComment::where('forum_post_id', $post->id)
             ->whereNull('parent_id')
             ->orderByDesc('created_at')
             ->get();
+
+        // Add is_liked status for each comment if user is authenticated
+        if ($user) {
+            $commentIds = $comments->pluck('id')->toArray();
+            $likedCommentIds = \DB::table('forum_comment_likes')
+                ->whereIn('forum_comment_id', $commentIds)
+                ->where('user_id', $user->id)
+                ->pluck('forum_comment_id')
+                ->toArray();
+
+            foreach ($comments as $comment) {
+                $comment->is_liked = in_array($comment->id, $likedCommentIds);
+            }
+        }
 
         return response()->json([
             'data' => $comments,
@@ -148,21 +175,64 @@ class ForumController extends Controller
      */
     public function toggleLike(ForumPost $post, Request $request): JsonResponse
     {
-        // For now, just increment/decrement likes without tracking per-user.
-        $like = filter_var($request->input('like', true), FILTER_VALIDATE_BOOLEAN);
+        $user = $request->user();
+        
+        // Check if user already liked this post
+        $existingLike = \DB::table('forum_post_likes')
+            ->where('forum_post_id', $post->id)
+            ->where('user_id', $user->id)
+            ->first();
 
-        if ($like) {
+        $isLiked = $existingLike !== null;
+        $like = filter_var($request->input('like', !$isLiked), FILTER_VALIDATE_BOOLEAN);
+
+        if ($like && !$isLiked) {
+            // Like the post
+            \DB::table('forum_post_likes')->insert([
+                'forum_post_id' => $post->id,
+                'user_id' => $user->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
             $post->increment('likes');
-        } else {
+        } elseif (!$like && $isLiked) {
+            // Unlike the post
+            \DB::table('forum_post_likes')
+                ->where('forum_post_id', $post->id)
+                ->where('user_id', $user->id)
+                ->delete();
             if ($post->likes > 0) {
                 $post->decrement('likes');
             }
         }
 
         $post->refresh();
+        
+        // Check if current user liked the post
+        $isLikedByUser = \DB::table('forum_post_likes')
+            ->where('forum_post_id', $post->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        $postData = $post->toArray();
+        $postData['is_liked'] = $isLikedByUser;
 
         return response()->json([
             'message' => $like ? 'Post liked' : 'Post unliked',
+            'data' => $postData,
+        ]);
+    }
+    
+    /**
+     * Share a post (increment share count).
+     */
+    public function share(ForumPost $post): JsonResponse
+    {
+        $post->increment('shares');
+        $post->refresh();
+
+        return response()->json([
+            'message' => 'Post shared',
             'data' => $post,
         ]);
     }
@@ -172,21 +242,51 @@ class ForumController extends Controller
      */
     public function toggleCommentLike(ForumComment $comment, Request $request): JsonResponse
     {
-        $like = filter_var($request->input('like', true), FILTER_VALIDATE_BOOLEAN);
+        $user = $request->user();
+        
+        // Check if user already liked this comment
+        $existingLike = \DB::table('forum_comment_likes')
+            ->where('forum_comment_id', $comment->id)
+            ->where('user_id', $user->id)
+            ->first();
 
-        if ($like) {
+        $isLiked = $existingLike !== null;
+        $like = filter_var($request->input('like', !$isLiked), FILTER_VALIDATE_BOOLEAN);
+
+        if ($like && !$isLiked) {
+            // Like the comment
+            \DB::table('forum_comment_likes')->insert([
+                'forum_comment_id' => $comment->id,
+                'user_id' => $user->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
             $comment->increment('likes');
-        } else {
+        } elseif (!$like && $isLiked) {
+            // Unlike the comment
+            \DB::table('forum_comment_likes')
+                ->where('forum_comment_id', $comment->id)
+                ->where('user_id', $user->id)
+                ->delete();
             if ($comment->likes > 0) {
                 $comment->decrement('likes');
             }
         }
 
         $comment->refresh();
+        
+        // Check if current user liked the comment
+        $isLikedByUser = \DB::table('forum_comment_likes')
+            ->where('forum_comment_id', $comment->id)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        $commentData = $comment->toArray();
+        $commentData['is_liked'] = $isLikedByUser;
 
         return response()->json([
             'message' => $like ? 'Comment liked' : 'Comment unliked',
-            'data' => $comment,
+            'data' => $commentData,
         ]);
     }
 }
