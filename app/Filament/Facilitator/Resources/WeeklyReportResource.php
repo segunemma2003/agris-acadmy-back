@@ -159,7 +159,7 @@ class WeeklyReportResource extends Resource
                 // after their location changes. If you don't want that, you can remove this block.
                 if ($facilitator->location) {
                     $query->whereHas('facilitator', function ($q) use ($facilitator) {
-                        $q->where('location', $facilitator->location);
+                        $q->whereRaw('LOWER(location) = LOWER(?)', [$facilitator->location]);
                     });
                 }
             })
@@ -328,8 +328,9 @@ class WeeklyReportResource extends Resource
         }
 
         // Check facilitator location matches (via relationship if available)
+        // Case-insensitive location matching
         if ($record->facilitator && $record->facilitator->location) {
-            return $record->facilitator->location === $facilitator->location;
+            return strcasecmp($record->facilitator->location, $facilitator->location) === 0;
         }
 
         // If facilitator relationship isn't loaded, still allow based on current facilitator location being set.

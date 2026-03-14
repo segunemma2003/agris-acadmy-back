@@ -65,14 +65,24 @@ class ProcessStudentRegistrationWithCSV implements ShouldQueue
             //     $this->sendGeneralWelcomeEmail();
             // }
 
-            // Set default location to Lagos
-            $this->user->update(['location' => 'Lagos']);
-            
-            Log::info('Set default location to Lagos for user', [
-                'user_id' => $this->user->id,
-                'email' => $this->user->email,
-                'location' => 'Lagos',
-            ]);
+            // Set default location to Lagos only if location is not already set
+            // This preserves location provided during registration, ensuring students
+            // are matched with facilitators based on their actual location
+            if (empty($this->user->location)) {
+                $this->user->update(['location' => 'Lagos']);
+                
+                Log::info('Set default location to Lagos for user (no location provided)', [
+                    'user_id' => $this->user->id,
+                    'email' => $this->user->email,
+                    'location' => 'Lagos',
+                ]);
+            } else {
+                Log::info('Preserved user-provided location', [
+                    'user_id' => $this->user->id,
+                    'email' => $this->user->email,
+                    'location' => $this->user->location,
+                ]);
+            }
             
             // Send welcome email with enrollment code
             $this->sendWelcomeEmailWithEnrollmentCode();

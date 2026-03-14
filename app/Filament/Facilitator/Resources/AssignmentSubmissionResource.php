@@ -34,7 +34,7 @@ class AssignmentSubmissionResource extends Resource
                                 return $query->whereHas('course', function ($q) use ($facilitatorLocation) {
                                     $q->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
                                         $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                                            $uq->where('location', $facilitatorLocation);
+                                            $uq->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                                         });
                                     });
                                 });

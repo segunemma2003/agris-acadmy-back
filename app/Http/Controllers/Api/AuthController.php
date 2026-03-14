@@ -27,6 +27,7 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -35,6 +36,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'student',
             'phone' => $request->phone,
+            'location' => $request->location,
             'is_active' => true,
         ]);
 
@@ -59,6 +61,7 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'location' => $user->location,
                     'role' => $user->role,
                     'avatar' => $user->avatar,
                 ],
@@ -112,6 +115,7 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'location' => $user->location,
                     'role' => $user->role,
                     'avatar' => $user->avatar,
                     'bio' => $user->bio,
@@ -172,12 +176,13 @@ class AuthController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'bio' => 'nullable|string|max:1000',
             'avatar' => 'nullable|string|max:500',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $updateData = $request->only(['name', 'email', 'phone', 'bio', 'avatar']);
+        $updateData = $request->only(['name', 'email', 'phone', 'location', 'bio', 'avatar']);
 
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
@@ -194,6 +199,7 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'location' => $user->location,
                     'bio' => $user->bio,
                     'avatar' => $user->avatar,
                     'role' => $user->role,

@@ -36,7 +36,7 @@ class ModuleTestResource extends Resource
                                 $facilitatorLocation = Auth::user()->location;
                                 return $query->whereHas('enrollments', function ($eq) use ($facilitatorLocation) {
                                     $eq->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                                        $uq->where('location', $facilitatorLocation);
+                                        $uq->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                                     });
                                 });
                             })

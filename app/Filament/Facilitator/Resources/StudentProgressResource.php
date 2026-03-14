@@ -34,7 +34,7 @@ class StudentProgressResource extends Resource
                                 return $query->where('role', 'student')
                                              ->whereNotNull('location')
                                              ->where('location', '!=', '')
-                                             ->where('location', $facilitatorLocation);
+                                             ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                             })
                             ->required()
                             ->searchable()
@@ -48,7 +48,7 @@ class StudentProgressResource extends Resource
                                         $uq->where('role', 'student')
                                            ->whereNotNull('location')
                                            ->where('location', '!=', '')
-                                           ->where('location', $facilitatorLocation);
+                                           ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                                     });
                                 });
                             })
@@ -85,7 +85,7 @@ class StudentProgressResource extends Resource
                 $uq->where('role', 'student')
                    ->whereNotNull('location')
                    ->where('location', '!=', '')
-                   ->where('location', $facilitatorLocation);
+                   ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
             }))
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
@@ -127,7 +127,7 @@ class StudentProgressResource extends Resource
                                 $uq->where('role', 'student')
                                    ->whereNotNull('location')
                                    ->where('location', '!=', '')
-                                   ->where('location', $facilitatorLocation);
+                                   ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                             });
                         });
                     })
@@ -180,6 +180,7 @@ class StudentProgressResource extends Resource
             return false;
         }
         
-        return $record->user->location === $facilitatorLocation;
+        // Case-insensitive location matching
+        return strcasecmp($record->user->location, $facilitatorLocation) === 0;
     }
 }

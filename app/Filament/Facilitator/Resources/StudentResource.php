@@ -53,7 +53,7 @@ class StudentResource extends Resource
                 ->where('role', 'student')
                 ->whereNotNull('location')
                 ->where('location', '!=', '')
-                ->where('location', $facilitatorLocation)
+                ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation])
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
@@ -132,6 +132,7 @@ class StudentResource extends Resource
             return false;
         }
         
-        return $record->location === $facilitatorLocation;
+        // Case-insensitive location matching
+        return strcasecmp($record->location, $facilitatorLocation) === 0;
     }
 }

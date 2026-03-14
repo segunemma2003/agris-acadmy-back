@@ -139,7 +139,7 @@ class CourseResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query->whereHas('enrollments', function ($q) use ($facilitatorLocation) {
                 $q->whereHas('user', function ($uq) use ($facilitatorLocation) {
-                    $uq->where('location', $facilitatorLocation);
+                    $uq->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation]);
                 });
             }))
             ->columns([
