@@ -313,7 +313,7 @@ class EnrollmentController extends Controller
                 'course.tutor:id,name,avatar',
                 'course.tutors:id,name,avatar'
             ])
-            ->orderBy('issued_date', 'desc')
+            ->orderBy('created_at', 'desc') // Use created_at instead of issued_date
             ->get();
         
         return response()->json([
