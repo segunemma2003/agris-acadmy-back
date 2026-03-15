@@ -10,6 +10,7 @@ class TestQuestion extends Model
     protected $fillable = [
         'module_test_id',
         'question',
+        'image',
         'question_type',
         'options',
         'correct_answer',

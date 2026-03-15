@@ -40,6 +40,14 @@ class QuestionsRelationManager extends RelationManager
                     ->required()
                     ->rows(3)
                     ->columnSpanFull(),
+                Forms\Components\FileUpload::make('image')
+                    ->label('Question Image (Optional)')
+                    ->image()
+                    ->imageEditor()
+                    ->imagePreviewHeight('200')
+                    ->directory('test-questions')
+                    ->visibility('public')
+                    ->columnSpanFull(),
                 Forms\Components\Repeater::make('options')
                     ->label('Options')
                     ->schema([
@@ -179,6 +187,13 @@ class QuestionsRelationManager extends RelationManager
                                     ->label('Question')
                                     ->required()
                                     ->rows(2),
+                                Forms\Components\FileUpload::make('image')
+                                    ->label('Question Image (Optional)')
+                                    ->image()
+                                    ->imageEditor()
+                                    ->imagePreviewHeight('200')
+                                    ->directory('test-questions')
+                                    ->visibility('public'),
                                 Forms\Components\TextInput::make('option_a')
                                     ->label('Option A')
                                     ->visible(fn ($get) => $get('question_type') === 'multiple_choice'),
@@ -257,6 +272,7 @@ class QuestionsRelationManager extends RelationManager
                                 'module_test_id' => $ownerRecord->id,
                                 'question_type' => $questionData['question_type'],
                                 'question' => $questionData['question'],
+                                'image' => $questionData['image'] ?? null,
                                 'options' => $optionsArray,
                                 'correct_answer' => $questionData['correct_answer'],
                                 'explanation' => $questionData['explanation'] ?? null,

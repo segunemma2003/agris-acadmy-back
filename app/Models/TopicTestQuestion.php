@@ -10,6 +10,7 @@ class TopicTestQuestion extends Model
     protected $fillable = [
         'topic_test_id',
         'question',
+        'image',
         'question_type',
         'options',
         'correct_answer',
