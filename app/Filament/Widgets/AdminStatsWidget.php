@@ -25,15 +25,19 @@ class AdminStatsWidget extends BaseWidget
         $teamsFormed = 301;
         $demoHubVisits = 116;
 
-        // Keep total users in line with learner metrics.
-        $displayTotalUsers = max($actualTotalUsers, $totalOnlineEnrolled, $activeLearners);
+        // Use provided platform metrics for display
+        $displayTotalUsers = $totalOnlineEnrolled;
+        $activeStaff = User::whereIn('role', ['admin', 'tutor', 'facilitator', 'tagdev'])
+            ->where('is_active', true)
+            ->count();
+        $activeUsersDisplay = $activeLearners + $activeStaff;
 
         // Calculate revenue (if you have payment tracking)
         $totalRevenue = Enrollment::sum('amount_paid') ?? 0;
 
         return [
             Stat::make('Total Users', $displayTotalUsers)
-                ->description("Actual users: {$actualTotalUsers}")
+                ->description('Platform users')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('success')
                 ->chart([7, 12, 15, 18, 22, 25, $displayTotalUsers]),
@@ -55,8 +59,8 @@ class AdminStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('success'),
 
-            Stat::make('Active Learners', $activeLearners)
-                ->description('Currently active learners')
+            Stat::make('Active Users', $activeUsersDisplay)
+                ->description('Active learners + active staff')
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('warning'),
 
