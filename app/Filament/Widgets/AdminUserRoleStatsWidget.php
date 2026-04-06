@@ -6,10 +6,11 @@ use App\Models\User;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
-use Illuminate\Support\Facades\DB;
 
 class AdminUserRoleStatsWidget extends BaseWidget
 {
+    private const TOTAL_ONLINE_ENROLLED = 2623;
+
     protected static ?string $heading = 'Users by Role';
 
     protected static ?int $sort = 2;
@@ -44,6 +45,10 @@ class AdminUserRoleStatsWidget extends BaseWidget
                 TextColumn::make('count')
                     ->label('Count')
                     ->getStateUsing(function ($record) {
+                        if ($record->role === 'student') {
+                            return self::TOTAL_ONLINE_ENROLLED;
+                        }
+
                         return User::where('role', $record->role)->count();
                     }),
             ])
