@@ -45,11 +45,11 @@ class AdminStatsWidget extends BaseWidget
                 ->color('info')
                 ->chart([3, 5, 8, 12, 15, 18, $totalCourses]),
 
-            Stat::make('Total Enrollments', $totalEnrollments)
-                ->description("Records: {$activeEnrollments} active, {$completedEnrollments} completed")
-                ->descriptionIcon('heroicon-m-user-group')
-                ->color('warning')
-                ->chart([10, 20, 30, 40, 50, 60, $totalEnrollments]),
+            // Stat::make('Total Enrollments', $totalEnrollments)
+            //     ->description("Records: {$activeEnrollments} active, {$completedEnrollments} completed")
+            //     ->descriptionIcon('heroicon-m-user-group')
+            //     ->color('warning')
+            //     ->chart([10, 20, 30, 40, 50, 60, $totalEnrollments]),
 
             Stat::make('Total Online Enrolled', $totalOnlineEnrolled)
                 ->description('Temporary hardcoded metric')
