@@ -14,12 +14,15 @@ class AdminStatsWidget extends BaseWidget
     {
         $totalUsers = User::count();
         $totalTutors = User::where('role', 'tutor')->count();
-        $totalStudents = User::where('role', 'student')->count();
+        $registeredStudents = User::where('role', 'student')->count();
         $totalCourses = Course::count();
         $publishedCourses = Course::where('is_published', true)->count();
         $totalEnrollments = Enrollment::count();
         $activeEnrollments = Enrollment::where('status', 'active')->count();
         $completedEnrollments = Enrollment::where('status', 'completed')->count();
+        $activeEnrolledStudents = Enrollment::where('status', 'active')
+            ->distinct()
+            ->count('user_id');
 
         // Calculate revenue (if you have payment tracking)
         $totalRevenue = Enrollment::sum('amount_paid') ?? 0;
@@ -38,13 +41,23 @@ class AdminStatsWidget extends BaseWidget
                 ->chart([3, 5, 8, 12, 15, 18, $totalCourses]),
 
             Stat::make('Total Enrollments', $totalEnrollments)
-                ->description("{$activeEnrollments} active, {$completedEnrollments} completed")
+                ->description("Records: {$activeEnrollments} active, {$completedEnrollments} completed")
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('warning')
                 ->chart([10, 20, 30, 40, 50, 60, $totalEnrollments]),
 
+            Stat::make('Registered Students', $registeredStudents)
+                ->description('All users with role = student')
+                ->descriptionIcon('heroicon-m-user-group')
+                ->color('success'),
+
+            Stat::make('Enrolled Students', $activeEnrolledStudents)
+                ->description('Unique students with active enrollments')
+                ->descriptionIcon('heroicon-m-check-badge')
+                ->color('warning'),
+
             Stat::make('Tutors', $totalTutors)
-                ->description("{$totalStudents} students")
+                ->description('All users with role = tutor')
                 ->descriptionIcon('heroicon-m-user-circle')
                 ->color('primary'),
 

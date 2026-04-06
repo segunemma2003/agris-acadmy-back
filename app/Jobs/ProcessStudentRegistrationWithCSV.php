@@ -69,13 +69,13 @@ class ProcessStudentRegistrationWithCSV implements ShouldQueue
             // This preserves location provided during registration, ensuring students
             // are matched with facilitators based on their actual location
             if (empty($this->user->location)) {
-                $this->user->update(['location' => 'Lagos']);
-                
+            $this->user->update(['location' => 'Lagos']);
+            
                 Log::info('Set default location to Lagos for user (no location provided)', [
-                    'user_id' => $this->user->id,
-                    'email' => $this->user->email,
-                    'location' => 'Lagos',
-                ]);
+                'user_id' => $this->user->id,
+                'email' => $this->user->email,
+                'location' => 'Lagos',
+            ]);
             } else {
                 Log::info('Preserved user-provided location', [
                     'user_id' => $this->user->id,
