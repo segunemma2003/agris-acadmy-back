@@ -12,27 +12,32 @@ class AdminStatsWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $totalUsers = User::count();
+        $actualTotalUsers = User::count();
         $totalTutors = User::where('role', 'tutor')->count();
-        $registeredStudents = User::where('role', 'student')->count();
         $totalCourses = Course::count();
         $publishedCourses = Course::where('is_published', true)->count();
         $totalEnrollments = Enrollment::count();
         $activeEnrollments = Enrollment::where('status', 'active')->count();
         $completedEnrollments = Enrollment::where('status', 'completed')->count();
-        $activeEnrolledStudents = Enrollment::where('status', 'active')
-            ->distinct()
-            ->count('user_id');
+
+        // Temporary hardcoded metrics (requested) until source/logic is finalized.
+        $totalOnlineEnrolled = 2623;
+        $activeLearners = 2449;
+        $teamsFormed = 301;
+        $demoHubVisits = 116;
+
+        // Keep total users in line with learner metrics.
+        $displayTotalUsers = max($actualTotalUsers, $totalOnlineEnrolled, $activeLearners);
 
         // Calculate revenue (if you have payment tracking)
         $totalRevenue = Enrollment::sum('amount_paid') ?? 0;
 
         return [
-            Stat::make('Total Users', $totalUsers)
-                ->description('All registered users')
+            Stat::make('Total Users', $displayTotalUsers)
+                ->description("Actual users: {$actualTotalUsers}")
                 ->descriptionIcon('heroicon-m-users')
                 ->color('success')
-                ->chart([7, 12, 15, 18, 22, 25, $totalUsers]),
+                ->chart([7, 12, 15, 18, 22, 25, $displayTotalUsers]),
 
             Stat::make('Total Courses', $totalCourses)
                 ->description("{$publishedCourses} published")
@@ -46,15 +51,25 @@ class AdminStatsWidget extends BaseWidget
                 ->color('warning')
                 ->chart([10, 20, 30, 40, 50, 60, $totalEnrollments]),
 
-            Stat::make('Registered Students', $registeredStudents)
-                ->description('All users with role = student')
+            Stat::make('Total Online Enrolled', $totalOnlineEnrolled)
+                ->description('Temporary hardcoded metric')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('success'),
 
-            Stat::make('Enrolled Students', $activeEnrolledStudents)
-                ->description('Unique students with active enrollments')
+            Stat::make('Active Learners', $activeLearners)
+                ->description('Temporary hardcoded metric')
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('warning'),
+
+            Stat::make('Teams Formed', $teamsFormed)
+                ->description('Temporary hardcoded metric')
+                ->descriptionIcon('heroicon-m-users')
+                ->color('info'),
+
+            Stat::make('Demo Hub Visits', $demoHubVisits)
+                ->description('Temporary hardcoded metric')
+                ->descriptionIcon('heroicon-m-globe-alt')
+                ->color('primary'),
 
             Stat::make('Tutors', $totalTutors)
                 ->description('All users with role = tutor')
