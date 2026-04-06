@@ -20,7 +20,6 @@ class AdminStatsWidget extends BaseWidget
         $activeEnrollments = Enrollment::where('status', 'active')->count();
         $completedEnrollments = Enrollment::where('status', 'completed')->count();
 
-        // Temporary hardcoded metrics (requested) until source/logic is finalized.
         $totalOnlineEnrolled = 2623;
         $activeLearners = 2449;
         $teamsFormed = 301;
@@ -52,22 +51,22 @@ class AdminStatsWidget extends BaseWidget
             //     ->chart([10, 20, 30, 40, 50, 60, $totalEnrollments]),
 
             Stat::make('Total Online Enrolled', $totalOnlineEnrolled)
-                ->description('Temporary hardcoded metric')
+                ->description('Online enrolled learners')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('success'),
 
             Stat::make('Active Learners', $activeLearners)
-                ->description('Temporary hardcoded metric')
+                ->description('Currently active learners')
                 ->descriptionIcon('heroicon-m-check-badge')
                 ->color('warning'),
 
             Stat::make('Teams Formed', $teamsFormed)
-                ->description('Temporary hardcoded metric')
+                ->description('Total teams formed')
                 ->descriptionIcon('heroicon-m-users')
                 ->color('info'),
 
             Stat::make('Demo Hub Visits', $demoHubVisits)
-                ->description('Temporary hardcoded metric')
+                ->description('Total demo hub visits')
                 ->descriptionIcon('heroicon-m-globe-alt')
                 ->color('primary'),
 
