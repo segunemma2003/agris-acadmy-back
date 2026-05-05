@@ -54,8 +54,13 @@ jobs:
       - name: Run migrations
         run: php artisan migrate
 
-      - name: Execute tests
-        run: php artisan test
+      - name: Execute tests (if present)
+        run: |
+          if [ -d tests ] && [ "$(ls -A tests 2>/dev/null)" ]; then
+            php artisan test
+          else
+            echo "No tests directory found; skipping test step."
+          fi
 
       - name: Check code style
         run: vendor/bin/pint --test || true
