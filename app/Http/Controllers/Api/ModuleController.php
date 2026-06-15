@@ -3,12 +3,26 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\Module;
 use Illuminate\Http\Request;
 
 class ModuleController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/modules/{module}",
+     *     tags={"Modules"},
+     *     summary="Get module details with topics, tests, and per-topic progress",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Module details with topics and tests"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="Course or module not found")
+     * )
+     */
     public function show(Request $request, Course $course, Module $module)
     {
         if (!$course->is_published) {

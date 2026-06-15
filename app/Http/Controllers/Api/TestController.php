@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\Module;
 use App\Models\Topic;
@@ -14,6 +15,19 @@ use Illuminate\Http\Request;
 
 class TestController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/modules/{module}/test",
+     *     tags={"Tests"},
+     *     summary="Get the test for a module with questions and past attempts",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Module test with questions and past attempts"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="No test found for this module")
+     * )
+     */
     public function show(Request $request, Course $course, Module $module)
     {
         if (!$course->is_published) {
@@ -78,6 +92,27 @@ class TestController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/modules/{module}/tests/{test}/submit",
+     *     tags={"Tests"},
+     *     summary="Submit answers for a module test",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="test", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"answers"},
+     *             @OA\Property(property="answers", type="object", description="Map of question_id => selected_answer", example={"1":"A","2":"C"})
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Test submitted with score and pass/fail result"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="Test not in this module")
+     * )
+     */
     public function submit(Request $request, Course $course, Module $module, ModuleTest $test)
     {
         // Check if user is enrolled
@@ -148,6 +183,20 @@ class TestController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/modules/{module}/topics/{topic}/test",
+     *     tags={"Tests"},
+     *     summary="Get the test for a specific topic/lesson with questions and past attempts",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Topic test with questions and past attempts"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="No test found for this topic")
+     * )
+     */
     public function showTopicTest(Request $request, Course $course, Module $module, Topic $topic)
     {
         if (!$course->is_published) {
@@ -220,6 +269,28 @@ class TestController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/modules/{module}/topics/{topic}/tests/{test}/submit",
+     *     tags={"Tests"},
+     *     summary="Submit answers for a topic/lesson test",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="test", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"answers"},
+     *             @OA\Property(property="answers", type="object", description="Map of question_id => selected_answer", example={"1":"B","2":"D"})
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Test submitted with score and pass/fail result"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="Test or topic not found")
+     * )
+     */
     public function submitTopicTest(Request $request, Course $course, Module $module, Topic $topic, TopicTest $test)
     {
         // Check if user is enrolled

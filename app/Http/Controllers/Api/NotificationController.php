@@ -3,12 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/notifications",
+     *     tags={"Notifications"},
+     *     summary="Get paginated notifications for the authenticated user",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="unread_only", in="query", required=false, @OA\Schema(type="boolean")),
+     *     @OA\Parameter(name="type", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=20)),
+     *     @OA\Response(response=200, description="Paginated notifications")
+     * )
+     *
      * Get user's notifications
      */
     public function index(Request $request)
@@ -46,6 +58,14 @@ class NotificationController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/notifications/unread-count",
+     *     tags={"Notifications"},
+     *     summary="Get the number of unread notifications",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Unread count", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="unread_count", type="integer"))))
+     * )
+     *
      * Get unread notifications count
      */
     public function unreadCount(Request $request)
@@ -64,6 +84,52 @@ class NotificationController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/notifications/{notification}",
+     *     tags={"Notifications"},
+     *     summary="Get a notification (auto-marks as read)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="notification", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Notification"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     *
+     * @OA\Put(
+     *     path="/api/notifications/{notification}/read",
+     *     tags={"Notifications"},
+     *     summary="Mark a notification as read",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="notification", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Notification marked as read"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     *
+     * @OA\Put(
+     *     path="/api/notifications/read-all",
+     *     tags={"Notifications"},
+     *     summary="Mark ALL notifications as read",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="All notifications marked as read")
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/notifications/{notification}",
+     *     tags={"Notifications"},
+     *     summary="Delete a notification",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="notification", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Notification deleted"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/notifications/read/all",
+     *     tags={"Notifications"},
+     *     summary="Delete all read notifications",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Read notifications deleted")
+     * )
+     *
      * Get a specific notification
      */
     public function show(Request $request, Notification $notification)

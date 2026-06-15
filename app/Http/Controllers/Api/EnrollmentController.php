@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\EnrollmentCode;
@@ -11,6 +12,25 @@ use Illuminate\Support\Facades\Mail;
 
 class EnrollmentController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/enroll",
+     *     tags={"Enrollments"},
+     *     summary="Enroll in a course using an enrollment code",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"course_id","enrollment_code"},
+     *             @OA\Property(property="course_id", type="integer", example=1),
+     *             @OA\Property(property="enrollment_code", type="string", example="ABC123")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Enrolled successfully", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")))),
+     *     @OA\Response(response=400, description="Already enrolled or invalid code", @OA\JsonContent(ref="#/components/schemas/ApiError")),
+     *     @OA\Response(response=403, description="Code not valid for this account", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     */
     public function enroll(Request $request)
     {
         $request->validate([
@@ -138,6 +158,15 @@ class EnrollmentController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/my-enrollments",
+     *     tags={"Enrollments"},
+     *     summary="Get all enrollments for the authenticated user (minimal, for quick list)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Enrollments list", @OA\JsonContent(type="array", @OA\Items(ref="#/components/schemas/Enrollment")))
+     * )
+     */
     public function myEnrollments(Request $request)
     {
         $enrollments = $request->user()
@@ -146,9 +175,19 @@ class EnrollmentController extends Controller
             ->orderBy('enrolled_at', 'desc')
             ->get();
 
-        return response()->json($enrollments);
+        return response()->json(['success' => true, 'data' => $enrollments]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/my-courses",
+     *     tags={"Enrollments"},
+     *     summary="Get the authenticated user's courses with progress, optionally filtered by status",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="status", in="query", required=false, @OA\Schema(type="string", enum={"all","active","completed"}, default="all")),
+     *     @OA\Response(response=200, description="Courses with progress")
+     * )
+     */
     public function myCourses(Request $request)
     {
         $status = $request->get('status', 'all');
@@ -189,6 +228,15 @@ class EnrollmentController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/ongoing-courses",
+     *     tags={"Enrollments"},
+     *     summary="Get courses with status=active for the authenticated user",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Ongoing courses with progress")
+     * )
+     */
     public function ongoingCourses(Request $request)
     {
         $user = $request->user();
@@ -231,6 +279,15 @@ class EnrollmentController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/completed-courses",
+     *     tags={"Enrollments"},
+     *     summary="Get courses with status=completed for the authenticated user",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Completed courses")
+     * )
+     */
     public function completedCourses(Request $request)
     {
         $user = $request->user();
@@ -253,6 +310,17 @@ class EnrollmentController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/enrollments/{enrollment}",
+     *     tags={"Enrollments"},
+     *     summary="Get a specific enrollment with course details",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="enrollment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Enrollment details"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
     public function show(Request $request, Enrollment $enrollment)
     {
         if ($enrollment->user_id !== $request->user()->id) {
@@ -269,6 +337,30 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/my-ongoing-courses",
+     *     tags={"Enrollments"},
+     *     summary="Alias for /ongoing-courses",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Ongoing courses")
+     * )
+     *
+     * @OA\Get(
+     *     path="/api/saved-courses-list",
+     *     tags={"Saved Courses"},
+     *     summary="Get saved/bookmarked courses (via enrollment controller)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Saved courses")
+     * )
+     *
+     * @OA\Get(
+     *     path="/api/certified-courses",
+     *     tags={"Enrollments"},
+     *     summary="Get courses for which the authenticated user has certificates",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Certified courses with certificate objects")
+     * )
+     *
      * Get user's ongoing courses (alias for ongoingCourses)
      */
     public function myOngoingCourses(Request $request)

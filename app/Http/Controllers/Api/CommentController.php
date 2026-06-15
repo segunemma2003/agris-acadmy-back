@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\CourseComment;
 use App\Models\LessonComment;
@@ -13,6 +14,17 @@ use Illuminate\Support\Facades\Cache;
 class CommentController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/topics/{topic}/comments",
+     *     tags={"Comments"},
+     *     summary="Get top-level comments (with nested replies) for a lesson/topic",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Lesson comments with replies"),
+     *     @OA\Response(response=404, description="Topic not in course")
+     * )
+     *
      * Get comments for a lesson
      */
     public function lessonComments(Request $request, Course $course, Topic $topic)
@@ -45,6 +57,18 @@ class CommentController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/topics/{topic}/comments",
+     *     tags={"Comments"},
+     *     summary="Add a comment (or reply) to a lesson/topic",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"comment"}, @OA\Property(property="comment", type="string", maxLength=2000), @OA\Property(property="parent_id", type="integer", nullable=true, description="ID of parent comment for replies"))),
+     *     @OA\Response(response=201, description="Comment created"),
+     *     @OA\Response(response=404, description="Topic not in course")
+     * )
+     *
      * Add comment to a lesson
      */
     public function addLessonComment(Request $request, Course $course, Topic $topic)
@@ -83,6 +107,73 @@ class CommentController extends Controller
     }
 
     /**
+     * @OA\Put(
+     *     path="/api/courses/{course}/topics/{topic}/comments/{comment}",
+     *     tags={"Comments"},
+     *     summary="Update a lesson comment (owner only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"comment"}, @OA\Property(property="comment", type="string", maxLength=2000))),
+     *     @OA\Response(response=200, description="Comment updated"),
+     *     @OA\Response(response=404, description="Comment not found")
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/courses/{course}/topics/{topic}/comments/{comment}",
+     *     tags={"Comments"},
+     *     summary="Delete a lesson comment and all its replies (owner only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Comment deleted"),
+     *     @OA\Response(response=404, description="Comment not found")
+     * )
+     *
+     * @OA\Get(
+     *     path="/api/courses/{course}/comments",
+     *     tags={"Comments"},
+     *     summary="Get top-level comments (with replies) for a whole course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Course comments")
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/courses/{course}/comments",
+     *     tags={"Comments"},
+     *     summary="Add a comment (or reply) to a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"comment"}, @OA\Property(property="comment", type="string", maxLength=2000), @OA\Property(property="parent_id", type="integer", nullable=true))),
+     *     @OA\Response(response=201, description="Comment created")
+     * )
+     *
+     * @OA\Put(
+     *     path="/api/courses/{course}/comments/{comment}",
+     *     tags={"Comments"},
+     *     summary="Update a course comment (owner only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"comment"}, @OA\Property(property="comment", type="string"))),
+     *     @OA\Response(response=200, description="Comment updated"),
+     *     @OA\Response(response=404, description="Comment not found")
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/courses/{course}/comments/{comment}",
+     *     tags={"Comments"},
+     *     summary="Delete a course comment and all its replies (owner only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Comment deleted"),
+     *     @OA\Response(response=404, description="Comment not found")
+     * )
+     *
      * Get comments for a course
      */
     public function courseComments(Request $request, Course $course)

@@ -179,7 +179,7 @@ class TranscribeVideos extends Command
 
                 // Still processing
                 if ($attempt % 12 === 0) { // Log every minute
-                    $this->info("  Still processing... ({$attempt * 5}s elapsed)");
+                    $this->info("  Still processing... (" . ($attempt * 5) . "s elapsed)");
                 }
             }
 

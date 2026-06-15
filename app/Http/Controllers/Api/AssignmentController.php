@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
@@ -10,6 +11,17 @@ use Illuminate\Http\Request;
 
 class AssignmentController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/assignments",
+     *     tags={"Assignments"},
+     *     summary="List assignments for a course with the user's submission status",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Assignments list with submission info"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function index(Request $request, Course $course)
     {
         $user = $request->user();
@@ -45,9 +57,20 @@ class AssignmentController extends Controller
                 return $assignment;
             });
 
-        return response()->json($assignments);
+        return response()->json(['success' => true, 'data' => $assignments]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/assignments/{assignment}",
+     *     tags={"Assignments"},
+     *     summary="Get a single assignment with the user's submission",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="assignment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Assignment with submission"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function show(Request $request, Assignment $assignment)
     {
         $user = $request->user();
@@ -77,9 +100,31 @@ class AssignmentController extends Controller
         $assignment->submission = $submission; // Single submission object instead of array
         $assignment->unsetRelation('submissions'); // Remove the array
 
-        return response()->json($assignment);
+        return response()->json(['success' => true, 'data' => $assignment]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/assignments/{assignment}/submit",
+     *     tags={"Assignments"},
+     *     summary="Submit or re-submit an assignment (multipart/form-data to include a file)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="assignment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"submission_content"},
+     *                 @OA\Property(property="submission_content", type="string"),
+     *                 @OA\Property(property="file", type="string", format="binary", description="Optional file attachment, max 10 MB")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Submission created/updated"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function submit(Request $request, Assignment $assignment)
     {
         $user = $request->user();
@@ -121,9 +166,18 @@ class AssignmentController extends Controller
             ]
         );
 
-        return response()->json($submission, 201);
+        return response()->json(['success' => true, 'data' => $submission], 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/my-submissions",
+     *     tags={"Assignments"},
+     *     summary="Get all assignment submissions made by the authenticated user across all courses",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="List of submissions with assignment and course")
+     * )
+     */
     public function mySubmissions(Request $request)
     {
         $user = $request->user();
@@ -142,7 +196,7 @@ class AssignmentController extends Controller
                 return $submission;
             });
 
-        return response()->json($submissions);
+        return response()->json(['success' => true, 'data' => $submissions]);
     }
 }
 

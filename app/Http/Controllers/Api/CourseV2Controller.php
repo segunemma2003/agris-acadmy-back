@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\StudentProgress;
@@ -13,6 +14,14 @@ use Illuminate\Support\Facades\DB;
 class CourseV2Controller extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/daily-recommended-courses",
+     *     tags={"Courses"},
+     *     summary="Get today's personalised recommended courses (up to 10, cached 5 min)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Daily recommended courses", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Course"))))
+     * )
+     *
      * Get daily recommended courses for authenticated user
      * Cached per user for 5 minutes
      */
@@ -72,6 +81,14 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/latest-courses",
+     *     tags={"Courses"},
+     *     summary="Get the 10 most recently published courses",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Latest courses")
+     * )
+     *
      * Get latest 10 courses
      */
     public function latest(Request $request)
@@ -100,6 +117,13 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/featured-courses",
+     *     tags={"Courses"},
+     *     summary="Get featured/highlighted courses (public; auth optional for enrollment status)",
+     *     @OA\Response(response=200, description="Featured courses")
+     * )
+     *
      * Get featured courses (public endpoint - no auth required)
      * If user is authenticated, includes enrollment status
      */
@@ -207,6 +231,16 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/curriculum",
+     *     tags={"Courses"},
+     *     summary="Get full course curriculum: modules, topics, tests, assignments, VR/DIY content",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Full curriculum"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     *
      * Get course curriculum with modules, lessons, assignments, VR, DIY, tests
      */
     public function curriculum(Request $request, Course $course)
@@ -290,6 +324,16 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/completion",
+     *     tags={"Courses"},
+     *     summary="Get the authenticated user's completion percentage for a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Completion percentage", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="course_id", type="integer"), @OA\Property(property="completion_percentage", type="number")))),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     *
      * Get course completion percentage for authenticated user
      */
     public function completion(Request $request, Course $course)
@@ -370,6 +414,16 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/reviews",
+     *     tags={"Courses"},
+     *     summary="Get paginated reviews for a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=10)),
+     *     @OA\Response(response=200, description="Reviews list with pagination")
+     * )
+     *
      * Get course reviews
      */
     public function reviews(Request $request, Course $course)
@@ -399,6 +453,18 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/reviews",
+     *     tags={"Courses"},
+     *     summary="Submit a review for a course (enrollment required, one review per user)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"rating"}, @OA\Property(property="rating", type="integer", minimum=1, maximum=5), @OA\Property(property="review", type="string", nullable=true, maxLength=2000))),
+     *     @OA\Response(response=201, description="Review submitted"),
+     *     @OA\Response(response=400, description="Already reviewed"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     *
      * Add course review
      */
     public function addReview(Request $request, Course $course)
@@ -454,6 +520,18 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Put(
+     *     path="/api/courses/{course}/reviews/{review}",
+     *     tags={"Courses"},
+     *     summary="Update the authenticated user's review for a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="review", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(@OA\JsonContent(@OA\Property(property="rating", type="integer", minimum=1, maximum=5), @OA\Property(property="review", type="string", nullable=true))),
+     *     @OA\Response(response=200, description="Review updated"),
+     *     @OA\Response(response=404, description="Review not found")
+     * )
+     *
      * Update course review
      */
     public function updateReview(Request $request, Course $course, $reviewId)
@@ -493,6 +571,17 @@ class CourseV2Controller extends Controller
     }
 
     /**
+     * @OA\Delete(
+     *     path="/api/courses/{course}/reviews/{review}",
+     *     tags={"Courses"},
+     *     summary="Delete the authenticated user's review for a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="review", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Review deleted"),
+     *     @OA\Response(response=404, description="Review not found")
+     * )
+     *
      * Delete course review
      */
     public function deleteReview(Request $request, Course $course, $reviewId)

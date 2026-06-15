@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\StudentProgress;
 use App\Models\Topic;
@@ -11,6 +12,30 @@ use Illuminate\Support\Facades\Log;
 
 class ProgressController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/progress",
+     *     tags={"Progress"},
+     *     summary="Get topic-level progress for a course (enrollment required)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Course progress",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="course_id", type="integer"),
+     *                 @OA\Property(property="overall_progress", type="number"),
+     *                 @OA\Property(property="total_topics", type="integer"),
+     *                 @OA\Property(property="completed_topics", type="integer"),
+     *                 @OA\Property(property="topics", type="array", @OA\Items(type="object"))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function show(Request $request, Course $course)
     {
         $user = $request->user();
@@ -70,6 +95,17 @@ class ProgressController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/topics/{topic}/complete",
+     *     tags={"Progress"},
+     *     summary="Mark a topic/lesson as 100% complete",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Topic marked complete"),
+     *     @OA\Response(response=403, description="Not enrolled in the course that owns this topic")
+     * )
+     */
     public function complete(Request $request, Topic $topic)
     {
         $user = $request->user();
@@ -114,6 +150,23 @@ class ProgressController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/progress/{studentProgress}",
+     *     tags={"Progress"},
+     *     summary="Update watch time and completion percentage for a progress record",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="studentProgress", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="watch_time_seconds", type="integer", nullable=true),
+     *             @OA\Property(property="completion_percentage", type="number", minimum=0, maximum=100, nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Progress updated"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
     public function update(Request $request, StudentProgress $studentProgress)
     {
         if ($studentProgress->user_id !== $request->user()->id) {
@@ -218,6 +271,39 @@ class ProgressController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/modules/{module}/tests/{test}/complete-quiz",
+     *     tags={"Progress"},
+     *     summary="Mark a module quiz as completed and retrieve the test attempt result",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="test", in="path", required=true, @OA\Schema(type="integer", description="TestAttempt ID")),
+     *     @OA\Response(response=200, description="Quiz completion result"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="Test attempt not found")
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/progress/sync",
+     *     tags={"Progress"},
+     *     summary="Sync a single topic progress record (mobile app legacy endpoint)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"course_id","topic_id"},
+     *             @OA\Property(property="course_id", type="integer"),
+     *             @OA\Property(property="topic_id", type="integer"),
+     *             @OA\Property(property="watch_time_seconds", type="integer", nullable=true),
+     *             @OA\Property(property="completion_percentage", type="number", nullable=true),
+     *             @OA\Property(property="is_completed", type="boolean", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Progress synced"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     *
      * Sync course progress (legacy endpoint for mobile app)
      */
     public function sync(Request $request)

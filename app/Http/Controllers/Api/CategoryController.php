@@ -3,11 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/categories",
+     *     tags={"Categories"},
+     *     summary="List all active categories",
+     *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Categories list", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="array", @OA\Items(type="object"))))
+     * )
+     */
     public function index(Request $request)
     {
         $query = Category::where('is_active', true);
@@ -30,6 +40,16 @@ class CategoryController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/categories/{category}",
+     *     tags={"Categories"},
+     *     summary="Get a single category with its courses",
+     *     @OA\Parameter(name="category", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Category details"),
+     *     @OA\Response(response=404, description="Category not found")
+     * )
+     */
     public function show(Category $category)
     {
         if (!$category->is_active) {
@@ -52,6 +72,14 @@ class CategoryController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/categories-with-courses",
+     *     tags={"Categories"},
+     *     summary="List all categories with their published courses nested inside",
+     *     @OA\Response(response=200, description="Categories with courses")
+     * )
+     */
     public function withCourses()
     {
         $categories = Category::where('is_active', true)
@@ -70,6 +98,14 @@ class CategoryController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/featured-courses-public",
+     *     tags={"Categories"},
+     *     summary="Get featured courses grouped by category (public)",
+     *     @OA\Response(response=200, description="Featured courses per category")
+     * )
+     */
     public function featuredCourses()
     {
         $categories = Category::where('is_active', true)
@@ -94,7 +130,20 @@ class CategoryController extends Controller
     }
 
     /**
-     * Get courses by category
+     * @OA\Get(
+     *     path="/api/categories/{category}/courses",
+     *     tags={"Categories"},
+     *     summary="List courses belonging to a category with filters",
+     *     @OA\Parameter(name="category", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="level", in="query", required=false, @OA\Schema(type="string", enum={"beginner","intermediate","advanced"})),
+     *     @OA\Parameter(name="min_rating", in="query", required=false, @OA\Schema(type="number")),
+     *     @OA\Parameter(name="min_duration", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="max_duration", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=20)),
+     *     @OA\Response(response=200, description="Paginated courses in category"),
+     *     @OA\Response(response=404, description="Category not found")
+     * )
      */
     public function courses(Request $request, Category $category)
     {

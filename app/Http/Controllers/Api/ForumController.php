@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\ForumPost;
 use App\Models\ForumComment;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,18 @@ use Illuminate\Http\Request;
 class ForumController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/forum/posts",
+     *     tags={"Forum"},
+     *     summary="List forum posts with optional search, category filter, and trending sort",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="sort", in="query", required=false, @OA\Schema(type="string", enum={"newest","trending"})),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=20)),
+     *     @OA\Response(response=200, description="Paginated forum posts")
+     * )
+     *
      * List forum posts with basic filters (search, category, sort).
      */
     public function index(Request $request): JsonResponse
@@ -48,6 +61,26 @@ class ForumController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/forum/posts",
+     *     tags={"Forum"},
+     *     summary="Create a new forum post (multipart/form-data to attach image)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"content"},
+     *                 @OA\Property(property="content", type="string"),
+     *                 @OA\Property(property="category", type="string", nullable=true),
+     *                 @OA\Property(property="image", type="string", format="binary", description="Optional image, max 4 MB")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Post created")
+     * )
+     *
      * Create a new forum post.
      */
     public function store(Request $request): JsonResponse
@@ -84,6 +117,15 @@ class ForumController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/forum/posts/{post}",
+     *     tags={"Forum"},
+     *     summary="Get a forum post with its top-level comments",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="post", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Forum post with comments and is_liked status")
+     * )
+     *
      * Show a single forum post with comments.
      */
     public function show(Request $request, ForumPost $post): JsonResponse
@@ -109,6 +151,16 @@ class ForumController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/forum/posts/{post}/comments",
+     *     tags={"Forum"},
+     *     summary="Add a comment (or nested reply) to a forum post",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="post", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"content"}, @OA\Property(property="content", type="string"), @OA\Property(property="parent_id", type="integer", nullable=true))),
+     *     @OA\Response(response=201, description="Comment added")
+     * )
+     *
      * Add a comment to a forum post.
      */
     public function addComment(Request $request, ForumPost $post): JsonResponse
@@ -140,6 +192,15 @@ class ForumController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/forum/posts/{post}/comments",
+     *     tags={"Forum"},
+     *     summary="List top-level comments for a forum post with is_liked status",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="post", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Comments list")
+     * )
+     *
      * List comments for a forum post.
      */
     public function comments(Request $request, ForumPost $post): JsonResponse
@@ -171,6 +232,35 @@ class ForumController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/forum/posts/{post}/like",
+     *     tags={"Forum"},
+     *     summary="Toggle like on a forum post (like=true to like, like=false to unlike; defaults to toggle)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="post", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(@OA\JsonContent(@OA\Property(property="like", type="boolean", nullable=true, description="Explicit like value; omit to auto-toggle"))),
+     *     @OA\Response(response=200, description="Updated post with likes count and is_liked")
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/forum/posts/{post}/share",
+     *     tags={"Forum"},
+     *     summary="Increment share count on a forum post",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="post", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Updated post with shares count")
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/forum/comments/{comment}/like",
+     *     tags={"Forum"},
+     *     summary="Toggle like on a forum comment",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(@OA\JsonContent(@OA\Property(property="like", type="boolean", nullable=true))),
+     *     @OA\Response(response=200, description="Updated comment with likes count and is_liked")
+     * )
+     *
      * Like or unlike a post.
      */
     public function toggleLike(ForumPost $post, Request $request): JsonResponse

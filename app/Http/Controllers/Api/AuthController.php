@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Mail\WelcomeStudentMail;
 use App\Jobs\ProcessStudentRegistrationWithCSV;
 use App\Models\User;
@@ -20,6 +21,39 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/register",
+     *     tags={"Auth"},
+     *     summary="Register a new student account",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","password","password_confirmation"},
+     *             @OA\Property(property="name", type="string", example="John Doe"),
+     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", minLength=8, example="secret123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="secret123"),
+     *             @OA\Property(property="phone", type="string", nullable=true, example="+234801234567"),
+     *             @OA\Property(property="location", type="string", nullable=true, example="Lagos")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Registration successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Student registered successfully"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="token", type="string", example="1|abc123..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
+     * )
+     */
     public function register(Request $request)
     {
         $request->validate([
@@ -71,6 +105,36 @@ class AuthController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/login",
+     *     tags={"Auth"},
+     *     summary="Login and obtain Bearer token",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="secret123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Login successful",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Login successful"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="user", ref="#/components/schemas/User"),
+     *                 @OA\Property(property="token", type="string", example="1|abc123..."),
+     *                 @OA\Property(property="token_type", type="string", example="Bearer")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Invalid credentials", @OA\JsonContent(ref="#/components/schemas/ApiError")),
+     *     @OA\Response(response=403, description="Account inactive", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     */
     public function login(Request $request)
     {
         $request->validate([
@@ -126,6 +190,15 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/logout",
+     *     tags={"Auth"},
+     *     summary="Revoke the current Bearer token",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Logged out", @OA\JsonContent(@OA\Property(property="message", type="string", example="Logged out successfully")))
+     * )
+     */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -133,6 +206,28 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/user",
+     *     tags={"Auth"},
+     *     summary="Get authenticated user profile with stats",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="User profile",
+     *         @OA\JsonContent(
+     *             allOf={@OA\Schema(ref="#/components/schemas/User")},
+     *             @OA\Property(property="stats", type="object",
+     *                 @OA\Property(property="total_courses", type="integer"),
+     *                 @OA\Property(property="ongoing_courses", type="integer"),
+     *                 @OA\Property(property="completed_courses", type="integer"),
+     *                 @OA\Property(property="total_hours_spent", type="number"),
+     *                 @OA\Property(property="certificates_acquired", type="integer")
+     *             )
+     *         )
+     *     )
+     * )
+     */
     public function user(Request $request)
     {
         $user = $request->user();
@@ -168,6 +263,27 @@ class AuthController extends Controller
         return response()->json($userData);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/user/profile",
+     *     tags={"Auth"},
+     *     summary="Update authenticated user profile",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="email", type="string", format="email"),
+     *             @OA\Property(property="phone", type="string", nullable=true),
+     *             @OA\Property(property="location", type="string", nullable=true),
+     *             @OA\Property(property="bio", type="string", nullable=true),
+     *             @OA\Property(property="avatar", type="string", nullable=true),
+     *             @OA\Property(property="password", type="string", minLength=8, nullable=true),
+     *             @OA\Property(property="password_confirmation", type="string", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Profile updated", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="user", ref="#/components/schemas/User"))))
+     * )
+     */
     public function updateProfile(Request $request)
     {
         $user = $request->user();
@@ -222,6 +338,100 @@ class AuthController extends Controller
         return $code;
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/user/password",
+     *     tags={"Auth"},
+     *     summary="Change password for authenticated user",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"current_password","password","password_confirmation"},
+     *             @OA\Property(property="current_password", type="string"),
+     *             @OA\Property(property="password", type="string", minLength=8),
+     *             @OA\Property(property="password_confirmation", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Password changed", @OA\JsonContent(ref="#/components/schemas/ApiSuccess")),
+     *     @OA\Response(response=400, description="Wrong current password or same password", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/user/account",
+     *     tags={"Auth"},
+     *     summary="Delete authenticated user account",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(required={"password"}, @OA\Property(property="password", type="string"))
+     *     ),
+     *     @OA\Response(response=200, description="Account deleted", @OA\JsonContent(ref="#/components/schemas/ApiSuccess")),
+     *     @OA\Response(response=400, description="Incorrect password", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     *
+     * @OA\Get(
+     *     path="/api/user/certificates",
+     *     tags={"Auth"},
+     *     summary="Get all certificates earned by the authenticated user",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="List of certificates", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="array", @OA\Items(type="object"))))
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/user/profile/avatar",
+     *     tags={"Auth"},
+     *     summary="Upload a profile picture (multipart/form-data)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(required={"avatar"}, @OA\Property(property="avatar", type="string", format="binary", description="JPEG/PNG/GIF, max 2 MB"))
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Avatar uploaded", @OA\JsonContent(ref="#/components/schemas/ApiSuccess"))
+     * )
+     *
+     * @OA\Delete(
+     *     path="/api/user/profile/avatar",
+     *     tags={"Auth"},
+     *     summary="Delete the current profile picture",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Avatar deleted", @OA\JsonContent(ref="#/components/schemas/ApiSuccess"))
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/forgot-password",
+     *     tags={"Auth"},
+     *     summary="Send a 6-character password reset code to an email address",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(required={"email"}, @OA\Property(property="email", type="string", format="email"))
+     *     ),
+     *     @OA\Response(response=200, description="Reset code sent", @OA\JsonContent(ref="#/components/schemas/ApiSuccess")),
+     *     @OA\Response(response=429, description="Too many requests – wait 60 s", @OA\JsonContent(ref="#/components/schemas/ApiError")),
+     *     @OA\Response(response=404, description="Email not found", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     *
+     * @OA\Post(
+     *     path="/api/reset-password",
+     *     tags={"Auth"},
+     *     summary="Reset password using the 6-character code",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token","email","password","password_confirmation"},
+     *             @OA\Property(property="token", type="string", minLength=6, maxLength=6, example="AB1C2D", description="6-character reset code from email"),
+     *             @OA\Property(property="email", type="string", format="email"),
+     *             @OA\Property(property="password", type="string", minLength=8),
+     *             @OA\Property(property="password_confirmation", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Password reset successful", @OA\JsonContent(ref="#/components/schemas/ApiSuccess")),
+     *     @OA\Response(response=400, description="Invalid or expired code", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     */
     /**
      * Send password reset code
      */

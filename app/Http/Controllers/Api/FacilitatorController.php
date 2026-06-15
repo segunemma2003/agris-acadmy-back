@@ -3,12 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\User;
 use Illuminate\Http\Request;
 
 class FacilitatorController extends Controller
 {
     /**
+     * @OA\Get(
+     *     path="/api/facilitators",
+     *     tags={"Facilitators"},
+     *     summary="Get facilitators in the authenticated user's location",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Facilitators list (empty if user has no location)")
+     * )
+     *
      * Get facilitators by location
      * GET /facilitators?location={location}
      */
@@ -50,6 +59,14 @@ class FacilitatorController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/instructors",
+     *     tags={"Facilitators"},
+     *     summary="Get all active tutors and facilitators",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Instructors/tutors list")
+     * )
+     *
      * Get all instructors/tutors (for admin or general listing)
      * GET /instructors
      */

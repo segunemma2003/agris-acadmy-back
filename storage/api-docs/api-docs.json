@@ -1,0 +1,3880 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Agrisiti Academy API",
+        "description": "REST API for the Agrisiti Academy e-learning platform. Supports student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, and notifications.",
+        "contact": {
+            "email": "admin@agrisiti.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://academy-backends.agrisiti.com",
+            "description": "Production Server"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Local Development Server"
+        }
+    ],
+    "paths": {
+        "/api/courses/{course}/assignments": {
+            "get": {
+                "tags": [
+                    "Assignments"
+                ],
+                "summary": "List assignments for a course with the user's submission status",
+                "operationId": "7c02156b42be6cf65a757aca54963716",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignments list with submission info"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/assignments/{assignment}": {
+            "get": {
+                "tags": [
+                    "Assignments"
+                ],
+                "summary": "Get a single assignment with the user's submission",
+                "operationId": "5bd66e4a56ec61d3f0145377c6347a02",
+                "parameters": [
+                    {
+                        "name": "assignment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Assignment with submission"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/assignments/{assignment}/submit": {
+            "post": {
+                "tags": [
+                    "Assignments"
+                ],
+                "summary": "Submit or re-submit an assignment (multipart/form-data to include a file)",
+                "operationId": "cd9090f6248b40810341a4a0b5ca5533",
+                "parameters": [
+                    {
+                        "name": "assignment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "submission_content"
+                                ],
+                                "properties": {
+                                    "submission_content": {
+                                        "type": "string"
+                                    },
+                                    "file": {
+                                        "description": "Optional file attachment, max 10 MB",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Submission created/updated"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-submissions": {
+            "get": {
+                "tags": [
+                    "Assignments"
+                ],
+                "summary": "Get all assignment submissions made by the authenticated user across all courses",
+                "operationId": "f623be9e48cb7b227582166e506c2592",
+                "responses": {
+                    "200": {
+                        "description": "List of submissions with assignment and course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new student account",
+                "operationId": "8e4e3cb7b46126f4696379d3c7eeb4ad",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123",
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+234801234567",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Lagos",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registration successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Student registered successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|abc123..."
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login and obtain Bearer token",
+                "operationId": "222b2625838e3c57e017987f73598fda",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Login successful"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|abc123..."
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Account inactive",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Revoke the current Bearer token",
+                "operationId": "ad65cbbd4e9f201619eae184a5961a98",
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logged out successfully"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Get authenticated user profile with stats",
+                "operationId": "961ad57987905b44ae2e2f40b82e76de",
+                "responses": {
+                    "200": {
+                        "description": "User profile",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        {
+                                            "properties": {
+                                                "stats": {
+                                                    "properties": {
+                                                        "total_courses": {
+                                                            "type": "integer"
+                                                        },
+                                                        "ongoing_courses": {
+                                                            "type": "integer"
+                                                        },
+                                                        "completed_courses": {
+                                                            "type": "integer"
+                                                        },
+                                                        "total_hours_spent": {
+                                                            "type": "number"
+                                                        },
+                                                        "certificates_acquired": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/profile": {
+            "put": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Update authenticated user profile",
+                "operationId": "1ef0ec18e9319f6a3324289e5f9ef5d3",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "bio": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "avatar": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/categories": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List all active categories",
+                "operationId": "ac9c4d978ea4e5b72915ca9728e5b8b1",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Categories list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/categories/{category}": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get a single category with its courses",
+                "operationId": "ff3ab984d3fe877eb16da6009394d694",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Category details"
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    }
+                }
+            }
+        },
+        "/api/categories-with-courses": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List all categories with their published courses nested inside",
+                "operationId": "c1eff7a877b5c33569510bdcf90dad4d",
+                "responses": {
+                    "200": {
+                        "description": "Categories with courses"
+                    }
+                }
+            }
+        },
+        "/api/featured-courses-public": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get featured courses grouped by category (public)",
+                "operationId": "af6baaa84e989113040667893bd070cc",
+                "responses": {
+                    "200": {
+                        "description": "Featured courses per category"
+                    }
+                }
+            }
+        },
+        "/api/categories/{category}/courses": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List courses belonging to a category with filters",
+                "operationId": "7cf8effceb9594fb2e2978f9ae0a3794",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "min_rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "min_duration",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "max_duration",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated courses in category"
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    }
+                }
+            }
+        },
+        "/api/courses/{course}/topics/{topic}/comments": {
+            "get": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Get top-level comments (with nested replies) for a lesson/topic",
+                "operationId": "62a2173bec79c97549025fdff6a6f122",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lesson comments with replies"
+                    },
+                    "404": {
+                        "description": "Topic not in course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Add a comment (or reply) to a lesson/topic",
+                "operationId": "ed0b55d0dc1cbe36b9cf760f84ee166c",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "comment"
+                                ],
+                                "properties": {
+                                    "comment": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "parent_id": {
+                                        "description": "ID of parent comment for replies",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Comment created"
+                    },
+                    "404": {
+                        "description": "Topic not in course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/topics/{topic}/comments/{comment}": {
+            "put": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Update a lesson comment (owner only)",
+                "operationId": "8b28325e9f4499ee81057462478a43c9",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "comment"
+                                ],
+                                "properties": {
+                                    "comment": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comment updated"
+                    },
+                    "404": {
+                        "description": "Comment not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Delete a lesson comment and all its replies (owner only)",
+                "operationId": "d198b4cd1cb7a9a072a010d6db436071",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Comment deleted"
+                    },
+                    "404": {
+                        "description": "Comment not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/comments": {
+            "get": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Get top-level comments (with replies) for a whole course",
+                "operationId": "c2fbd6089fa0ca44109df0e39d43c86c",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course comments"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Add a comment (or reply) to a course",
+                "operationId": "db3bd79bdc78f15c180d7b7f66341ab6",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "comment"
+                                ],
+                                "properties": {
+                                    "comment": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "parent_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Comment created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/comments/{comment}": {
+            "put": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Update a course comment (owner only)",
+                "operationId": "5a877d532a700c87a6821f7a84f8e929",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "comment"
+                                ],
+                                "properties": {
+                                    "comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Comment updated"
+                    },
+                    "404": {
+                        "description": "Comment not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Delete a course comment and all its replies (owner only)",
+                "operationId": "1eab81fde6f8a305cffefcdea40952e6",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Comment deleted"
+                    },
+                    "404": {
+                        "description": "Comment not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "List published courses with filters (public)",
+                "operationId": "d452dd5ed2fa44f48bd98e5677e3cc3f",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "level",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "beginner",
+                                "intermediate",
+                                "advanced"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "min_rating",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "min_duration",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "max_duration",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated courses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Course"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/components/schemas/Pagination"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/courses/{course}": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get full course details (public)",
+                "operationId": "0449b337fd98c3b8384aa8816d862c1d",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Course"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                }
+            }
+        },
+        "/api/recommended-courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get courses recommended for the authenticated user based on enrollment history",
+                "operationId": "3e44378ab07d3704dfaa61196644ae1b",
+                "responses": {
+                    "200": {
+                        "description": "Recommended courses list"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "List modules (with topics) for a course",
+                "operationId": "1d02ea4e69b6008e6da19dbecc13e9c4",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Modules list"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/information": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get detailed course information (description, requirements, instructors, etc.)",
+                "operationId": "1aa547ffc4f64d2b2c05905a91180034",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course information"
+                    },
+                    "404": {
+                        "description": "Course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/diy-content": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get DIY (do-it-yourself) content for a course (enrollment required)",
+                "operationId": "b581c57b336ff5ea6ca4b4f18bb51c37",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DIY content list"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/resources": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get downloadable resources for a course (enrollment required)",
+                "operationId": "bb5619221477da6c131e4512ec5d56b5",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resources list"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/daily-recommended-courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get today's personalised recommended courses (up to 10, cached 5 min)",
+                "operationId": "d929fb6b99f71f42cf9abc635fb2c258",
+                "responses": {
+                    "200": {
+                        "description": "Daily recommended courses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Course"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/latest-courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get the 10 most recently published courses",
+                "operationId": "d915e40c6eab14dc41ef9fc5d0fbde3a",
+                "responses": {
+                    "200": {
+                        "description": "Latest courses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/featured-courses": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get featured/highlighted courses (public; auth optional for enrollment status)",
+                "operationId": "c880d4de68a89f7fa8d7a5ca70f4b72b",
+                "responses": {
+                    "200": {
+                        "description": "Featured courses"
+                    }
+                }
+            }
+        },
+        "/api/courses/{course}/curriculum": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get full course curriculum: modules, topics, tests, assignments, VR/DIY content",
+                "operationId": "b1aa6611e989ca2dcd0a669f35f32bce",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Full curriculum"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/completion": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get the authenticated user's completion percentage for a course",
+                "operationId": "53cfd5d2fde3270250ae23df7b32208a",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Completion percentage",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "course_id": {
+                                                    "type": "integer"
+                                                },
+                                                "completion_percentage": {
+                                                    "type": "number"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/reviews": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get paginated reviews for a course",
+                "operationId": "9a70af50275058cdd536a07e5b7f06c8",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reviews list with pagination"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Submit a review for a course (enrollment required, one review per user)",
+                "operationId": "560d6987aa1f19513e159058421e16e1",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    },
+                                    "review": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Review submitted"
+                    },
+                    "400": {
+                        "description": "Already reviewed"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/reviews/{review}": {
+            "put": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Update the authenticated user's review for a course",
+                "operationId": "d1ae21f1f1e24258437ebf11224bd047",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "review",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    },
+                                    "review": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Review updated"
+                    },
+                    "404": {
+                        "description": "Review not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Delete the authenticated user's review for a course",
+                "operationId": "0d03805ff938d827a323d9fad4665ee8",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "review",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Review deleted"
+                    },
+                    "404": {
+                        "description": "Review not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/enroll": {
+            "post": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Enroll in a course using an enrollment code",
+                "operationId": "bc62520cb8b83e1652361e1f9856db1d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "course_id",
+                                    "enrollment_code"
+                                ],
+                                "properties": {
+                                    "course_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "enrollment_code": {
+                                        "type": "string",
+                                        "example": "ABC123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Enrolled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "enrollment": {
+                                                    "$ref": "#/components/schemas/Enrollment"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Already enrolled or invalid code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Code not valid for this account",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-enrollments": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get all enrollments for the authenticated user (minimal, for quick list)",
+                "operationId": "653272242ab66427801d85f2a1539809",
+                "responses": {
+                    "200": {
+                        "description": "Enrollments list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Enrollment"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-courses": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get the authenticated user's courses with progress, optionally filtered by status",
+                "operationId": "7a1202119bc11d7efb5590e46d39535f",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "all",
+                            "enum": [
+                                "all",
+                                "active",
+                                "completed"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Courses with progress"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ongoing-courses": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get courses with status=active for the authenticated user",
+                "operationId": "ab7b7457e83a4246b6d03a4b1753f008",
+                "responses": {
+                    "200": {
+                        "description": "Ongoing courses with progress"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/completed-courses": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get courses with status=completed for the authenticated user",
+                "operationId": "6ffec60f62d1e7b1fd93499fd4f9c275",
+                "responses": {
+                    "200": {
+                        "description": "Completed courses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/enrollments/{enrollment}": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get a specific enrollment with course details",
+                "operationId": "71600048701b247a7192d59731227af2",
+                "parameters": [
+                    {
+                        "name": "enrollment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Enrollment details"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-ongoing-courses": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Alias for /ongoing-courses",
+                "operationId": "557b5ab904e550c9fd99be8511ae60ed",
+                "responses": {
+                    "200": {
+                        "description": "Ongoing courses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/saved-courses-list": {
+            "get": {
+                "tags": [
+                    "Saved Courses"
+                ],
+                "summary": "Get saved/bookmarked courses (via enrollment controller)",
+                "operationId": "93e56620db25132a2c8d24675ab9d686",
+                "responses": {
+                    "200": {
+                        "description": "Saved courses"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/certified-courses": {
+            "get": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Get courses for which the authenticated user has certificates",
+                "operationId": "5a9efb7c85d36ee091716b4a84ffe314",
+                "responses": {
+                    "200": {
+                        "description": "Certified courses with certificate objects"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/facilitators": {
+            "get": {
+                "tags": [
+                    "Facilitators"
+                ],
+                "summary": "Get facilitators in the authenticated user's location",
+                "operationId": "375cfaeeb234d3bd150644d5d7d72d9a",
+                "responses": {
+                    "200": {
+                        "description": "Facilitators list (empty if user has no location)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/instructors": {
+            "get": {
+                "tags": [
+                    "Facilitators"
+                ],
+                "summary": "Get all active tutors and facilitators",
+                "operationId": "3f3c2e7b38d17ca377d1a4418d9f673a",
+                "responses": {
+                    "200": {
+                        "description": "Instructors/tutors list"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/posts": {
+            "get": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "List forum posts with optional search, category filter, and trending sort",
+                "operationId": "d157fc0e6a9b3fa6710c35db0358dc78",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "newest",
+                                "trending"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated forum posts"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Create a new forum post (multipart/form-data to attach image)",
+                "operationId": "caaf559b4b88b655c9174803654050fd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "content"
+                                ],
+                                "properties": {
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "image": {
+                                        "description": "Optional image, max 4 MB",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Post created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/posts/{post}": {
+            "get": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Get a forum post with its top-level comments",
+                "operationId": "13e470368bd61b93b4fb1ba530c0acff",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Forum post with comments and is_liked status"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/posts/{post}/comments": {
+            "get": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "List top-level comments for a forum post with is_liked status",
+                "operationId": "a349d9bde419a186a81be9c994033ec8",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Comments list"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Add a comment (or nested reply) to a forum post",
+                "operationId": "79a8e3ee41bfa5f745c28d3f0f7dcf77",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "content"
+                                ],
+                                "properties": {
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "parent_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Comment added"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/posts/{post}/like": {
+            "post": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Toggle like on a forum post (like=true to like, like=false to unlike; defaults to toggle)",
+                "operationId": "a0541644b0f6f2cb8677aac5043374b3",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "like": {
+                                        "description": "Explicit like value; omit to auto-toggle",
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated post with likes count and is_liked"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/posts/{post}/share": {
+            "post": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Increment share count on a forum post",
+                "operationId": "a8939abc1f639cba8dd51e52c67d3ad2",
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated post with shares count"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/forum/comments/{comment}/like": {
+            "post": {
+                "tags": [
+                    "Forum"
+                ],
+                "summary": "Toggle like on a forum comment",
+                "operationId": "6183333f4104e29853408b93d704e96c",
+                "parameters": [
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "like": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated comment with likes count and is_liked"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/messages": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Get messages for a course conversation (must be enrolled; or use course_id=0 for location-based facilitator messages)",
+                "operationId": "4cb70de617fc15e6dac78a9a801a51fd",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "description": "Course ID or 0 for location-based messaging",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Messages list"
+                    },
+                    "403": {
+                        "description": "Not enrolled or course not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages": {
+            "post": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send a message to a course instructor or location-based facilitator",
+                "operationId": "c85a9171473a13f151a8672235e01559",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "course_id",
+                                    "recipient_id",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "course_id": {
+                                        "description": "Course ID or 0 for location-based messaging",
+                                        "type": "integer"
+                                    },
+                                    "recipient_id": {
+                                        "type": "integer"
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 255
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Message sent"
+                    },
+                    "403": {
+                        "description": "Recipient not reachable (not instructor of course / wrong location)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/{message}": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Get a single message (auto-marks as read if the user is the recipient)",
+                "operationId": "48780e1caa5a24669cfe7c0b30a0bc1b",
+                "parameters": [
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message object"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/{message}/read": {
+            "put": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Mark a message as read (recipient only)",
+                "operationId": "7a868a5bf39d5d9be22144dc87848737",
+                "parameters": [
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Message marked as read"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}": {
+            "get": {
+                "tags": [
+                    "Modules"
+                ],
+                "summary": "Get module details with topics, tests, and per-topic progress",
+                "operationId": "4dae24516bea98c328648a87c36b6770",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module details with topics and tests"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Course or module not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/notes": {
+            "get": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Get all notes the authenticated user made for a course",
+                "operationId": "31429fefcc9f5625ec9f671d49e85ceb",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "All notes for the course"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/notes": {
+            "get": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Get all notes the authenticated user made for topics in a specific module",
+                "operationId": "cb2f7d1b82eacc93454f42b22410ca78",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module-scoped notes"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Module not in this course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notes": {
+            "post": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Create a note for a specific topic at an optional video timestamp",
+                "operationId": "b741a3f13d8dcdf760b41fbad8c68737",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "course_id",
+                                    "topic_id",
+                                    "notes"
+                                ],
+                                "properties": {
+                                    "course_id": {
+                                        "type": "integer"
+                                    },
+                                    "topic_id": {
+                                        "type": "integer"
+                                    },
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "timestamp_seconds": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "nullable": true,
+                                        "default": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Note created"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notes/{note}": {
+            "put": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Update a note",
+                "operationId": "868de0af8647b2c498932322d6140c02",
+                "parameters": [
+                    {
+                        "name": "note",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "notes"
+                                ],
+                                "properties": {
+                                    "notes": {
+                                        "type": "string"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Note updated"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Delete a note",
+                "operationId": "18dd7c2317f5f45221b4e50b9762c481",
+                "parameters": [
+                    {
+                        "name": "note",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Note deleted"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/topics/{topic}/notes": {
+            "get": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Get all notes for a specific topic/lesson",
+                "operationId": "f0b11a7154ea46b13b9cbf9fdf77dcee",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Topic notes"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Module or topic not in course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get paginated notifications for the authenticated user",
+                "operationId": "6d56a555955089a73fdf3f7229e8ead8",
+                "parameters": [
+                    {
+                        "name": "unread_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated notifications"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/unread-count": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get the number of unread notifications",
+                "operationId": "f3e05b69d516049be949f02a45e0eedd",
+                "responses": {
+                    "200": {
+                        "description": "Unread count",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "unread_count": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{notification}": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get a notification (auto-marks as read)",
+                "operationId": "ea7eaa587ff4cfb9b97294857f2adbff",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Delete a notification",
+                "operationId": "d4e7cdee77debc12063ed6b115704505",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification deleted"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{notification}/read": {
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark a notification as read",
+                "operationId": "fa2d5601fece5fa53b401c825ab29bae",
+                "parameters": [
+                    {
+                        "name": "notification",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification marked as read"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read-all": {
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark ALL notifications as read",
+                "operationId": "ee714a953725b971d855de15e47764d2",
+                "responses": {
+                    "200": {
+                        "description": "All notifications marked as read"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read/all": {
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Delete all read notifications",
+                "operationId": "b61ed89d42b9caff25e8b4d1148c8151",
+                "responses": {
+                    "200": {
+                        "description": "Read notifications deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/progress": {
+            "get": {
+                "tags": [
+                    "Progress"
+                ],
+                "summary": "Get topic-level progress for a course (enrollment required)",
+                "operationId": "77811065a44e585053bb9997b3eba175",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course progress",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "course_id": {
+                                                    "type": "integer"
+                                                },
+                                                "overall_progress": {
+                                                    "type": "number"
+                                                },
+                                                "total_topics": {
+                                                    "type": "integer"
+                                                },
+                                                "completed_topics": {
+                                                    "type": "integer"
+                                                },
+                                                "topics": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/topics/{topic}/complete": {
+            "post": {
+                "tags": [
+                    "Progress"
+                ],
+                "summary": "Mark a topic/lesson as 100% complete",
+                "operationId": "c1fceda82179d614a314b869bb73398e",
+                "parameters": [
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Topic marked complete"
+                    },
+                    "403": {
+                        "description": "Not enrolled in the course that owns this topic"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/progress/{studentProgress}": {
+            "put": {
+                "tags": [
+                    "Progress"
+                ],
+                "summary": "Update watch time and completion percentage for a progress record",
+                "operationId": "061304e0b491f55ddf3f0eda62848013",
+                "parameters": [
+                    {
+                        "name": "studentProgress",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "watch_time_seconds": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "completion_percentage": {
+                                        "type": "number",
+                                        "nullable": true,
+                                        "maximum": 100,
+                                        "minimum": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Progress updated"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/tests/{test}/complete-quiz": {
+            "post": {
+                "tags": [
+                    "Progress"
+                ],
+                "summary": "Mark a module quiz as completed and retrieve the test attempt result",
+                "operationId": "893292a1e1e0c9ec8c23590eda1a863b",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "test",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "description": "TestAttempt ID",
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Quiz completion result"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Test attempt not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/progress/sync": {
+            "post": {
+                "tags": [
+                    "Progress"
+                ],
+                "summary": "Sync a single topic progress record (mobile app legacy endpoint)",
+                "operationId": "f1b6c8c74623f5411707d659d6f7871a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "course_id",
+                                    "topic_id"
+                                ],
+                                "properties": {
+                                    "course_id": {
+                                        "type": "integer"
+                                    },
+                                    "topic_id": {
+                                        "type": "integer"
+                                    },
+                                    "watch_time_seconds": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "completion_percentage": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "is_completed": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Progress synced"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/saved-courses": {
+            "get": {
+                "tags": [
+                    "Saved Courses"
+                ],
+                "summary": "Get all courses saved/bookmarked by the authenticated user",
+                "operationId": "e7bf82a07a441d12f16edbbe591da511",
+                "responses": {
+                    "200": {
+                        "description": "Saved courses list"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/save": {
+            "post": {
+                "tags": [
+                    "Saved Courses"
+                ],
+                "summary": "Bookmark/save a course",
+                "operationId": "cba6e0c9210af6936d305ba8f46c5341",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Course saved"
+                    },
+                    "400": {
+                        "description": "Already saved"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/unsave": {
+            "delete": {
+                "tags": [
+                    "Saved Courses"
+                ],
+                "summary": "Remove a course from bookmarks",
+                "operationId": "f1d1a4f44673bff18861b84d04fa3a1e",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Course unsaved"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/test": {
+            "get": {
+                "tags": [
+                    "Tests"
+                ],
+                "summary": "Get the test for a module with questions and past attempts",
+                "operationId": "84e45658045334995bc38a532d88b4cd",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Module test with questions and past attempts"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "No test found for this module"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/tests/{test}/submit": {
+            "post": {
+                "tags": [
+                    "Tests"
+                ],
+                "summary": "Submit answers for a module test",
+                "operationId": "61561551642b10559a3d225b1adf23fa",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "test",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "answers"
+                                ],
+                                "properties": {
+                                    "answers": {
+                                        "description": "Map of question_id => selected_answer",
+                                        "type": "object",
+                                        "example": {
+                                            "1": "A",
+                                            "2": "C"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Test submitted with score and pass/fail result"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Test not in this module"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/topics/{topic}/test": {
+            "get": {
+                "tags": [
+                    "Tests"
+                ],
+                "summary": "Get the test for a specific topic/lesson with questions and past attempts",
+                "operationId": "0a3eba94e89769c8e5acd9012f92a66a",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Topic test with questions and past attempts"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "No test found for this topic"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/modules/{module}/topics/{topic}/tests/{test}/submit": {
+            "post": {
+                "tags": [
+                    "Tests"
+                ],
+                "summary": "Submit answers for a topic/lesson test",
+                "operationId": "2a5b2c89ed277788421dcb368ae5495a",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "module",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "test",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "answers"
+                                ],
+                                "properties": {
+                                    "answers": {
+                                        "description": "Map of question_id => selected_answer",
+                                        "type": "object",
+                                        "example": {
+                                            "1": "B",
+                                            "2": "D"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Test submitted with score and pass/fail result"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Test or topic not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ApiSuccess": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ApiError": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationError": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "The given data was invalid."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "Pagination": {
+                "properties": {
+                    "current_page": {
+                        "type": "integer"
+                    },
+                    "last_page": {
+                        "type": "integer"
+                    },
+                    "per_page": {
+                        "type": "integer"
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bio": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "location": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "Course": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "thumbnail": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float",
+                        "nullable": true
+                    },
+                    "is_free": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "category_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Enrollment": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "course_id": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "progress_percentage": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "enrolled_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sanctumAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Enter your Bearer token from /api/login"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Assignments",
+            "description": "Assignments"
+        },
+        {
+            "name": "Auth",
+            "description": "Auth"
+        },
+        {
+            "name": "Categories",
+            "description": "Categories"
+        },
+        {
+            "name": "Comments",
+            "description": "Comments"
+        },
+        {
+            "name": "Courses",
+            "description": "Courses"
+        },
+        {
+            "name": "Enrollments",
+            "description": "Enrollments"
+        },
+        {
+            "name": "Saved Courses",
+            "description": "Saved Courses"
+        },
+        {
+            "name": "Facilitators",
+            "description": "Facilitators"
+        },
+        {
+            "name": "Forum",
+            "description": "Forum"
+        },
+        {
+            "name": "Messages",
+            "description": "Messages"
+        },
+        {
+            "name": "Modules",
+            "description": "Modules"
+        },
+        {
+            "name": "Notes",
+            "description": "Notes"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notifications"
+        },
+        {
+            "name": "Progress",
+            "description": "Progress"
+        },
+        {
+            "name": "Tests",
+            "description": "Tests"
+        }
+    ]
+}

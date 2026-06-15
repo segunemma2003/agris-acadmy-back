@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
@@ -10,6 +11,29 @@ use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/api/courses",
+     *     tags={"Courses"},
+     *     summary="List published courses with filters (public)",
+     *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category_id", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="level", in="query", required=false, @OA\Schema(type="string", enum={"beginner","intermediate","advanced"})),
+     *     @OA\Parameter(name="min_rating", in="query", required=false, @OA\Schema(type="number")),
+     *     @OA\Parameter(name="min_duration", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="max_duration", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=20)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated courses",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean"),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Course")),
+     *             @OA\Property(property="pagination", ref="#/components/schemas/Pagination")
+     *         )
+     *     )
+     * )
+     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -90,6 +114,16 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}",
+     *     tags={"Courses"},
+     *     summary="Get full course details (public)",
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Course details", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", ref="#/components/schemas/Course"))),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
+     */
     public function show(Request $request, Course $course)
     {
         if (!$course->is_published) {
@@ -170,6 +204,15 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/recommended-courses",
+     *     tags={"Courses"},
+     *     summary="Get courses recommended for the authenticated user based on enrollment history",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Recommended courses list")
+     * )
+     */
     public function recommendedCourses(Request $request)
     {
         $user = $request->user();
@@ -210,6 +253,17 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/modules",
+     *     tags={"Courses"},
+     *     summary="List modules (with topics) for a course",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Modules list"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
+     */
     public function modules(Request $request, Course $course)
     {
         if (!$course->is_published) {
@@ -247,6 +301,17 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/information",
+     *     tags={"Courses"},
+     *     summary="Get detailed course information (description, requirements, instructors, etc.)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Course information"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
+     */
     public function courseInformation(Request $request, Course $course)
     {
         if (!$course->is_published) {
@@ -310,6 +375,17 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/diy-content",
+     *     tags={"Courses"},
+     *     summary="Get DIY (do-it-yourself) content for a course (enrollment required)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="DIY content list"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function diyContent(Request $request, Course $course)
     {
         if (!$course->is_published) {
@@ -346,6 +422,17 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/resources",
+     *     tags={"Courses"},
+     *     summary="Get downloadable resources for a course (enrollment required)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Resources list"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
     public function resources(Request $request, Course $course)
     {
         if (!$course->is_published) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Events\MessageSent;
 use App\Events\MessageRead;
 use App\Http\Controllers\Controller;
+use OpenApi\Annotations as OA;
 use App\Mail\AdminNotificationMail;
 use App\Mail\TutorNotificationMail;
 use App\Models\Course;
@@ -16,7 +17,18 @@ use Illuminate\Support\Facades\Mail;
 
 class MessageController extends Controller
 {
-    public function index(Request $request, Course $course = null)
+    /**
+     * @OA\Get(
+     *     path="/api/courses/{course}/messages",
+     *     tags={"Messages"},
+     *     summary="Get messages for a course conversation (must be enrolled; or use course_id=0 for location-based facilitator messages)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer", description="Course ID or 0 for location-based messaging")),
+     *     @OA\Response(response=200, description="Messages list"),
+     *     @OA\Response(response=403, description="Not enrolled or course not found")
+     * )
+     */
+    public function index(Request $request, ?Course $course = null)
     {
         $user = $request->user();
         $courseId = $request->route('course') ? $course->id : $request->input('course_id', 0);
@@ -33,7 +45,7 @@ class MessageController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            return response()->json($messages);
+            return response()->json(['success' => true, 'data' => $messages]);
         }
 
         // Course-based messaging
@@ -60,9 +72,29 @@ class MessageController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json($messages);
+        return response()->json(['success' => true, 'data' => $messages]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/messages",
+     *     tags={"Messages"},
+     *     summary="Send a message to a course instructor or location-based facilitator",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"course_id","recipient_id","message"},
+     *             @OA\Property(property="course_id", type="integer", description="Course ID or 0 for location-based messaging"),
+     *             @OA\Property(property="recipient_id", type="integer"),
+     *             @OA\Property(property="subject", type="string", nullable=true, maxLength=255),
+     *             @OA\Property(property="message", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Message sent"),
+     *     @OA\Response(response=403, description="Recipient not reachable (not instructor of course / wrong location)")
+     * )
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -124,7 +156,7 @@ class MessageController extends Controller
                 }
             }
             
-            return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']), 201);
+            return response()->json(['success' => true, 'data' => $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar'])], 201);
         }
         
         // Course-based messaging
@@ -201,6 +233,17 @@ class MessageController extends Controller
         return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']), 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/messages/{message}",
+     *     tags={"Messages"},
+     *     summary="Get a single message (auto-marks as read if the user is the recipient)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="message", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Message object"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
     public function show(Request $request, Message $message)
     {
         $user = $request->user();
@@ -220,9 +263,20 @@ class MessageController extends Controller
             broadcast(new MessageRead($message))->toOthers();
         }
 
-        return response()->json($message->load(['sender:id,name,avatar', 'recipient:id,name,avatar']));
+        return response()->json(['success' => true, 'data' => $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar'])]);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/messages/{message}/read",
+     *     tags={"Messages"},
+     *     summary="Mark a message as read (recipient only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="message", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Message marked as read"),
+     *     @OA\Response(response=403, description="Unauthorized")
+     * )
+     */
     public function markAsRead(Request $request, Message $message)
     {
         $user = $request->user();
@@ -239,7 +293,7 @@ class MessageController extends Controller
         // Broadcast message read event
         broadcast(new MessageRead($message))->toOthers();
 
-        return response()->json($message);
+        return response()->json(['success' => true, 'data' => $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar'])]);
     }
 }
 

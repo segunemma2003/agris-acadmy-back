@@ -401,6 +401,13 @@ jobs:
             fi
             echo "✓ CORS configuration verified"
 
+            # 14.5 GENERATE SWAGGER DOCS
+            echo "Step 14.5: Generating Swagger API documentation..."
+            mkdir -p storage/api-docs
+            sudo chmod -R 775 storage/api-docs
+            sudo -u www-data php artisan l5-swagger:generate || echo "⚠️  Swagger generation warning - continuing deployment"
+            echo "✓ Swagger documentation generated"
+
             # 15. CLEAR ALL CACHES
             echo "Step 15: Clearing all caches..."
             # Laravel system caches
