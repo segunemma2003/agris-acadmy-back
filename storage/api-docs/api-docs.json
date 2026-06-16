@@ -201,9 +201,44 @@
                                         "example": "+234801234567",
                                         "nullable": true
                                     },
+                                    "gender": {
+                                        "type": "string",
+                                        "example": "male",
+                                        "nullable": true,
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ]
+                                    },
+                                    "age": {
+                                        "type": "integer",
+                                        "example": 25,
+                                        "nullable": true
+                                    },
                                     "location": {
                                         "type": "string",
                                         "example": "Lagos",
+                                        "nullable": true
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "example": "Lagos State",
+                                        "nullable": true
+                                    },
+                                    "lga": {
+                                        "type": "string",
+                                        "example": "Ikeja",
+                                        "nullable": true
+                                    },
+                                    "occupation": {
+                                        "type": "string",
+                                        "example": "Farmer",
+                                        "nullable": true
+                                    },
+                                    "referral": {
+                                        "type": "string",
+                                        "example": "friend",
                                         "nullable": true
                                     }
                                 },
@@ -466,7 +501,36 @@
                                         "type": "string",
                                         "nullable": true
                                     },
+                                    "gender": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "male",
+                                            "female",
+                                            "other"
+                                        ]
+                                    },
+                                    "age": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
                                     "location": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "lga": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "occupation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "referral": {
                                         "type": "string",
                                         "nullable": true
                                     },

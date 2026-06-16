@@ -35,7 +35,13 @@ class AuthController extends Controller
      *             @OA\Property(property="password", type="string", format="password", minLength=8, example="secret123"),
      *             @OA\Property(property="password_confirmation", type="string", format="password", example="secret123"),
      *             @OA\Property(property="phone", type="string", nullable=true, example="+234801234567"),
-     *             @OA\Property(property="location", type="string", nullable=true, example="Lagos")
+     *             @OA\Property(property="gender", type="string", nullable=true, enum={"male","female","other"}, example="male"),
+     *             @OA\Property(property="age", type="integer", nullable=true, example=25),
+     *             @OA\Property(property="location", type="string", nullable=true, example="Lagos"),
+     *             @OA\Property(property="state", type="string", nullable=true, example="Lagos State"),
+     *             @OA\Property(property="lga", type="string", nullable=true, example="Ikeja"),
+     *             @OA\Property(property="occupation", type="string", nullable=true, example="Farmer"),
+     *             @OA\Property(property="referral", type="string", nullable=true, example="friend")
      *         )
      *     ),
      *     @OA\Response(
@@ -60,8 +66,14 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
+            'age' => 'nullable|integer|min:1|max:120',
             'location' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'lga' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'referral' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -70,7 +82,13 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => 'student',
             'phone' => $request->phone,
+            'gender' => $request->gender,
+            'age' => $request->age,
             'location' => $request->location,
+            'state' => $request->state,
+            'lga' => $request->lga,
+            'occupation' => $request->occupation,
+            'referral' => $request->referral,
             'is_active' => true,
         ]);
 
@@ -95,7 +113,13 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'gender' => $user->gender,
+                    'age' => $user->age,
                     'location' => $user->location,
+                    'state' => $user->state,
+                    'lga' => $user->lga,
+                    'occupation' => $user->occupation,
+                    'referral' => $user->referral,
                     'role' => $user->role,
                     'avatar' => $user->avatar,
                 ],
@@ -274,7 +298,13 @@ class AuthController extends Controller
      *             @OA\Property(property="name", type="string"),
      *             @OA\Property(property="email", type="string", format="email"),
      *             @OA\Property(property="phone", type="string", nullable=true),
+     *             @OA\Property(property="gender", type="string", nullable=true, enum={"male","female","other"}),
+     *             @OA\Property(property="age", type="integer", nullable=true),
      *             @OA\Property(property="location", type="string", nullable=true),
+     *             @OA\Property(property="state", type="string", nullable=true),
+     *             @OA\Property(property="lga", type="string", nullable=true),
+     *             @OA\Property(property="occupation", type="string", nullable=true),
+     *             @OA\Property(property="referral", type="string", nullable=true),
      *             @OA\Property(property="bio", type="string", nullable=true),
      *             @OA\Property(property="avatar", type="string", nullable=true),
      *             @OA\Property(property="password", type="string", minLength=8, nullable=true),
@@ -291,14 +321,24 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'gender' => 'nullable|string|in:male,female,other',
+            'age' => 'nullable|integer|min:1|max:120',
             'location' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'lga' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'referral' => 'nullable|string|max:255',
             'bio' => 'nullable|string|max:1000',
             'avatar' => 'nullable|string|max:500',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $updateData = $request->only(['name', 'email', 'phone', 'location', 'bio', 'avatar']);
+        $updateData = $request->only([
+            'name', 'email', 'phone', 'gender', 'age',
+            'location', 'state', 'lga', 'occupation', 'referral',
+            'bio', 'avatar',
+        ]);
 
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
@@ -315,7 +355,13 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'gender' => $user->gender,
+                    'age' => $user->age,
                     'location' => $user->location,
+                    'state' => $user->state,
+                    'lga' => $user->lga,
+                    'occupation' => $user->occupation,
+                    'referral' => $user->referral,
                     'bio' => $user->bio,
                     'avatar' => $user->avatar,
                     'role' => $user->role,
