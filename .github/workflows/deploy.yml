@@ -213,6 +213,20 @@ jobs:
             update_env "DB_USERNAME" "${{ secrets.DB_USERNAME }}"
             update_env "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
             update_env "SENDER_API_KEY" "${{ secrets.SENDER_API_KEY }}"
+
+            # Claude AI (Chatbot)
+            if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+              update_env "ANTHROPIC_API_KEY" "${{ secrets.ANTHROPIC_API_KEY }}"
+              echo "✓ Anthropic (Claude) API key configured"
+            fi
+
+            # Africa's Talking (USSD + SMS)
+            if [ -n "${{ secrets.AT_API_KEY }}" ]; then
+              update_env "AT_API_KEY" "${{ secrets.AT_API_KEY }}"
+              update_env "AT_USERNAME" "${{ secrets.AT_USERNAME }}"
+              update_env "AT_HASH_KEY" "${{ secrets.AT_HASH_KEY }}"
+              echo "✓ Africa's Talking (USSD/SMS) configured"
+            fi
             # Set queue connection (default to database if not set)
             if ! grep -q "^QUEUE_CONNECTION=" .env 2>/dev/null; then
               echo 'QUEUE_CONNECTION=database' | sudo -u www-data tee -a .env > /dev/null

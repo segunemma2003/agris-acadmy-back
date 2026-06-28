@@ -16,8 +16,23 @@ use App\Http\Controllers\Api\SavedCourseController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ForumController;
 use App\Http\Controllers\Api\TranscriptController;
+use App\Http\Controllers\Api\ChatbotController;
+use App\Http\Controllers\Api\UssdController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+// Chatbot routes (public, throttled)
+Route::middleware('throttle:20,1')->prefix('chatbot')->group(function () {
+    Route::post('/session', [ChatbotController::class, 'session']);
+    Route::post('/message', [ChatbotController::class, 'message']);
+    Route::post('/dismiss', [ChatbotController::class, 'dismiss']);
+    Route::post('/answers', [ChatbotController::class, 'saveAnswers']);
+    Route::post('/recommendations', [ChatbotController::class, 'recommendations']);
+    Route::post('/link-answers', [ChatbotController::class, 'linkAnswers']);
+});
+
+// USSD webhook (Africa's Talking; rate not throttled — AT controls session frequency)
+Route::post('/ussd', [UssdController::class, 'handle']);
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);

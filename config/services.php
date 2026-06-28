@@ -35,6 +35,16 @@ return [
         ],
     ],
 
+    'claude' => [
+        'api_key' => env('ANTHROPIC_API_KEY'),
+    ],
+
+    'africastalking' => [
+        'username' => env('AT_USERNAME', 'sandbox'),
+        'key'      => env('AT_API_KEY'),
+        'hash_key' => env('AT_HASH_KEY'),
+    ],
+
     'pusher' => [
         'driver' => 'pusher',
         'key' => env('PUSHER_APP_KEY'),
