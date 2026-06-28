@@ -61,6 +61,89 @@ class ChatbotService
             ->toArray();
     }
 
+    /**
+     * Stream Claude's reply token-by-token as a PHP Generator.
+     * Persists the user message immediately and the full assistant reply after streaming ends.
+     *
+     * Yields: string — each text delta from Claude
+     */
+    public function streamFromClaude(ChatbotSession $session, string $userContent): \Generator
+    {
+        if ($session->messages()->count() >= 100) {
+            yield 'You have reached the maximum number of messages for this session.';
+            return;
+        }
+
+        $session->messages()->create(['role' => 'user', 'content' => $userContent]);
+        $history = $this->getHistory($session->fresh());
+
+        $fullReply  = '';
+        $errorReply = "I'm having a little trouble right now. Please try again in a moment!";
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'x-api-key'         => config('claude.api_key'),
+                    'anthropic-version' => config('claude.api_version'),
+                    'Content-Type'      => 'application/json',
+                ])
+                ->withOptions(['stream' => true])
+                ->post(config('claude.api_url'), [
+                    'model'      => config('claude.model'),
+                    'max_tokens' => config('claude.max_tokens'),
+                    'system'     => $this->buildSystemPrompt(),
+                    'messages'   => $history,
+                    'stream'     => true,
+                ]);
+
+            if (!$response->successful()) {
+                Log::warning('Claude streaming non-2xx', ['status' => $response->status()]);
+                yield $errorReply;
+                $fullReply = $errorReply;
+            } else {
+                $body   = $response->getBody();
+                $buffer = '';
+
+                while (!$body->eof()) {
+                    $buffer .= $body->read(512);
+
+                    // Process complete SSE lines from the buffer
+                    while (($eol = strpos($buffer, "\n")) !== false) {
+                        $line   = trim(substr($buffer, 0, $eol));
+                        $buffer = substr($buffer, $eol + 1);
+
+                        if (!str_starts_with($line, 'data: ')) {
+                            continue;
+                        }
+
+                        $payload = substr($line, 6);
+                        if ($payload === '[DONE]') {
+                            break 2;
+                        }
+
+                        $parsed = json_decode($payload, true);
+                        $delta  = $parsed['delta']['text'] ?? null;
+
+                        if ($parsed['type'] === 'content_block_delta' && $delta !== null) {
+                            $fullReply .= $delta;
+                            yield $delta;
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('Claude streaming failed', ['error' => $e->getMessage()]);
+            yield $errorReply;
+            $fullReply = $errorReply;
+        }
+
+        // Persist the complete assistant reply
+        $session->messages()->create([
+            'role'    => 'assistant',
+            'content' => $fullReply ?: $errorReply,
+        ]);
+    }
+
     public function sendToClaudeAndPersist(ChatbotSession $session, string $userContent): ChatbotMessage
     {
         // Enforce hard cap

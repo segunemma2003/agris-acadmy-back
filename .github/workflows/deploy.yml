@@ -336,31 +336,46 @@ jobs:
               echo "✓ Google Translate API key configured"
             fi
 
-            # Pusher / Broadcasting Configuration
-            echo "Configuring Pusher broadcasting settings..."
-            # If Pusher credentials are present, configure broadcast driver and Pusher keys from GitHub Secrets
-            if [ -n "${{ secrets.PUSHER_APP_KEY }}" ] && [ -n "${{ secrets.PUSHER_APP_SECRET }}" ] && [ -n "${{ secrets.PUSHER_APP_ID }}" ]; then
-              update_env "BROADCAST_DRIVER" "pusher"
-              update_env "PUSHER_APP_ID" "${{ secrets.PUSHER_APP_ID }}"
-              update_env "PUSHER_APP_KEY" "${{ secrets.PUSHER_APP_KEY }}"
-              update_env "PUSHER_APP_SECRET" "${{ secrets.PUSHER_APP_SECRET }}"
+            # ── Laravel Reverb (WebSocket server for chatbot real-time streaming) ──
+            echo "Configuring Laravel Reverb WebSocket server..."
+            update_env "BROADCAST_CONNECTION" "reverb"
+            update_env "REVERB_APP_ID"     "${{ secrets.REVERB_APP_ID }}"
+            update_env "REVERB_APP_KEY"    "${{ secrets.REVERB_APP_KEY }}"
+            update_env "REVERB_APP_SECRET" "${{ secrets.REVERB_APP_SECRET }}"
+            update_env "REVERB_HOST"       "academy-backends.agrisiti.com"
+            update_env "REVERB_PORT"       "443"
+            update_env "REVERB_SCHEME"     "https"
+            update_env "REVERB_SERVER_HOST" "0.0.0.0"
+            update_env "REVERB_SERVER_PORT" "8080"
+            echo "✓ Laravel Reverb WebSocket configuration set"
 
-              # Optional: cluster and connection options
+            # ── Supervisor config for Reverb process ──────────────────────────
+            echo "Configuring Supervisor for Reverb WebSocket server..."
+            {
+              echo '[program:reverb]'
+              echo 'process_name=%(program_name)s'
+              echo 'command=php /var/www/laravel/artisan reverb:start --host=0.0.0.0 --port=8080 --no-interaction'
+              echo 'autostart=true'
+              echo 'autorestart=true'
+              echo 'user=www-data'
+              echo 'redirect_stderr=true'
+              echo 'stdout_logfile=/var/www/laravel/storage/logs/reverb.log'
+              echo 'stopwaitsecs=10'
+            } | sudo tee /etc/supervisor/conf.d/reverb.conf > /dev/null
+            echo "✓ Reverb supervisor config written to /etc/supervisor/conf.d/reverb.conf"
+
+            # ── Pusher / Broadcasting (legacy, kept for backwards compat) ──────
+            echo "Configuring Pusher broadcasting settings (legacy)..."
+            if [ -n "${{ secrets.PUSHER_APP_KEY }}" ] && [ -n "${{ secrets.PUSHER_APP_SECRET }}" ] && [ -n "${{ secrets.PUSHER_APP_ID }}" ]; then
+              update_env "PUSHER_APP_ID"     "${{ secrets.PUSHER_APP_ID }}"
+              update_env "PUSHER_APP_KEY"    "${{ secrets.PUSHER_APP_KEY }}"
+              update_env "PUSHER_APP_SECRET" "${{ secrets.PUSHER_APP_SECRET }}"
               if [ -n "${{ secrets.PUSHER_APP_CLUSTER }}" ]; then
                 update_env "PUSHER_APP_CLUSTER" "${{ secrets.PUSHER_APP_CLUSTER }}"
               fi
-              if [ -n "${{ secrets.PUSHER_HOST }}" ]; then
-                update_env "PUSHER_HOST" "${{ secrets.PUSHER_HOST }}"
-              fi
-              if [ -n "${{ secrets.PUSHER_PORT }}" ]; then
-                update_env "PUSHER_PORT" "${{ secrets.PUSHER_PORT }}"
-              fi
-              if [ -n "${{ secrets.PUSHER_SCHEME }}" ]; then
-                update_env "PUSHER_SCHEME" "${{ secrets.PUSHER_SCHEME }}"
-              fi
-              echo "✓ Pusher broadcasting configuration added"
+              echo "✓ Pusher credentials configured (not active — Reverb is primary)"
             else
-              echo "ℹ️  Pusher secrets not fully provided; skipping Pusher env configuration"
+              echo "ℹ️  Pusher secrets not provided; Reverb is the active broadcast driver"
             fi
 
             echo "✓ .env recreated and updated"
@@ -526,6 +541,19 @@ jobs:
                 echo "⚠️  Supervisor workers have errors - this might affect the application"
                 echo "   Status:"
                 sudo supervisorctl status laravel-worker:* 2>&1 | head -5
+              fi
+              # Restart Reverb WebSocket server
+              echo "Restarting Reverb WebSocket server..."
+              sudo supervisorctl stop reverb 2>&1 || true
+              sudo supervisorctl reread || true
+              sudo supervisorctl update || true
+              sudo supervisorctl start reverb 2>&1 || {
+                echo "⚠️  Failed to start Reverb - chatbot WebSocket will fall back to SSE/HTTP"
+              }
+              if sudo supervisorctl status reverb 2>&1 | grep -q "RUNNING"; then
+                echo "✓ Reverb WebSocket server running on port 8080"
+              else
+                echo "⚠️  Reverb not running - chatbot will degrade to SSE/HTTP automatically"
               fi
             else
               # If supervisor not available, process pending jobs with proper retry handling

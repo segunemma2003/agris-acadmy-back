@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Events\ChatbotChunkEvent;
+use App\Events\ChatbotDoneEvent;
 use App\Mail\AdminNotificationMail;
 use App\Models\ChatbotIntakeAnswer;
 use App\Models\ChatbotSession;
@@ -12,6 +14,7 @@ use App\Services\NotificationService;
 use App\Services\RecommendationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\Mail;
 use OpenApi\Annotations as OA;
 
@@ -142,6 +145,108 @@ class ChatbotController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/chatbot/message/stream",
+     *     tags={"Chatbot"},
+     *     summary="Send a message and receive a real-time SSE stream reply",
+     *     description="Streams Claude's reply token-by-token using Server-Sent Events. Frontend reads data: {delta} lines and appends them to the assistant bubble in real time. Ends with data: [DONE].",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"session_token","content"},
+     *             @OA\Property(property="session_token", type="string", format="uuid"),
+     *             @OA\Property(property="content", type="string", maxLength=2000)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="text/event-stream — data: {delta} lines, ends with data: [DONE]"
+     *     ),
+     *     @OA\Response(response=404, description="Session not found")
+     * )
+     */
+    public function messageStream(Request $request): StreamedResponse
+    {
+        $request->validate([
+            'session_token' => 'required|uuid',
+            'content'       => 'required|string|max:2000',
+        ]);
+
+        $session = ChatbotSession::where('session_token', $request->input('session_token'))->first();
+
+        if (!$session) {
+            return response()->stream(function () {
+                echo "data: " . json_encode(['error' => 'Session not found']) . "\n\n";
+                ob_flush(); flush();
+            }, 404, ['Content-Type' => 'text/event-stream', 'Cache-Control' => 'no-cache']);
+        }
+
+        $content = $request->input('content');
+        $service = $this->chatbotService;
+
+        return response()->stream(function () use ($session, $content, $service) {
+            foreach ($service->streamFromClaude($session, $content) as $token) {
+                echo "data: " . json_encode(['delta' => $token]) . "\n\n";
+                ob_flush();
+                flush();
+            }
+            echo "data: [DONE]\n\n";
+            ob_flush();
+            flush();
+        }, 200, [
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache',
+            'X-Accel-Buffering' => 'no',   // disable Nginx buffering
+            'Connection'        => 'keep-alive',
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/chatbot/message/ws",
+     *     tags={"Chatbot"},
+     *     summary="Send a message — reply delivered via Reverb WebSocket channel",
+     *     description="HTTP request returns immediately (202). Claude's reply streams token-by-token via the Reverb WebSocket channel `chatbot.{session_token}`. Frontend must be subscribed to that channel via Pusher.js before calling this endpoint.",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"session_token","content"},
+     *             @OA\Property(property="session_token", type="string", format="uuid"),
+     *             @OA\Property(property="content", type="string", maxLength=2000)
+     *         )
+     *     ),
+     *     @OA\Response(response=202, description="Processing — chunks will arrive on the WebSocket channel"),
+     *     @OA\Response(response=404, description="Session not found")
+     * )
+     */
+    public function messageWebSocket(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_token' => 'required|uuid',
+            'content'       => 'required|string|max:2000',
+        ]);
+
+        $session = ChatbotSession::where('session_token', $request->input('session_token'))->first();
+
+        if (!$session) {
+            return response()->json(['success' => false, 'message' => 'Session not found'], 404);
+        }
+
+        $token   = $session->session_token;
+        $content = $request->input('content');
+
+        // Stream Claude's reply and broadcast each token to the Reverb WebSocket channel.
+        // ShouldBroadcastNow fires synchronously — no queue needed.
+        foreach ($this->chatbotService->streamFromClaude($session, $content) as $delta) {
+            broadcast(new ChatbotChunkEvent($token, $delta));
+        }
+
+        broadcast(new ChatbotDoneEvent($token));
+
+        return response()->json(['success' => true], 202);
     }
 
     /**

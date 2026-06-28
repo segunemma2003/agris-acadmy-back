@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('throttle:20,1')->prefix('chatbot')->group(function () {
     Route::post('/session', [ChatbotController::class, 'session']);
     Route::post('/message', [ChatbotController::class, 'message']);
+    Route::post('/message/stream', [ChatbotController::class, 'messageStream']); // SSE streaming
+    Route::post('/message/ws',     [ChatbotController::class, 'messageWebSocket']); // Reverb WebSocket
     Route::post('/dismiss', [ChatbotController::class, 'dismiss']);
     Route::post('/answers', [ChatbotController::class, 'saveAnswers']);
     Route::post('/recommendations', [ChatbotController::class, 'recommendations']);
