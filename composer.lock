@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "15fed0c6f9100e5ddb7276868198e8fc",
+    "content-hash": "070dda00ed0650d8f4b19d7e6620dc20",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -1423,6 +1423,49 @@
                 }
             ],
             "time": "2025-03-06T22:45:56+00:00"
+        },
+        {
+            "name": "emmadonjo/naija",
+            "version": "v1.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/emmadonjo/naija.git",
+                "reference": "f21f263fbdbdbf9a7249d1c8a4bc38aea68e5c79"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/emmadonjo/naija/zipball/f21f263fbdbdbf9a7249d1c8a4bc38aea68e5c79",
+                "reference": "f21f263fbdbdbf9a7249d1c8a4bc38aea68e5c79",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8"
+            },
+            "require-dev": {
+                "pestphp/pest": "^3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Emmadonjo\\Naija\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Joshua Emmanuel",
+                    "email": "jo4christ48@yahoo.com"
+                }
+            ],
+            "description": "Naija is a PHP package that provides data about States, Local Government Areas, cities, and towns in Nigeria.",
+            "support": {
+                "issues": "https://github.com/emmadonjo/naija/issues",
+                "source": "https://github.com/emmadonjo/naija/tree/v1.4.0"
+            },
+            "time": "2026-06-17T20:48:54+00:00"
         },
         {
             "name": "filament/actions",

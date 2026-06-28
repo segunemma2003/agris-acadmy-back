@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\Certificate;
 use App\Models\StudentProgress;
+use App\Services\FacilitatorAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -63,44 +65,55 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:20',
-            'gender' => 'nullable|string|in:male,female,other',
-            'age' => 'nullable|integer|min:1|max:120',
-            'location' => 'nullable|string|max:255',
-            'state' => 'nullable|string|max:255',
-            'lga' => 'nullable|string|max:255',
-            'occupation' => 'nullable|string|max:255',
-            'referral' => 'nullable|string|max:255',
+            'name'                  => 'required|string|max:255',
+            'email'                 => 'required|string|email|max:255|unique:users',
+            'password'              => 'required|string|min:8|confirmed',
+            'phone'                 => 'nullable|string|max:20',
+            'gender'                => 'nullable|string|in:male,female,other',
+            'date_of_birth'         => 'nullable|date|before:today',
+            'age'                   => 'nullable|integer|min:1|max:120',
+            'location'              => 'nullable|string|max:255',
+            'state'                 => 'nullable|string|max:255',
+            'lga'                   => 'nullable|string|max:255',
+            'occupation'            => 'nullable|string|max:255',
+            'referral'              => 'nullable|string|max:255',
         ]);
 
+        // Derive age from date_of_birth when not supplied explicitly
+        $age = $request->age;
+        if (!$age && $request->date_of_birth) {
+            $age = Carbon::parse($request->date_of_birth)->age;
+        }
+
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'student',
-            'phone' => $request->phone,
-            'gender' => $request->gender,
-            'age' => $request->age,
-            'location' => $request->location,
-            'state' => $request->state,
-            'lga' => $request->lga,
-            'occupation' => $request->occupation,
-            'referral' => $request->referral,
-            'is_active' => true,
+            'name'          => $request->name,
+            'email'         => $request->email,
+            'password'      => Hash::make($request->password),
+            'role'          => 'student',
+            'phone'         => $request->phone,
+            'gender'        => $request->gender,
+            'date_of_birth' => $request->date_of_birth,
+            'age'           => $age,
+            'location'      => $request->location,
+            'state'         => $request->state,
+            'lga'           => $request->lga,
+            'occupation'    => $request->occupation,
+            'referral'      => $request->referral,
+            'is_active'     => true,
         ]);
+
+        // Auto-assign facilitator based on LGA / state
+        try {
+            app(FacilitatorAssignmentService::class)->assign($user);
+        } catch (\Throwable $e) {
+            \Log::error('Facilitator assignment failed for user ' . $user->id . ': ' . $e->getMessage());
+        }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Process registration with CSV check and send emails via queue (non-blocking)
-        // This will check CSV, update user info if found, and send appropriate emails
-        // If processing fails, registration still succeeds
         try {
             ProcessStudentRegistrationWithCSV::dispatch($user);
         } catch (\Exception $e) {
-            // Log error but don't fail registration
             \Log::error('Failed to dispatch CSV processing job for ' . $user->email . ': ' . $e->getMessage());
         }
 
@@ -108,21 +121,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Student registered successfully',
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'gender' => $user->gender,
-                    'age' => $user->age,
-                    'location' => $user->location,
-                    'state' => $user->state,
-                    'lga' => $user->lga,
-                    'occupation' => $user->occupation,
-                    'referral' => $user->referral,
-                    'role' => $user->role,
-                    'avatar' => $user->avatar,
-                ],
+                'user' => $this->formatUser($user),
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -319,55 +318,79 @@ class AuthController extends Controller
         $user = $request->user();
 
         $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:20',
-            'gender' => 'nullable|string|in:male,female,other',
-            'age' => 'nullable|integer|min:1|max:120',
-            'location' => 'nullable|string|max:255',
-            'state' => 'nullable|string|max:255',
-            'lga' => 'nullable|string|max:255',
-            'occupation' => 'nullable|string|max:255',
-            'referral' => 'nullable|string|max:255',
-            'bio' => 'nullable|string|max:1000',
-            'avatar' => 'nullable|string|max:500',
-            'password' => 'nullable|string|min:8|confirmed',
+            'name'          => 'sometimes|required|string|max:255',
+            'email'         => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
+            'phone'         => 'nullable|string|max:20',
+            'gender'        => 'nullable|string|in:male,female,other',
+            'date_of_birth' => 'nullable|date|before:today',
+            'age'           => 'nullable|integer|min:1|max:120',
+            'location'      => 'nullable|string|max:255',
+            'state'         => 'nullable|string|max:255',
+            'lga'           => 'nullable|string|max:255',
+            'occupation'    => 'nullable|string|max:255',
+            'referral'      => 'nullable|string|max:255',
+            'bio'           => 'nullable|string|max:1000',
+            'avatar'        => 'nullable|string|max:500',
+            'password'      => 'nullable|string|min:8|confirmed',
         ]);
 
         $updateData = $request->only([
-            'name', 'email', 'phone', 'gender', 'age',
+            'name', 'email', 'phone', 'gender', 'date_of_birth', 'age',
             'location', 'state', 'lga', 'occupation', 'referral',
             'bio', 'avatar',
         ]);
+
+        // Derive age when date_of_birth changes but age not supplied
+        if (isset($updateData['date_of_birth']) && !isset($updateData['age'])) {
+            $updateData['age'] = Carbon::parse($updateData['date_of_birth'])->age;
+        }
 
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
         }
 
+        $locationChanged = isset($updateData['state']) || isset($updateData['lga']);
+
         $user->update($updateData);
+
+        // Re-run facilitator assignment if state/LGA changed
+        if ($locationChanged) {
+            try {
+                app(FacilitatorAssignmentService::class)->reassign($user->fresh());
+            } catch (\Throwable $e) {
+                \Log::error('Facilitator reassignment failed for user ' . $user->id . ': ' . $e->getMessage());
+            }
+        }
+
+        Cache::forget("user_{$user->id}_profile_stats");
 
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'gender' => $user->gender,
-                    'age' => $user->age,
-                    'location' => $user->location,
-                    'state' => $user->state,
-                    'lga' => $user->lga,
-                    'occupation' => $user->occupation,
-                    'referral' => $user->referral,
-                    'bio' => $user->bio,
-                    'avatar' => $user->avatar,
-                    'role' => $user->role,
-                ],
-            ],
+            'data' => ['user' => $this->formatUser($user->fresh())],
         ]);
+    }
+
+    private function formatUser(User $user): array
+    {
+        return [
+            'id'             => $user->id,
+            'name'           => $user->name,
+            'email'          => $user->email,
+            'phone'          => $user->phone,
+            'gender'         => $user->gender,
+            'date_of_birth'  => $user->date_of_birth?->toDateString(),
+            'age'            => $user->age,
+            'location'       => $user->location,
+            'state'          => $user->state,
+            'lga'            => $user->lga,
+            'occupation'     => $user->occupation,
+            'referral'       => $user->referral,
+            'bio'            => $user->bio,
+            'avatar'         => $user->avatar,
+            'role'           => $user->role,
+            'facilitator_id' => $user->facilitator_id,
+        ];
     }
 
     /**

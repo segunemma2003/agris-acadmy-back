@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ForumController;
 use App\Http\Controllers\Api\TranscriptController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\UssdController;
+use App\Http\Controllers\Api\LocationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,12 @@ Route::middleware('throttle:20,1')->prefix('chatbot')->group(function () {
 
 // USSD webhook (Africa's Talking; rate not throttled — AT controls session frequency)
 Route::post('/ussd', [UssdController::class, 'handle']);
+
+// Nigeria location data (public, cached forever)
+Route::prefix('locations')->group(function () {
+    Route::get('/states', [LocationController::class, 'states']);
+    Route::get('/lgas/{state}', [LocationController::class, 'lgas']);
+});
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);

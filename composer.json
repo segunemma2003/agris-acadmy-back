@@ -10,6 +10,7 @@
         "blade-ui-kit/blade-icons": "^1.8",
         "darkaonline/l5-swagger": "^11.1",
         "doctrine/annotations": "^2.0",
+        "emmadonjo/naija": "^1.4",
         "filament/filament": "*",
         "laravel/framework": "^12.0",
         "laravel/pail": "^1.2",

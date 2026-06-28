@@ -3,6 +3,7 @@
 namespace App\Filament\Facilitator\Resources;
 
 use App\Filament\Facilitator\Resources\StudentResource\Pages;
+use App\Filament\Imports\StudentImporter;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -46,14 +47,12 @@ class StudentResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $facilitatorLocation = Auth::user()->location;
-        
+        $facilitatorId = Auth::id();
+
         return $table
             ->modifyQueryUsing(fn ($query) => $query
                 ->where('role', 'student')
-                ->whereNotNull('location')
-                ->where('location', '!=', '')
-                ->whereRaw('LOWER(location) = LOWER(?)', [$facilitatorLocation])
+                ->where('facilitator_id', $facilitatorId)
             )
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
@@ -64,12 +63,16 @@ class StudentResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('location')
-                    ->label('Location')
+                Tables\Columns\TextColumn::make('state')
+                    ->label('State')
                     ->searchable()
                     ->sortable()
                     ->badge()
                     ->color('info'),
+                Tables\Columns\TextColumn::make('lga')
+                    ->label('LGA')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('enrollments_count')
                     ->label('Enrollments')
                     ->counts('enrollments')
@@ -85,6 +88,12 @@ class StudentResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),
             ])
+            ->headerActions([
+                Tables\Actions\ImportAction::make()
+                    ->importer(StudentImporter::class)
+                    ->label('Import Students (CSV)')
+                    ->icon('heroicon-o-arrow-up-tray'),
+            ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
             ])
@@ -95,7 +104,7 @@ class StudentResource extends Resource
     {
         return [
             'index' => Pages\ListStudents::route('/'),
-            'view' => Pages\ViewStudent::route('/{record}'),
+            'view'  => Pages\ViewStudent::route('/{record}'),
         ];
     }
 
@@ -121,18 +130,7 @@ class StudentResource extends Resource
 
     public static function canView($record): bool
     {
-        $facilitatorLocation = Auth::user()->location;
-        if ($record->role !== 'student') {
-            return false;
-        }
-        
-        // Facilitators can only see students with a location that matches theirs
-        // Students without location are hidden from facilitators
-        if (empty($facilitatorLocation) || empty($record->location)) {
-            return false;
-        }
-        
-        // Case-insensitive location matching
-        return strcasecmp($record->location, $facilitatorLocation) === 0;
+        return $record->role === 'student'
+            && $record->facilitator_id === Auth::id();
     }
 }

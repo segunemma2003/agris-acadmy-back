@@ -32,11 +32,16 @@ class User extends Authenticatable
         'lga',
         'occupation',
         'age',
+        'date_of_birth',
         'referral',
         'bio',
         'avatar',
         'is_active',
         'last_login_at',
+        'facilitator_id',
+        'is_in_facilitator_queue',
+        'covered_states',
+        'covered_lgas',
     ];
 
     /**
@@ -61,10 +66,27 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'date_of_birth' => 'date',
+            'is_in_facilitator_queue' => 'boolean',
+            'covered_states' => 'array',
+            'covered_lgas' => 'array',
         ];
     }
 
     // Relationships
+
+    // The facilitator assigned to this learner
+    public function facilitator()
+    {
+        return $this->belongsTo(User::class, 'facilitator_id');
+    }
+
+    // Learners assigned to this facilitator
+    public function assignedLearners()
+    {
+        return $this->hasMany(User::class, 'facilitator_id');
+    }
+
     // Primary tutor courses (backward compatibility)
     public function coursesAsTutor()
     {
