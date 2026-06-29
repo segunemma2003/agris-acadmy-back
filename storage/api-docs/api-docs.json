@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Agrisiti Academy API",
-        "description": "REST API for the Agrisiti Academy e-learning platform. Supports student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, and notifications.",
+        "description": "REST and WebSocket API for the Agrisiti Academy e-learning platform. Covers student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, notifications, and the Agri chatbot (AI-powered onboarding assistant with real-time Reverb WebSocket streaming, SSE fallback, and course recommendations). See the Chatbot tag for the complete user journey, quiz questions, and 3-tier transport documentation.",
         "contact": {
             "email": "admin@agrisiti.com"
         },
@@ -763,6 +763,639 @@
                     },
                     "404": {
                         "description": "Category not found"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/session": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Start or resume a chatbot session",
+                "description": "**Always the very first API call.** Fired automatically 3 seconds after the page/screen loads, or immediately when the user taps the chatbot FAB.\n     *\n     * ### Step-by-step process\n     *\n     * 1. Client reads `session_token` from localStorage (null if first visit).\n     * 2. Client reads `user_id` from auth context (null if not logged in).\n     * 3. Both are sent to this endpoint.\n     * 4. Backend looks up the token:\n     *    - **Found** → returns `is_returning: true` + full message history → client renders history, skips intro and quiz.\n     *    - **Not found / null** → creates a new session → returns `is_returning: false`, `messages: []`.\n     * 5. Client saves the returned `session_token` to localStorage.\n     * 6. Client connects pusher-js to Reverb → subscribes to channel `chatbot.{session_token}`.\n     * 7. If `is_returning: false` → show greeting locally (NO extra API call):\n     *    *'Hi! I am Agri, your Agrisiti Academy guide. I will help you find the perfect course. First — what is your name?'*\n     * 8. If `is_returning: true` → display previous messages immediately and open to free-chat mode.\n     *\n     * ### Auth scenarios\n     *\n     * | Scenario | session_token | user_id | Result |\n     * |---|---|---|---|\n     * | Anonymous, first visit | null | null | New session created |\n     * | Anonymous, returning | stored UUID | null | Session resumed with history |\n     * | Logged-in, first visit | null | 101 | New session linked to user |\n     * | Logged-in, returning | stored UUID | 101 | Session resumed and linked |",
+                "operationId": "8c6cd97e21d8973b331acc04b6b3933f",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "session_token": {
+                                        "description": "Token from localStorage. Send null on first visit.",
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": null,
+                                        "nullable": true
+                                    },
+                                    "user_id": {
+                                        "description": "Authenticated user ID. Send null for anonymous visitors.",
+                                        "type": "integer",
+                                        "example": null,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Session created or resumed. Check is_returning to decide which UI flow to show.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "session_token": {
+                                                    "description": "Store this in localStorage. Send on every subsequent chatbot request.",
+                                                    "type": "string",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "is_returning": {
+                                                    "description": "true = show history, skip intro. false = show greeting, start quiz flow.",
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "last_seen_at": {
+                                                    "description": "null for brand-new sessions.",
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "nullable": true
+                                                },
+                                                "messages": {
+                                                    "description": "Full conversation history. Empty array for new sessions.",
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "role": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "user",
+                                                                    "assistant"
+                                                                ]
+                                                            },
+                                                            "content": {
+                                                                "type": "string"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error — session_token must be a valid UUID if provided"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/message": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Send a message — plain REST, full reply in one response (Tier 3 fallback)",
+                "description": "**Tier 3 transport — last resort fallback.** Used only when both Reverb WebSocket (Tier 1) and SSE streaming (Tier 2) have failed. The reply is NOT streamed — the user waits for the full response before seeing anything.\n     *\n     * ### When this is called\n     *\n     * The frontend tries Tier 1 → Tier 2 → Tier 3 automatically. This endpoint is only\n     * reached if the other two transports both fail. Under normal conditions,\n     * POST /api/chatbot/message/ws (Tier 1) or POST /api/chatbot/message/stream (Tier 2) is used instead.\n     *\n     * ### Step-by-step (when this fallback fires)\n     *\n     * 1. User submits a message in the chat input.\n     * 2. User bubble added to UI immediately (optimistic update).\n     * 3. Empty assistant placeholder bubble inserted, typing indicator shown.\n     * 4. This endpoint is called.\n     * 5. Backend calls Claude API synchronously (no streaming), waits for full reply.\n     * 6. Full reply returned in one JSON response.\n     * 7. Placeholder bubble replaced with the full reply text.\n     * 8. Input unlocked.\n     *\n     * ### When is this vs the quiz flow?\n     *\n     * This handles **free-form chat only** (name collection, follow-up questions,\n     * post-recommendation conversation). The quiz (Q1–Q5) runs entirely client-side\n     * with no API calls per question. Quiz answers are submitted via POST /api/chatbot/answers.",
+                "operationId": "80cd3c3fdf12d36c1d964ddac072375b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Is there a course about drip irrigation?",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Full assistant reply returned in one response.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "message": {
+                                                    "properties": {
+                                                        "role": {
+                                                            "type": "string",
+                                                            "example": "assistant"
+                                                        },
+                                                        "content": {
+                                                            "type": "string",
+                                                            "example": "Yes! We have a great course on drip irrigation systems."
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found — session_token does not match any session"
+                    },
+                    "422": {
+                        "description": "Validation error — session_token or content missing/invalid"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/message/stream": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Send a message — SSE streaming reply (Tier 2 fallback)",
+                "description": "**Tier 2 transport.** Used when Reverb WebSocket (Tier 1) is unavailable. Streams Claude's reply token-by-token using Server-Sent Events so the user sees text appear in real time.\n     *\n     * ### Step-by-step process\n     *\n     * 1. Reverb connection has already failed — frontend switches to this endpoint automatically.\n     * 2. User submits a message.\n     * 3. User bubble added to UI immediately (optimistic update).\n     * 4. Empty assistant placeholder bubble inserted with typing indicator.\n     * 5. This endpoint is called with headers: Accept text/event-stream and Content-Type application/json.\n     * 6. Backend opens a streamed response and calls Claude API with stream enabled.\n     * 7. For each token Claude yields, backend emits one SSE event line followed by a blank line.\n     *    Format: data: followed by a JSON object with a delta field containing the token text.\n     * 8. Frontend reads each data: line, parses the JSON, appends the delta value to the bubble.\n     * 9. When Claude finishes, backend emits the end signal: data: [DONE] followed by a blank line.\n     * 10. Frontend receives [DONE] — finalises bubble, unlocks input box.\n     *\n     * ### Exact SSE line format emitted by this endpoint\n     *\n     * Each token arrives as: data: followed by a JSON object with key delta and string value, then two newlines.\n     * Stream ends with: data: [DONE] followed by two newlines.\n     * Example stream body for the reply 'Yes! We have a great course on drip irrigation.':\n     *   data: (json delta=Yes! ) blank-line\n     *   data: (json delta=We have a great course) blank-line\n     *   data: (json delta= on drip irrigation.) blank-line\n     *   data: [DONE] blank-line\n     *\n     * ### Required response headers (backend must set all of these)\n     *\n     * - Content-Type: text/event-stream\n     * - Cache-Control: no-cache\n     * - X-Accel-Buffering: no — CRITICAL: disables Nginx buffering so tokens reach client immediately\n     * - Connection: keep-alive",
+                "operationId": "70e35f21c7006f1c2268ba0a99d7d7dd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Do you have a course on irrigation?",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "SSE stream opened. Body contains newline-delimited data: events. Final event is data: [DONE]."
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/message/ws": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Send a message — real-time reply via Reverb WebSocket (Tier 1, preferred)",
+                "description": "**Tier 1 transport — preferred.** This HTTP POST triggers Claude streaming on the backend. It returns 202 immediately. The actual reply tokens arrive on the frontend through a Pusher.js channel subscription, NOT through this HTTP response.\n     *\n     * ### IMPORTANT: Frontend must subscribe BEFORE calling this endpoint\n     *\n     * The frontend must already be connected to Reverb and subscribed to\n     * channel `chatbot.{session_token}` before this POST is made.\n     * Otherwise tokens will be broadcast with nobody listening.\n     *\n     * ### Full step-by-step process\n     *\n     * **Setup (once after POST /api/chatbot/session):**\n     * 1. Frontend creates pusher-js client pointing at the Reverb server.\n     * 2. Subscribes to public channel: chatbot.SESSION_TOKEN (replace SESSION_TOKEN with the actual token).\n     * 3. Binds event handlers on the channel:\n     *    - On event 'chunk': read the delta field from the payload, append to assistant bubble.\n     *    - On event 'done':  finalise the assistant turn, unlock the input.\n     * 4. Connection state = 'connected' → activeTransport = 'websocket'.\n     *\n     * **Per message (every time user sends a message):**\n     * 1. User submits message → user bubble added to UI.\n     * 2. Empty assistant placeholder bubble inserted.\n     * 3. POST /api/chatbot/message/ws { session_token, content } → 202 Accepted.\n     * 4. Backend iterates the streamFromClaude() PHP Generator:\n     *    - Each yielded token is broadcast as a ChatbotChunkEvent to the Reverb channel.\n     *    - After the loop ends, a ChatbotDoneEvent is broadcast to the same channel.\n     * 5. Reverb pushes these events to channel chatbot.SESSION_TOKEN.\n     * 6. Frontend 'chunk' handler fires for each token → text fills the bubble.\n     * 7. Frontend 'done'  handler fires → input unlocked, bubble finalised.\n     *\n     * ### Reverb channel and events\n     *\n     * Channel: `chatbot.{session_token}` (public — no Pusher auth needed)\n     * Event `chunk`  payload: `{ delta: 'text token' }` — append to assistant bubble\n     * Event `done`   payload: `{}`                      — end of turn, unlock input\n     *\n     * ### Pusher.js connection config (frontend — React/React Native)\n     *\n     * Pass these options to the Pusher constructor: wsHost from VITE_REVERB_HOST,\n     * wsPort 443 in production (8080 in local dev), wssPort 443, forceTLS true in production,\n     * enabledTransports ws and wss, disableStats true, cluster mt1 (required by library but ignored by Reverb).\n     *\n     * ### Fallback behaviour\n     *\n     * If the pusher-js connection fails at setup time, `activeTransport` switches to `sse`\n     * and subsequent messages use POST /api/chatbot/message/stream instead.",
+                "operationId": "d5aa84ec7e756eec695801ff7bb2909f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "description": "Must already be subscribed to channel chatbot.{session_token} before calling.",
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Do you have a course on drip irrigation?",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Accepted — backend is streaming Claude reply to Reverb channel. Tokens arrive as 'chunk' Pusher events.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/dismiss": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Record that the user closed the chatbot widget",
+                "description": "Called **fire-and-forget** when the user taps the close (×) button on the chatbot.\n     * Errors from this call must be silently ignored — the widget should still collapse regardless.\n     *\n     * ### Step-by-step (client side)\n     *\n     * 1. User taps close button.\n     * 2. Client stores `chatbot_dismissed_at = now().toISOString()` in localStorage.\n     * 3. This endpoint is called asynchronously (do not await it).\n     * 4. Widget collapses to FAB immediately — do not wait for the response.\n     *\n     * ### Effect on next app open\n     *\n     * On every app open the client checks localStorage for `chatbot_dismissed_at`:\n     * - If less than 24 hours ago → POST /api/chatbot/session still fires (session init),\n     *   but the widget stays collapsed as FAB. User can tap FAB to open manually.\n     * - If 24 hours or more ago → widget auto-opens normally after 3-second delay.\n     *\n     * ### Backend use of this signal\n     *\n     * - Updates `metadata->dismissed_at` on the session record.\n     * - Used for churn analytics and suppressing push notifications during the 24h window.",
+                "operationId": "2bf69dc044874ef657574bcdfa23ec26",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Dismissed recorded. Widget can collapse immediately without waiting for this response.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/answers": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Save onboarding quiz answers after the user completes all 5 questions",
+                "description": "Called once after the user finishes the onboarding quiz (or taps 'Skip All').\n     * Always followed immediately by POST /api/chatbot/recommendations.\n     *\n     * ### IMPORTANT — Quiz questions are hardcoded in the frontend\n     *\n     * The backend NEVER sends these questions. The frontend renders them locally.\n     * This endpoint only receives the answers. Mobile developers must implement\n     * these exact 5 questions in their UI before calling this endpoint.\n     *\n     * **Q1 — occupation** — 'What best describes you?'\n     * Chips: Farmer | Student | Agri-business owner | Researcher | Other (or free text)\n     * → stored in field: occupation\n     *\n     * **Q2 — state_lga** — 'Which State/LGA are you in?'\n     * Free text only (no chips) — e.g. 'Kano, Nassarawa LGA'\n     * → stored in field: state_lga\n     *\n     * **Q3 — learning_goal** — 'What is your main learning goal?'\n     * Chips: Start a farm | Improve my farm | Learn agri-tech | Get certified | Other\n     * → stored in field: learning_goal\n     *\n     * **Q4 — experience_level** — 'What is your farming experience?'\n     * Chips: None | Beginner | Intermediate | Expert\n     * → stored in field: experience_level\n     *\n     * **Q5 — preferred_language** — 'What is your preferred language?'\n     * Chips: English (stored as 'en') | Hausa (stored as 'ha')\n     * → stored in field: preferred_language\n     *\n     * ### Skip logic\n     *\n     * If a question is skipped, its 1-based index goes into `skipped_questions`\n     * and its field is omitted from the payload.\n     *\n     * | Example action | skipped_questions |\n     * |---|---|\n     * | All 5 answered | [] |\n     * | Q2 and Q5 skipped | [2, 5] |\n     * | 'Skip All' tapped immediately | [1, 2, 3, 4, 5] |\n     *\n     * ### After this call\n     *\n     * On success: immediately call POST /api/chatbot/recommendations.\n     * On failure: show a retry button. Do NOT call /recommendations until this succeeds.",
+                "operationId": "d750ce4cf0a0bf131124b5de5bdbd48e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "occupation": {
+                                        "description": "Answer to Q1. Chip value or free text.",
+                                        "type": "string",
+                                        "example": "Farmer",
+                                        "nullable": true
+                                    },
+                                    "state_lga": {
+                                        "description": "Answer to Q2. Free text only.",
+                                        "type": "string",
+                                        "example": "Kano, Nassarawa LGA",
+                                        "nullable": true
+                                    },
+                                    "learning_goal": {
+                                        "description": "Answer to Q3. Chip value.",
+                                        "type": "string",
+                                        "example": "Start a farm",
+                                        "nullable": true
+                                    },
+                                    "experience_level": {
+                                        "description": "Answer to Q4. Chip value.",
+                                        "type": "string",
+                                        "example": "Beginner",
+                                        "nullable": true
+                                    },
+                                    "preferred_language": {
+                                        "description": "Answer to Q5. 'English' chip → 'en'. 'Hausa' chip → 'ha'.",
+                                        "type": "string",
+                                        "example": "en",
+                                        "nullable": true,
+                                        "enum": [
+                                            "en",
+                                            "ha"
+                                        ]
+                                    },
+                                    "skipped_questions": {
+                                        "description": "1-based indices of skipped questions. Empty array if none skipped.",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer",
+                                            "maximum": 5,
+                                            "minimum": 1
+                                        },
+                                        "example": [
+                                            2
+                                        ],
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Answers saved. Immediately call POST /api/chatbot/recommendations next.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/recommendations": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Get ranked course recommendations based on quiz answers",
+                "description": "Called **immediately after** POST /api/chatbot/answers. Returns top-N courses scored and ranked against the user's quiz answers.\n     *\n     * ### When this is called\n     *\n     * The client calls this right after /chatbot/answers succeeds.\n     * While waiting, show a loading state: 'Finding your courses...'\n     *\n     * ### How recommendations are scored (backend logic)\n     *\n     * 1. Read quiz answers linked to this session_token.\n     * 2. Score all published courses against:\n     *    - occupation → relevance of course topic to the user's role\n     *    - learning_goal → alignment with course outcomes\n     *    - experience_level → match with course level (beginner/intermediate/expert)\n     *    - preferred_language → language availability of course\n     *    - state_lga → regional relevance where applicable\n     * 3. Return top courses ordered by score descending, each with a label and rationale.\n     * 4. If all 5 questions were skipped → return popular/featured courses as fallback.\n     *\n     * ### What to render for each recommendation card\n     *\n     * - `label` — e.g. 'Best Match', 'Highly Relevant' — display as a badge on the card\n     * - `score` — 0 to 1 float — can be shown as percentage or hidden from user\n     * - `course.thumbnail` — image URL for the card header\n     * - `course.title` — course name\n     * - `course.level` — beginner / intermediate / advanced\n     * - `course.estimated_hours` — e.g. '6h 30m'\n     * - `course.languages` — array, e.g. ['English', 'Hausa']\n     * - `course.category` — e.g. 'Crop Production'\n     * - `course.rationale` — why this course was chosen — show this text on the card\n     * - `course.id` — use to navigate to the course detail screen on card tap\n     *\n     * ### On error\n     *\n     * Show: 'Could not load courses right now. You can still chat with me!'\n     * Do not block the chat input — user can continue messaging freely.",
+                "operationId": "96ca4155fb59b66c4afba4973c43916e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ranked course recommendations. Render each as a tappable card. Tapping navigates to course detail.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "recommendations": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "label": {
+                                                                "description": "Badge text for the card.",
+                                                                "type": "string",
+                                                                "example": "Best Match"
+                                                            },
+                                                            "score": {
+                                                                "description": "Relevance score 0-1.",
+                                                                "type": "number",
+                                                                "format": "float",
+                                                                "example": 0.96
+                                                            },
+                                                            "course": {
+                                                                "properties": {
+                                                                    "id": {
+                                                                        "description": "Use for navigation to course detail.",
+                                                                        "type": "integer",
+                                                                        "example": 42
+                                                                    },
+                                                                    "title": {
+                                                                        "type": "string",
+                                                                        "example": "Introduction to Organic Farming"
+                                                                    },
+                                                                    "thumbnail": {
+                                                                        "type": "string",
+                                                                        "example": "https://cdn.agrisiti.com/courses/42/thumb.jpg",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "rationale": {
+                                                                        "description": "Show this text on the recommendation card.",
+                                                                        "type": "string",
+                                                                        "example": "Perfect for beginners starting a farm in northern Nigeria."
+                                                                    },
+                                                                    "estimated_hours": {
+                                                                        "type": "string",
+                                                                        "example": "6h 30m",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "languages": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "example": [
+                                                                            "English",
+                                                                            "Hausa"
+                                                                        ]
+                                                                    },
+                                                                    "category": {
+                                                                        "type": "string",
+                                                                        "example": "Crop Production",
+                                                                        "nullable": true
+                                                                    },
+                                                                    "level": {
+                                                                        "type": "string",
+                                                                        "example": "beginner",
+                                                                        "nullable": true
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/chatbot/link-answers": {
+            "post": {
+                "tags": [
+                    "Chatbot"
+                ],
+                "summary": "Link an anonymous session and quiz answers to a registered user",
+                "description": "Called **automatically** when a user who was chatting anonymously then logs in or registers. No user action is needed — the app detects the auth state change and fires this silently in the background.\n     *\n     * ### When this is triggered\n     *\n     * The frontend watches `user_id` in the auth context. The moment it changes from\n     * `null` to a number (user just logged in or registered), if a `session_token`\n     * already exists in localStorage, this endpoint is called automatically.\n     *\n     * ### Step-by-step\n     *\n     * 1. User was chatting anonymously → `session_token: 'abc'` in localStorage.\n     * 2. User navigates to login/register screen and authenticates.\n     * 3. Auth context updates: `user_id` changes from `null` → `101`.\n     * 4. App detects this change (useEffect / reactive state watcher).\n     * 5. App calls POST /api/chatbot/link-answers { session_token: 'abc', user_id: 101 }.\n     * 6. Backend links the session and intake answers to user 101.\n     * 7. **Errors from this call must be silently ignored.** The session still works locally.\n     *\n     * ### What the backend does\n     *\n     * - Finds session by `session_token`.\n     * - Sets `session.user_id = user_id`.\n     * - If an intake answer record exists for this session, sets `intake_answer.user_id = user_id`.\n     * - Rejects with 403 if the session is already linked to a DIFFERENT user.\n     *\n     * ### Why this matters\n     *\n     * After linking, the user's quiz answers and conversation history are permanently tied\n     * to their account. On future logins from any device, the backend can recognise them\n     * and pre-load personalised recommendations without needing the chatbot quiz again.",
+                "operationId": "74bc479a14244afd64f68b919c0f8558",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "session_token",
+                                    "user_id"
+                                ],
+                                "properties": {
+                                    "session_token": {
+                                        "description": "The anonymous session token from localStorage.",
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                                    },
+                                    "user_id": {
+                                        "description": "The authenticated user's ID from the auth context.",
+                                        "type": "integer",
+                                        "example": 101
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Session and quiz answers linked to user. Ignore errors silently.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Session already linked to a different user — do not overwrite."
+                    },
+                    "404": {
+                        "description": "Session not found — token may have expired or never existed."
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -3702,6 +4335,70 @@
                     }
                 ]
             }
+        },
+        "/api/ussd": {
+            "post": {
+                "tags": [
+                    "USSD"
+                ],
+                "summary": "Africa's Talking USSD gateway webhook",
+                "description": "Handles USSD session callbacks from Africa's Talking. Requires HMAC signature validation via X-AfricasTalking-Hash header.",
+                "operationId": "b9471d1153e5b1a63393f6743c868903",
+                "parameters": [
+                    {
+                        "name": "X-AfricasTalking-Hash",
+                        "in": "header",
+                        "description": "HMAC-SHA256 signature of the raw request body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "required": [
+                                    "sessionId",
+                                    "serviceCode",
+                                    "phoneNumber",
+                                    "text"
+                                ],
+                                "properties": {
+                                    "sessionId": {
+                                        "type": "string",
+                                        "example": "ATUid_abc123"
+                                    },
+                                    "serviceCode": {
+                                        "type": "string",
+                                        "example": "*737*123#"
+                                    },
+                                    "phoneNumber": {
+                                        "type": "string",
+                                        "example": "+2348012345678"
+                                    },
+                                    "text": {
+                                        "description": "Star-delimited menu navigation path",
+                                        "type": "string",
+                                        "example": "1*1"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "USSD response string prefixed with CON (continue) or END (final)"
+                    },
+                    "401": {
+                        "description": "Invalid HMAC signature"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -3881,6 +4578,10 @@
     },
     "tags": [
         {
+            "name": "Chatbot",
+            "description": "All chatbot endpoints are PUBLIC — no Authorization header required.\n * Session identity uses session_token (UUID) in the request body, not auth headers.\n * Store this token in localStorage (web) or AsyncStorage (React Native).\n *\n * =====================================================================\n * COMPLETE USER JOURNEY — READ THIS BEFORE IMPLEMENTING\n * =====================================================================\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO A: First-time anonymous user (no token in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Storage has no chatbot_session_token. User is not logged in.\n * After a 3-second delay (or immediately on FAB tap):\n * Call POST /api/chatbot/session  body: session_token=null, user_id=null\n * Response: is_returning=false, fresh UUID session_token, messages=empty array.\n * Save the session_token to storage. Connect pusher-js to Reverb server.\n * Subscribe to public Reverb channel: chatbot.SESSION_TOKEN\n *\n * STEP 2 — Show greeting locally. NO API CALL.\n * Render this as an assistant chat bubble (no server call needed):\n * Hi! I am Agri, your Agrisiti Academy guide.\n * I will help you find the perfect course. First — what is your name?\n *\n * STEP 3 — User types their name and taps Send.\n * Add user bubble to UI immediately (optimistic, before API responds).\n * Insert empty assistant placeholder bubble. Show typing indicator.\n * Call POST /api/chatbot/message/ws  body: session_token, content: I am Amina\n * Response: 202 Accepted immediately. Actual reply arrives via Reverb.\n * Listen on channel — receive chunk events → append delta text to placeholder bubble.\n * Receive done event → remove typing indicator, unlock input.\n *\n * STEP 4 — Show quiz offer. NO API CALL.\n * After the assistant replies, render two buttons:\n * Button 1: Start Quiz\n * Button 2: Skip — just chat\n *\n * STEP 5 — User taps Start Quiz. Show Question 1 of 5. NO API CALL.\n * Question text: What best describes you?\n * Render chips: Farmer, Student, Agri-business owner, Researcher, Other\n * Also allow free text input.\n * Show a Skip Q1 link.\n * User taps chip or types free text → buffer answer in sessionStorage. No API call.\n * Transition to Q2.\n *\n * STEP 6 — Question 2 of 5. NO API CALL.\n * Question text: Which State and LGA are you in?\n * Render a free text input only — no chips for this question.\n * Placeholder hint: e.g. Kano, Nassarawa LGA\n * User types → buffer in sessionStorage. Transition to Q3.\n *\n * STEP 7 — Question 3 of 5. NO API CALL.\n * Question text: What is your main learning goal?\n * Render chips: Start a farm, Improve my farm, Learn agri-tech, Get certified, Other\n * User taps → buffer. Transition to Q4.\n *\n * STEP 8 — Question 4 of 5. NO API CALL.\n * Question text: What is your farming experience?\n * Render chips: None, Beginner, Intermediate, Expert\n * User taps → buffer. Transition to Q5.\n *\n * STEP 9 — Question 5 of 5. NO API CALL.\n * Question text: What is your preferred language?\n * Render two chips only: English and Hausa\n * English chip stores the string value en in the payload.\n * Hausa chip stores the string value ha in the payload.\n * User taps → buffer.\n *\n * STEP 10 — User answered Q5 (or tapped Skip All). TWO SEQUENTIAL API CALLS.\n * Show loading screen with text: Finding your courses...\n * API CALL 1: POST /api/chatbot/answers\n *   Body: session_token, plus any answered fields, plus skipped_questions array.\n *   On failure: show Retry button. Do NOT call /recommendations yet.\n * API CALL 2 (only after CALL 1 succeeds): POST /api/chatbot/recommendations\n *   Body: session_token only.\n *   On failure: show message Cannot load courses right now. You can still chat.\n * Also save answers to localStorage as chatbot_prefill for pre-filling on future visits.\n *\n * STEP 11 — Render course recommendation cards.\n * Use these fields for each card:\n *   label       — badge text e.g. Best Match (show as a coloured chip on the card)\n *   score       — float 0-1 (can show as percentage or hide from user)\n *   course.thumbnail     — image at top of card\n *   course.title         — large text below image\n *   course.category      — subtitle text\n *   course.level         — badge: beginner, intermediate, or advanced\n *   course.estimated_hours — e.g. 6h 30m\n *   course.languages     — array, show as small flags or text: English, Hausa\n *   course.rationale     — important: show this text as a description on the card\n *   course.id            — use this to navigate to course detail screen on tap\n *\n * STEP 12 — Post-recommendation free chat loop.\n * Chat input remains available below the cards.\n * Any message follows the same 3-tier transport chain as Step 3.\n * This loop continues indefinitely.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO B: Returning anonymous user (token exists in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Read storage: chatbot_session_token is an existing UUID.\n * Call POST /api/chatbot/session  body: session_token=existing UUID, user_id=null\n * Response: is_returning=true, same session_token, messages=full history array.\n * Display all previous messages immediately in chronological order.\n * Skip greeting and skip quiz entirely — open directly in free-chat mode.\n * Connect Reverb and subscribe to channel. Ready for new messages.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO C: Logged-in user\n * ──────────────────────────────────────────────────────────────────────\n *\n * Same as Scenario A or B, but include user_id from auth context:\n * Call POST /api/chatbot/session  body: session_token=null or stored, user_id=101\n * The session is linked to the user from the very start.\n * Quiz flow and chat flow are identical to Scenario A.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO D: Anonymous user who logs in during a session\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User chatted anonymously. session_token abc is in storage. user_id was null.\n * STEP 2 — User logs in or registers on any other screen in the app.\n * STEP 3 — Auth context detects user_id changed from null to 101.\n * STEP 4 — App automatically fires (fire-and-forget, requires no user action):\n * POST /api/chatbot/link-answers  body: session_token=abc, user_id=101\n * All quiz answers and conversation history are now owned by user 101.\n * STEP 5 — Any error from this call must be silently ignored.\n * The chat session still works fine on the current device regardless.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO E: User dismisses the chatbot\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User taps the close X button on the chatbot panel.\n * Immediately store chatbot_dismissed_at = current ISO timestamp in localStorage.\n * Call POST /api/chatbot/dismiss  body: session_token (fire-and-forget, do not await).\n * Collapse widget to FAB button immediately — do not wait for the API response.\n * Any error must be silently ignored.\n *\n * STEP 2 — Next app open within 24 hours.\n * Check: current time minus chatbot_dismissed_at is less than 24 hours.\n * POST /api/chatbot/session still fires (session init happens silently in background).\n * Widget stays collapsed as FAB. User can tap FAB to manually open the chat.\n *\n * STEP 3 — Next app open after 24 hours have elapsed.\n * Widget auto-opens normally with the 3-second delay.\n *\n * ──────────────────────────────────────────────────────────────────────\n * WIDGET STATES — implement all of these\n * ──────────────────────────────────────────────────────────────────────\n *\n * closed          Nothing visible. Timer has not fired yet.\n * minimized       FAB button only. After dismiss or manual collapse.\n * open            Full chat panel. Normal interactive state.\n * thinking        Typing indicator (3 dots animation) in assistant bubble. Waiting for first token.\n * streaming       Text appearing token by token in assistant bubble. Receiving Reverb or SSE chunks.\n * quiz            Quiz question with chip options rendered. No free-text input shown.\n * loading_recs    Spinner or shimmer cards. Between /answers and /recommendations calls.\n * recommendations Course cards rendered below the assistant message. Input still active.\n *\n * ──────────────────────────────────────────────────────────────────────\n * ERROR HANDLING — required behaviour for each failure case\n * ──────────────────────────────────────────────────────────────────────\n *\n * /chatbot/session fails         Silent retry once. If still fails, hide widget entirely.\n * Reverb connect fails           Silently switch to SSE (Tier 2). No error shown to user.\n * SSE fails                      Silently switch to plain REST (Tier 3). No error shown to user.\n * All 3 message tiers fail       Show error bubble: Could not reach server. Please try again.\n * /chatbot/answers fails         Show a Retry button in the quiz. Do NOT call /recommendations.\n * /chatbot/recommendations fails Show inline message: Could not load courses. You can still chat!\n * /chatbot/dismiss fails         Ignore silently. Widget collapses regardless.\n * /chatbot/link-answers fails    Ignore silently. Chat session still works on current device."
+        },
+        {
             "name": "Assignments",
             "description": "Assignments"
         },
@@ -3939,6 +4640,10 @@
         {
             "name": "Tests",
             "description": "Tests"
+        },
+        {
+            "name": "USSD",
+            "description": "USSD"
         }
     ]
 }

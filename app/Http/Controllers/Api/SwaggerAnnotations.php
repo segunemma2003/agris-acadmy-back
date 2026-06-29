@@ -7,7 +7,7 @@ use OpenApi\Attributes as OAT;
 #[OAT\Info(
     version: '1.0.0',
     title: 'Agrisiti Academy API',
-    description: 'REST API for the Agrisiti Academy e-learning platform. Supports student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, and notifications.',
+    description: 'REST and WebSocket API for the Agrisiti Academy e-learning platform. Covers student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, notifications, and the Agri chatbot (AI-powered onboarding assistant with real-time Reverb WebSocket streaming, SSE fallback, and course recommendations). See the Chatbot tag for the complete user journey, quiz questions, and 3-tier transport documentation.',
     contact: new OAT\Contact(email: 'admin@agrisiti.com'),
 )]
 #[OAT\Server(url: 'https://academy-backends.agrisiti.com', description: 'Production Server')]
