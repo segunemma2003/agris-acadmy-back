@@ -55,9 +55,20 @@ class CertificateGenerationService
     {
         $contents = $this->render($template, $name, $verificationCode);
 
-        Storage::disk('s3')->put($storagePath, $contents, 'public');
+        // The 's3' disk is configured with 'throw' => false and 'report' => false,
+        // so a failed write would otherwise return false silently with no
+        // exception and no log line. Force writes on this disk to throw so the
+        // real S3 error (e.g. bucket ACLs disabled, bad credentials) surfaces
+        // to the job's error handling instead of producing a dead link.
+        config(['filesystems.disks.s3.throw' => true]);
+        $disk = Storage::disk('s3');
+        $disk->put($storagePath, $contents, 'public');
 
-        return Storage::disk('s3')->url($storagePath);
+        if (!$disk->exists($storagePath)) {
+            throw new \RuntimeException("Certificate upload to S3 did not persist: {$storagePath}");
+        }
+
+        return $disk->url($storagePath);
     }
 
     private function hexToRgb(string $hex): array
