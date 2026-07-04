@@ -12,7 +12,9 @@ class Certificate extends Model
         'user_id',
         'course_id',
         'enrollment_id',
+        'certificate_template_id',
         'certificate_number',
+        'recipient_name',
         'issued_date',
         'file_path',
     ];
@@ -38,6 +40,11 @@ class Certificate extends Model
     public function enrollment(): BelongsTo
     {
         return $this->belongsTo(Enrollment::class);
+    }
+
+    public function certificateTemplate(): BelongsTo
+    {
+        return $this->belongsTo(CertificateTemplate::class);
     }
 
     // Generate unique certificate number
