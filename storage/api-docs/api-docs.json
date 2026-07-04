@@ -2065,6 +2065,87 @@
                 ]
             }
         },
+        "/api/courses/{course}/comments/{comment}/pin": {
+            "post": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Pin or unpin a forum thread (course tutor or admin only)",
+                "operationId": "efd68571ac4dfced1f881f52b157f03b",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thread pin state toggled"
+                    },
+                    "403": {
+                        "description": "Not authorized to moderate this course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/comments/{comment}/accept": {
+            "post": {
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Mark a reply as the accepted answer for its thread (course tutor or admin only)",
+                "operationId": "96526bb6f5e46f431da8c95362e844b9",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "comment",
+                        "in": "path",
+                        "description": "The reply's ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reply marked as accepted answer"
+                    },
+                    "403": {
+                        "description": "Not authorized to moderate this course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/courses": {
             "get": {
                 "tags": [

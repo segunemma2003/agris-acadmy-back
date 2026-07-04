@@ -136,6 +136,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courses/{course}/comments', [CommentController::class, 'addCourseComment']);
     Route::put('/courses/{course}/comments/{comment}', [CommentController::class, 'updateCourseComment']);
     Route::delete('/courses/{course}/comments/{comment}', [CommentController::class, 'deleteCourseComment']);
+    Route::post('/courses/{course}/comments/{comment}/pin', [CommentController::class, 'pinCourseComment']);
+    Route::post('/courses/{course}/comments/{comment}/accept', [CommentController::class, 'acceptCourseReply']);
 
     // Saved Courses
     Route::get('/saved-courses', [SavedCourseController::class, 'index']);

@@ -178,20 +178,132 @@ class CommentController extends Controller
      */
     public function courseComments(Request $request, Course $course)
     {
-        $cacheKey = "course_{$course->id}_comments";
-        
-        $comments = Cache::remember($cacheKey, 300, function () use ($course) {
-            return CourseComment::where('course_id', $course->id)
-                ->whereNull('parent_id')
-                ->with(['user:id,name,avatar', 'replies.user:id,name,avatar'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-        });
-        
+        $search = $request->query('search');
+        $moduleId = $request->query('module_id');
+        $perPage = (int) $request->query('per_page', 15);
+
+        $query = CourseComment::where('course_id', $course->id)
+            ->whereNull('parent_id')
+            ->with(['user:id,name,avatar', 'replies.user:id,name,avatar', 'module:id,title']);
+
+        if ($moduleId) {
+            $query->where('module_id', $moduleId);
+        }
+
+        if ($search) {
+            $query->where('comment', 'like', '%' . $search . '%');
+        }
+
+        // Pinned threads always float to the top, then newest first.
+        $threads = $query
+            ->orderByDesc('is_pinned')
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+
         return response()->json([
             'success' => true,
-            'data' => $comments,
+            'data' => $threads->items(),
+            'pagination' => [
+                'current_page' => $threads->currentPage(),
+                'last_page' => $threads->lastPage(),
+                'per_page' => $threads->perPage(),
+                'total' => $threads->total(),
+            ],
             'message' => 'Course comments retrieved successfully'
+        ]);
+    }
+
+    /**
+     * Whether this user can moderate (pin threads, accept answers, delete any post)
+     * discussion in this course — the course's tutor, or an admin.
+     */
+    private function canModerate($user, Course $course): bool
+    {
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        return $course->tutor_id === $user->id
+            || $course->tutors()->where('users.id', $user->id)->exists();
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/comments/{comment}/pin",
+     *     tags={"Comments"},
+     *     summary="Pin or unpin a forum thread (course tutor or admin only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thread pin state toggled"),
+     *     @OA\Response(response=403, description="Not authorized to moderate this course")
+     * )
+     */
+    public function pinCourseComment(Request $request, Course $course, $commentId)
+    {
+        $user = $request->user();
+
+        if (!$this->canModerate($user, $course)) {
+            return response()->json(['success' => false, 'message' => 'Only the course tutor or an admin can pin threads'], 403);
+        }
+
+        $thread = CourseComment::where('id', $commentId)
+            ->where('course_id', $course->id)
+            ->whereNull('parent_id')
+            ->first();
+
+        if (!$thread) {
+            return response()->json(['success' => false, 'message' => 'Thread not found'], 404);
+        }
+
+        $thread->update(['is_pinned' => !$thread->is_pinned]);
+        Cache::forget("course_{$course->id}_comments");
+
+        return response()->json([
+            'success' => true,
+            'data' => $thread,
+            'message' => $thread->is_pinned ? 'Thread pinned' : 'Thread unpinned',
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/courses/{course}/comments/{comment}/accept",
+     *     tags={"Comments"},
+     *     summary="Mark a reply as the accepted answer for its thread (course tutor or admin only)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="comment", in="path", required=true, @OA\Schema(type="integer"), description="The reply's ID"),
+     *     @OA\Response(response=200, description="Reply marked as accepted answer"),
+     *     @OA\Response(response=403, description="Not authorized to moderate this course")
+     * )
+     */
+    public function acceptCourseReply(Request $request, Course $course, $commentId)
+    {
+        $user = $request->user();
+
+        if (!$this->canModerate($user, $course)) {
+            return response()->json(['success' => false, 'message' => 'Only the course tutor or an admin can accept an answer'], 403);
+        }
+
+        $reply = CourseComment::where('id', $commentId)
+            ->where('course_id', $course->id)
+            ->whereNotNull('parent_id')
+            ->first();
+
+        if (!$reply) {
+            return response()->json(['success' => false, 'message' => 'Reply not found'], 404);
+        }
+
+        // Only one accepted answer per thread.
+        CourseComment::where('parent_id', $reply->parent_id)->update(['is_accepted' => false]);
+        $reply->update(['is_accepted' => true]);
+        Cache::forget("course_{$course->id}_comments");
+
+        return response()->json([
+            'success' => true,
+            'data' => $reply,
+            'message' => 'Reply marked as the accepted answer',
         ]);
     }
 
@@ -203,20 +315,48 @@ class CommentController extends Controller
         $request->validate([
             'comment' => 'required|string|max:2000',
             'parent_id' => 'nullable|exists:course_comments,id',
+            'module_id' => 'nullable|exists:modules,id',
         ]);
-        
+
         $user = $request->user();
-        
+
         $comment = CourseComment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
+            'module_id' => $request->module_id,
             'comment' => $request->comment,
             'parent_id' => $request->parent_id,
         ]);
-        
+
+        // Notify everyone else who's part of this thread that a new reply landed.
+        if ($request->parent_id) {
+            $thread = CourseComment::find($request->parent_id);
+            if ($thread) {
+                $participantIds = CourseComment::where('id', $thread->id)
+                    ->orWhere('parent_id', $thread->id)
+                    ->pluck('user_id')
+                    ->push($thread->user_id)
+                    ->unique()
+                    ->reject(fn ($id) => $id === $user->id);
+
+                $participants = \App\Models\User::whereIn('id', $participantIds)->get();
+                foreach ($participants as $participant) {
+                    \App\Services\NotificationService::create(
+                        $participant,
+                        'forum_reply',
+                        'New reply to a thread you\'re following',
+                        "{$user->name} replied in '{$course->title}': " . \Illuminate\Support\Str::limit($request->comment, 80),
+                        'course',
+                        $course->id,
+                        ['course_id' => $course->id, 'thread_id' => $thread->id]
+                    );
+                }
+            }
+        }
+
         // Clear cache
         Cache::forget("course_{$course->id}_comments");
-        
+
         return response()->json([
             'success' => true,
             'data' => $comment->load('user:id,name,avatar'),
@@ -339,27 +479,34 @@ class CommentController extends Controller
     public function deleteCourseComment(Request $request, Course $course, $commentId)
     {
         $user = $request->user();
-        
+
         $comment = CourseComment::where('id', $commentId)
             ->where('course_id', $course->id)
-            ->where('user_id', $user->id)
             ->first();
-        
+
         if (!$comment) {
             return response()->json([
                 'success' => false,
                 'message' => 'Comment not found'
             ], 404);
         }
-        
+
+        // Owners can delete their own post; the course tutor or an admin can moderate any post.
+        if ($comment->user_id !== $user->id && !$this->canModerate($user, $course)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only delete your own posts'
+            ], 403);
+        }
+
         // Delete replies first
         CourseComment::where('parent_id', $comment->id)->delete();
-        
+
         $comment->delete();
-        
+
         // Clear cache
         Cache::forget("course_{$course->id}_comments");
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Comment deleted successfully'

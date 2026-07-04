@@ -11,9 +11,20 @@ class CourseComment extends Model
     protected $fillable = [
         'user_id',
         'course_id',
+        'module_id',
         'comment',
         'parent_id',
+        'is_pinned',
+        'is_accepted',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_pinned' => 'boolean',
+            'is_accepted' => 'boolean',
+        ];
+    }
 
     public function user(): BelongsTo
     {
@@ -23,6 +34,11 @@ class CourseComment extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
     }
 
     public function parent(): BelongsTo
