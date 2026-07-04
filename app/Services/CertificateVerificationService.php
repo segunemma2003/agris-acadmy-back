@@ -24,7 +24,9 @@ class CertificateVerificationService
             $parser = new Parser();
             $text = $parser->parseFile($pdfPath)->getText();
         } finally {
-            ini_set('memory_limit', $previousLimit);
+            // Best-effort restore; PHP refuses to shrink the limit below current
+            // usage, which is harmless here since each request starts fresh.
+            @ini_set('memory_limit', $previousLimit);
         }
 
         return preg_match(self::CODE_PATTERN, $text, $matches) ? $matches[0] : null;

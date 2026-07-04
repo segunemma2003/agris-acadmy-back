@@ -4,13 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CertificateTemplateResource\Pages;
 use App\Models\CertificateTemplate;
-use App\Services\CertificateGenerationService;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\URL;
 
 class CertificateTemplateResource extends Resource
 {
@@ -104,30 +103,13 @@ class CertificateTemplateResource extends Resource
                 Tables\Actions\Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
-                    ->form([
-                        Forms\Components\TextInput::make('sample_name')
-                            ->label('Sample name')
-                            ->default('JOHN ADEBAYO OKONKWO')
-                            ->required(),
-                    ])
-                    ->action(function (CertificateTemplate $record, array $data) {
-                        try {
-                            $service = app(CertificateGenerationService::class);
-                            $contents = $service->render($record, $data['sample_name'], 'CERT-PREVIEW0000SAMPLE');
-
-                            return response()->streamDownload(
-                                fn () => print($contents),
-                                'certificate-preview.pdf',
-                                ['Content-Type' => 'application/pdf']
-                            );
-                        } catch (\Throwable $e) {
-                            Notification::make()
-                                ->title('Failed to generate preview')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
+                    ->url(fn (CertificateTemplate $record): string => URL::temporarySignedRoute(
+                        'admin.certificate-templates.preview',
+                        now()->addMinutes(10),
+                        ['certificateTemplate' => $record->id],
+                    ))
+                    ->openUrlInNewTab()
+                    ->tooltip('Opens the actual certificate design with a sample name in a new tab'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

@@ -40,6 +40,7 @@ class EnrollmentsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('enrollment_code')
+            ->modifyQueryUsing(fn ($query) => $query->with(['certificate', 'user']))
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Participant')
@@ -78,6 +79,13 @@ class EnrollmentsRelationManager extends RelationManager
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('view_certificate')
+                    ->label('View Certificate')
+                    ->icon('heroicon-o-document-text')
+                    ->color('success')
+                    ->visible(fn (Enrollment $record) => filled($record->certificate?->file_path))
+                    ->url(fn (Enrollment $record) => $record->certificate->file_path)
+                    ->openUrlInNewTab(),
                 Tables\Actions\Action::make('generate_certificate')
                     ->label('Generate Certificate')
                     ->icon('heroicon-o-academic-cap')
