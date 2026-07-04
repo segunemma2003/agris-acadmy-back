@@ -18,6 +18,8 @@ class AssignmentSubmission extends Model
         'feedback',
         'submitted_at',
         'graded_at',
+        'is_locked',
+        'locked_at',
     ];
 
     protected function casts(): array
@@ -25,6 +27,8 @@ class AssignmentSubmission extends Model
         return [
             'submitted_at' => 'datetime',
             'graded_at' => 'datetime',
+            'is_locked' => 'boolean',
+            'locked_at' => 'datetime',
         ];
     }
 
@@ -94,6 +98,9 @@ class AssignmentSubmission extends Model
                             'feedback' => $submission->feedback,
                         ]
                     );
+
+                    \Illuminate\Support\Facades\Mail::to($user->email)
+                        ->queue(new \App\Mail\AssignmentGradedMail($submission));
                 }
             }
         });

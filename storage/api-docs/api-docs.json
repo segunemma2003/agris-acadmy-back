@@ -113,7 +113,7 @@
                                         "type": "string"
                                     },
                                     "file": {
-                                        "description": "Optional file attachment, max 10 MB",
+                                        "description": "Optional file attachment: PDF, DOCX, JPG, or PNG, max 10 MB",
                                         "type": "string",
                                         "format": "binary"
                                     }
@@ -128,7 +128,17 @@
                         "description": "Submission created/updated"
                     },
                     "403": {
-                        "description": "Not enrolled"
+                        "description": "Not enrolled, or submission is locked by the tutor"
+                    },
+                    "422": {
+                        "description": "Validation error (e.g. unsupported file type)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2302,6 +2312,41 @@
                     },
                     "403": {
                         "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/courses/{course}/vr-content": {
+            "get": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Get VR learning content for a course (enrollment required)",
+                "operationId": "da57ce082e150afa7c28b4461737eeb0",
+                "parameters": [
+                    {
+                        "name": "course",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "VR content list"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    },
+                    "404": {
+                        "description": "Course not found"
                     }
                 },
                 "security": [

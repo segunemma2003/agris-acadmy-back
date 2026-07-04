@@ -117,12 +117,13 @@ class AssignmentController extends Controller
      *             @OA\Schema(
      *                 required={"submission_content"},
      *                 @OA\Property(property="submission_content", type="string"),
-     *                 @OA\Property(property="file", type="string", format="binary", description="Optional file attachment, max 10 MB")
+     *                 @OA\Property(property="file", type="string", format="binary", description="Optional file attachment: PDF, DOCX, JPG, or PNG, max 10 MB")
      *             )
      *         )
      *     ),
      *     @OA\Response(response=201, description="Submission created/updated"),
-     *     @OA\Response(response=403, description="Not enrolled")
+     *     @OA\Response(response=403, description="Not enrolled, or submission is locked by the tutor"),
+     *     @OA\Response(response=422, description="Validation error (e.g. unsupported file type)", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
      * )
      */
     public function submit(Request $request, Assignment $assignment)
@@ -138,9 +139,17 @@ class AssignmentController extends Controller
             return response()->json(['message' => 'You are not enrolled in this course'], 403);
         }
 
+        $existingSubmission = AssignmentSubmission::where('assignment_id', $assignment->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($existingSubmission && $existingSubmission->is_locked) {
+            return response()->json(['message' => 'This submission has been locked by your tutor and can no longer be resubmitted'], 403);
+        }
+
         $request->validate([
             'submission_content' => 'required|string',
-            'file' => 'nullable|file|max:10240', // 10MB max
+            'file' => 'nullable|file|mimes:pdf,docx,jpg,jpeg,png|max:10240', // 10MB max
         ]);
 
         $filePath = null;

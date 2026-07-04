@@ -107,6 +107,11 @@ class AssignmentSubmissionResource extends Resource
                             ->label('Feedback to Student')
                             ->helperText('Provide feedback on the submission')
                             ->columnSpanFull(),
+                        Forms\Components\Toggle::make('is_locked')
+                            ->label('Lock submission')
+                            ->helperText('Prevents the learner from resubmitting this assignment')
+                            ->live()
+                            ->afterStateUpdated(fn ($state, $set) => $set('locked_at', $state ? now() : null)),
                     ])->columns(2),
             ]);
     }
@@ -156,6 +161,11 @@ class AssignmentSubmissionResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\IconColumn::make('is_locked')
+                    ->label('Locked')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->falseIcon('heroicon-o-lock-open'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('assignment.course_id')
@@ -185,6 +195,15 @@ class AssignmentSubmissionResource extends Resource
                     ),
             ])
             ->actions([
+                Tables\Actions\Action::make('toggle_lock')
+                    ->label(fn (AssignmentSubmission $record) => $record->is_locked ? 'Unlock' : 'Lock')
+                    ->icon(fn (AssignmentSubmission $record) => $record->is_locked ? 'heroicon-o-lock-open' : 'heroicon-o-lock-closed')
+                    ->color(fn (AssignmentSubmission $record) => $record->is_locked ? 'gray' : 'danger')
+                    ->requiresConfirmation()
+                    ->action(fn (AssignmentSubmission $record) => $record->update([
+                        'is_locked' => !$record->is_locked,
+                        'locked_at' => $record->is_locked ? null : now(),
+                    ])),
                 Tables\Actions\EditAction::make(),
             ])
             ->defaultSort('submitted_at', 'desc');
