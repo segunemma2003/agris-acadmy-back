@@ -14,6 +14,35 @@ class NoteController extends Controller
 {
     /**
      * @OA\Get(
+     *     path="/api/my-notes",
+     *     tags={"Notes"},
+     *     summary="Get all notes the authenticated user has made across every course, for a consolidated 'My Notes' view",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="All notes across all courses")
+     * )
+     */
+    public function myNotes(Request $request)
+    {
+        $user = $request->user();
+
+        $notes = $user->notes()
+            ->with([
+                'course:id,title,slug',
+                'topic:id,title,module_id',
+                'topic.module:id,title',
+            ])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $notes,
+            'message' => 'All notes retrieved successfully'
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/courses/{course}/notes",
      *     tags={"Notes"},
      *     summary="Get all notes the authenticated user made for a course",

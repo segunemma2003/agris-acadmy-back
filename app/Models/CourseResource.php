@@ -9,6 +9,7 @@ class CourseResource extends Model
 {
     protected $fillable = [
         'course_id',
+        'topic_id',
         'title',
         'description',
         'file_path',
@@ -22,6 +23,8 @@ class CourseResource extends Model
         'is_active',
     ];
 
+    protected $appends = ['file_url'];
+
     protected function casts(): array
     {
         return [
@@ -34,6 +37,11 @@ class CourseResource extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class);
     }
 
     // Accessors

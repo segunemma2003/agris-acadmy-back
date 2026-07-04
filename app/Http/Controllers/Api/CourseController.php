@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use OpenApi\Annotations as OA;
 use App\Models\Course;
+use App\Models\CourseResource;
 use App\Models\Enrollment;
+use App\Models\Topic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -286,7 +288,7 @@ class CourseController extends Controller
             ->with(['topics' => function ($query) use ($isEnrolled) {
                 $query->where('is_active', true)
                     ->orderBy('sort_order');
-            }])
+            }, 'topics.resources'])
             ->orderBy('sort_order')
             ->get();
 
@@ -526,6 +528,50 @@ class CourseController extends Controller
             'success' => true,
             'data' => $resources,
             'message' => 'Course resources retrieved successfully'
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/topics/{topic}/resources/{resource}/download",
+     *     tags={"Courses"},
+     *     summary="Log a resource download for usage analytics",
+     *     description="Call this alongside (or just before) opening the resource's file_url. Records who downloaded what, from which lesson, and when.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="topic", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="resource", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Download logged"),
+     *     @OA\Response(response=403, description="Not enrolled")
+     * )
+     */
+    public function logResourceDownload(Request $request, Topic $topic, CourseResource $resource)
+    {
+        $user = $request->user();
+        $course = $topic->module->course;
+
+        $isEnrolled = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists();
+
+        if (!$isEnrolled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must be enrolled in this course to download resources'
+            ], 403);
+        }
+
+        \App\Models\TopicDownload::create([
+            'user_id' => $user->id,
+            'topic_id' => $topic->id,
+            'course_resource_id' => $resource->id,
+            'downloaded_at' => now(),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Download logged',
         ]);
     }
 }

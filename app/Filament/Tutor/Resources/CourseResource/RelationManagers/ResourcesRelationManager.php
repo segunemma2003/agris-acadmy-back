@@ -30,6 +30,17 @@ class ResourcesRelationManager extends RelationManager
                         Forms\Components\Textarea::make('description')
                             ->rows(3)
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('topic_id')
+                            ->label('Lesson (optional)')
+                            ->options(fn () => $this->getOwnerRecord()->modules()
+                                ->with('topics')
+                                ->get()
+                                ->pluck('topics')
+                                ->flatten()
+                                ->pluck('title', 'id'))
+                            ->searchable()
+                            ->columnSpanFull()
+                            ->helperText('Attach this resource to a specific lesson, or leave empty to show it course-wide.'),
                         Forms\Components\Select::make('resource_type')
                             ->label('Resource Type')
                             ->options([

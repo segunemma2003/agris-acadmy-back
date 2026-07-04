@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courses/{course}/diy-content', [CourseController::class, 'diyContent']);
     Route::get('/courses/{course}/vr-content', [CourseController::class, 'vrContent']);
     Route::get('/courses/{course}/resources', [CourseController::class, 'resources']);
+    Route::post('/topics/{topic}/resources/{resource}/download', [CourseController::class, 'logResourceDownload']);
     Route::get('/courses/{course}/curriculum', [CourseV2Controller::class, 'curriculum']);
     Route::get('/courses/{course}/completion', [CourseV2Controller::class, 'completion']);
     Route::get('/courses/{course}/reviews', [CourseV2Controller::class, 'reviews']);
@@ -118,6 +119,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/courses/{course}/modules/{module}/tests/{test}/complete-quiz', [ProgressController::class, 'completeQuiz']);
 
     // Notes
+    Route::get('/my-notes', [NoteController::class, 'myNotes']);
     Route::get('/courses/{course}/notes', [NoteController::class, 'index']);
     Route::get('/courses/{course}/modules/{module}/notes', [NoteController::class, 'moduleNotes']);
     Route::get('/courses/{course}/modules/{module}/topics/{topic}/notes', [NoteController::class, 'topicNotes']);

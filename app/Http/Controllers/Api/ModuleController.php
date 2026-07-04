@@ -80,7 +80,8 @@ class ModuleController extends Controller
             'topics' => function ($query) {
                 $query->where('is_active', true)
                     ->orderBy('sort_order');
-            }
+            },
+            'topics.resources',
         ]);
         
         // Load test (hasMany relationship - get first active test)

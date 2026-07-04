@@ -184,7 +184,8 @@ class ProgressController extends Controller
             'last_accessed_at' => now(),
         ]);
 
-        if ($studentProgress->completion_percentage >= 100) {
+        // A lesson is considered "watched" once 80% of the video has been viewed.
+        if ($studentProgress->completion_percentage >= 80 && !$studentProgress->is_completed) {
             $studentProgress->update([
                 'is_completed' => true,
                 'completed_at' => now(),
@@ -333,6 +334,15 @@ class ProgressController extends Controller
             ], 403);
         }
 
+        $existing = StudentProgress::where('user_id', $user->id)->where('topic_id', $topic->id)->first();
+
+        // Completion percentage tracks the furthest point reached in the video, so a
+        // later sync after seeking backward should never regress (or un-complete) it.
+        $completionPercentage = max($request->completion_percentage ?? 0, $existing->completion_percentage ?? 0);
+        // A lesson is considered "watched" once 80% of the video has been viewed,
+        // enforced server-side regardless of what the client computes.
+        $isCompleted = ($existing->is_completed ?? false) || ($request->is_completed ?? ($completionPercentage >= 80));
+
         // Create or update progress
         $progress = StudentProgress::updateOrCreate(
             [
@@ -341,11 +351,11 @@ class ProgressController extends Controller
             ],
             [
                 'course_id' => $course->id,
-                'watch_time_seconds' => $request->watch_time_seconds ?? 0,
-                'completion_percentage' => $request->completion_percentage ?? 0,
-                'is_completed' => $request->is_completed ?? false,
+                'watch_time_seconds' => max($request->watch_time_seconds ?? 0, $existing->watch_time_seconds ?? 0),
+                'completion_percentage' => $completionPercentage,
+                'is_completed' => $isCompleted,
                 'last_accessed_at' => now(),
-                'completed_at' => ($request->is_completed ?? false) ? now() : null,
+                'completed_at' => $existing?->completed_at ?? ($isCompleted ? now() : null),
             ]
         );
 

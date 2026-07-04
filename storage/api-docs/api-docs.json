@@ -2388,6 +2388,47 @@
                 ]
             }
         },
+        "/api/topics/{topic}/resources/{resource}/download": {
+            "post": {
+                "tags": [
+                    "Courses"
+                ],
+                "summary": "Log a resource download for usage analytics",
+                "description": "Call this alongside (or just before) opening the resource's file_url. Records who downloaded what, from which lesson, and when.",
+                "operationId": "146a8e337f860db09a6c50b424105486",
+                "parameters": [
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "resource",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Download logged"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/daily-recommended-courses": {
             "get": {
                 "tags": [
@@ -3610,6 +3651,25 @@
                     },
                     "404": {
                         "description": "Course or module not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/my-notes": {
+            "get": {
+                "tags": [
+                    "Notes"
+                ],
+                "summary": "Get all notes the authenticated user has made across every course, for a consolidated 'My Notes' view",
+                "operationId": "53552ffcfff308fe6e6b76ea4307a0c7",
+                "responses": {
+                    "200": {
+                        "description": "All notes across all courses"
                     }
                 },
                 "security": [

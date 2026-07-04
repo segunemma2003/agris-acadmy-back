@@ -61,6 +61,11 @@ class Topic extends Model
         return $this->hasMany(TopicDownload::class);
     }
 
+    public function resources(): HasMany
+    {
+        return $this->hasMany(CourseResource::class)->where('is_active', true)->orderBy('sort_order');
+    }
+
     public function assignments(): HasMany
     {
         return $this->hasMany(Assignment::class);
