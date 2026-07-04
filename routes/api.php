@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/courses/{course}/modules', [CourseController::class, 'modules']);
     Route::get('/courses/{course}/information', [CourseController::class, 'courseInformation']);
     Route::get('/courses/{course}/diy-content', [CourseController::class, 'diyContent']);
+    Route::get('/courses/{course}/vr-content', [CourseController::class, 'vrContent']);
     Route::get('/courses/{course}/resources', [CourseController::class, 'resources']);
     Route::get('/courses/{course}/curriculum', [CourseV2Controller::class, 'curriculum']);
     Route::get('/courses/{course}/completion', [CourseV2Controller::class, 'completion']);

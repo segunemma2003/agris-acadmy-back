@@ -424,6 +424,52 @@ class CourseController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/courses/{course}/vr-content",
+     *     tags={"Courses"},
+     *     summary="Get VR learning content for a course (enrollment required)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="VR content list"),
+     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=404, description="Course not found")
+     * )
+     */
+    public function vrContent(Request $request, Course $course)
+    {
+        if (!$course->is_published) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Course not found'
+            ], 404);
+        }
+
+        // Check if user is enrolled
+        $user = $request->user();
+        $isEnrolled = $user ? Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->exists() : false;
+
+        if (!$isEnrolled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must be enrolled in this course to access VR content'
+            ], 403);
+        }
+
+        $vrContent = $course->vrContent()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $vrContent,
+            'message' => 'Course VR content retrieved successfully'
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/courses/{course}/resources",
      *     tags={"Courses"},
      *     summary="Get downloadable resources for a course (enrollment required)",
