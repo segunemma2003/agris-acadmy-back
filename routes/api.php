@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ForumController;
 use App\Http\Controllers\Api\TranscriptController;
 use App\Http\Controllers\Api\ChatbotController;
+use App\Http\Controllers\Api\CertificateVerificationController;
 use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\LocationController;
 use Illuminate\Http\Request;
@@ -60,6 +61,12 @@ Route::get('/featured-courses-public', [CategoryController::class, 'featuredCour
 Route::get('/courses', [CourseController::class, 'index']);
 Route::get('/courses/{course}', [CourseController::class, 'show']);
 Route::get('/featured-courses', [CourseV2Controller::class, 'featured']); // Public featured courses endpoint
+
+// Certificate verification (public, throttled to prevent abuse)
+Route::middleware('throttle:20,1')->prefix('certificates')->group(function () {
+    Route::post('/verify', [CertificateVerificationController::class, 'verifyUpload']);
+    Route::get('/verify/{code}', [CertificateVerificationController::class, 'verifyCode']);
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {

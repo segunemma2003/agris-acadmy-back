@@ -418,6 +418,10 @@ jobs:
             echo "Step 12.5: Ensuring admin users exist with correct password..."
             sudo -u www-data php create-admin-users.php || echo "⚠️ Admin user creation skipped"
 
+            # 12.6. SEED CERTIFICATE TEMPLATE (idempotent - skips if already present, never duplicates)
+            echo "Step 12.6: Seeding default certificate template..."
+            sudo -u www-data php artisan db:seed --class=CertificateTemplateSeeder --force || echo "⚠️ Certificate template seeding skipped"
+
             # 13. CREATE STORAGE LINK
             echo "Step 13: Creating storage link..."
             sudo -u www-data php artisan storage:link || true

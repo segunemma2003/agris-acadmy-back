@@ -883,6 +883,155 @@
                 }
             }
         },
+        "/api/certificates/verify": {
+            "post": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Verify a certificate by uploading its PDF",
+                "description": "Extracts the hidden verification code embedded in the PDF and checks it against issued certificates.",
+                "operationId": "2d52439a9198ff06391cfe8878ee384c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "certificate"
+                                ],
+                                "properties": {
+                                    "certificate": {
+                                        "description": "The certificate PDF to verify",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Verification result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "This certificate is genuine."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "valid": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "certificate": {
+                                                    "properties": {
+                                                        "recipient_name": {
+                                                            "type": "string",
+                                                            "example": "John Adebayo Okonkwo"
+                                                        },
+                                                        "course_title": {
+                                                            "type": "string",
+                                                            "example": "Rice & Aquaculture Value Chain Programme"
+                                                        },
+                                                        "certificate_number": {
+                                                            "type": "string",
+                                                            "example": "CERT-AB12CD34EF56GH78"
+                                                        },
+                                                        "issued_date": {
+                                                            "type": "string",
+                                                            "format": "date",
+                                                            "example": "2026-07-04"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/certificates/verify/{code}": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Verify a certificate by its verification code",
+                "operationId": "5950d8d11c09b7564d71a7b8f030d860",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "CERT-AB12CD34EF56GH78"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verification result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "This certificate is genuine."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "valid": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "certificate": {
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/chatbot/session": {
             "post": {
                 "tags": [

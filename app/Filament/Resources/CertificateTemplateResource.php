@@ -113,7 +113,7 @@ class CertificateTemplateResource extends Resource
                     ->action(function (CertificateTemplate $record, array $data) {
                         try {
                             $service = app(CertificateGenerationService::class);
-                            $contents = $service->render($record, $data['sample_name']);
+                            $contents = $service->render($record, $data['sample_name'], 'CERT-PREVIEW0000SAMPLE');
 
                             return response()->streamDownload(
                                 fn () => print($contents),

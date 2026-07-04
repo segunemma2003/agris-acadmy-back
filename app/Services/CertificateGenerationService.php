@@ -10,8 +10,11 @@ class CertificateGenerationService
 {
     /**
      * Render the template with the given name and return the raw PDF bytes.
+     * When $verificationCode is given, it's printed as a tiny, near-invisible
+     * footer line (real text, not metadata) so uploaded certificates can be
+     * verified by extracting it back out.
      */
-    public function render(CertificateTemplate $template, string $name): string
+    public function render(CertificateTemplate $template, string $name, ?string $verificationCode = null): string
     {
         $templatePath = Storage::disk('public')->path($template->file_path);
 
@@ -21,6 +24,10 @@ class CertificateGenerationService
         $size = $pdf->getTemplateSize($pageId);
 
         $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+        // Text placed close to the bottom edge (the verification code) would
+        // otherwise trigger FPDF's automatic page break, silently pushing it
+        // onto a blank second page instead of the certificate itself.
+        $pdf->SetAutoPageBreak(false);
         $pdf->useTemplate($pageId);
 
         $pdf->SetFont($template->font_family, $template->font_style, $template->font_size);
@@ -31,15 +38,22 @@ class CertificateGenerationService
         $pdf->SetXY(0, $y);
         $pdf->Cell($size['width'], 10, $this->toWinAnsi($name), 0, 0, 'C');
 
+        if ($verificationCode) {
+            $pdf->SetFont('Helvetica', '', 5);
+            $pdf->SetTextColor(190, 190, 190);
+            $pdf->SetXY(0, $size['height'] - 4);
+            $pdf->Cell($size['width'], 3, $verificationCode, 0, 0, 'C');
+        }
+
         return $pdf->Output('S');
     }
 
     /**
      * Render the certificate and upload it to S3, returning the public URL.
      */
-    public function generateAndUpload(CertificateTemplate $template, string $name, string $storagePath): string
+    public function generateAndUpload(CertificateTemplate $template, string $name, string $storagePath, ?string $verificationCode = null): string
     {
-        $contents = $this->render($template, $name);
+        $contents = $this->render($template, $name, $verificationCode);
 
         Storage::disk('s3')->put($storagePath, $contents, 'public');
 

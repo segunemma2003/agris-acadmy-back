@@ -223,6 +223,12 @@ class CourseResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
+                Tables\Actions\Action::make('enrollments')
+                    ->label('Enrollments')
+                    ->icon('heroicon-o-user-group')
+                    ->color('info')
+                    ->url(fn (\App\Models\Course $record): string => static::getUrl('edit', ['record' => $record]) . '?activeRelationManager=3')
+                    ->tooltip('View enrolled participants and generate certificates'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

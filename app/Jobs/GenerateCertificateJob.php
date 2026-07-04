@@ -63,7 +63,7 @@ class GenerateCertificateJob implements ShouldQueue
                 $certificateNumber
             );
 
-            $url = $service->generateAndUpload($template, $name, $storagePath);
+            $url = $service->generateAndUpload($template, $name, $storagePath, $certificateNumber);
 
             $certificate = Certificate::updateOrCreate(
                 ['user_id' => $user->id, 'course_id' => $course->id],
