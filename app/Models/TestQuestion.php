@@ -10,11 +10,15 @@ class TestQuestion extends Model
     protected $fillable = [
         'module_test_id',
         'question',
+        'question_ha',
         'image',
         'question_type',
         'options',
+        'options_ha',
         'correct_answer',
         'explanation',
+        'explanation_ha',
+        'is_translated_ha',
         'points',
         'sort_order',
     ];
@@ -23,6 +27,8 @@ class TestQuestion extends Model
     {
         return [
             'options' => 'array',
+            'options_ha' => 'array',
+            'is_translated_ha' => 'boolean',
         ];
     }
 
@@ -44,8 +50,16 @@ class TestQuestion extends Model
         static::deleted(function ($question) {
             $question->moduleTest->updateTotalQuestions();
         });
+
+        // Auto-translate to Hausa in the background whenever the source text changes
+        static::saved(function ($question) {
+            if ($question->wasChanged('question') || $question->wasChanged('options') || $question->wasChanged('explanation') || $question->wasRecentlyCreated) {
+                \App\Jobs\TranslateContentJob::dispatch(static::class, $question->id, [
+                    'question' => 'question_ha',
+                    'options' => 'options_ha',
+                    'explanation' => 'explanation_ha',
+                ]);
+            }
+        });
     }
 }
-
-
-

@@ -119,6 +119,19 @@ class ModuleController extends Controller
             });
         }
 
+        // Serve Hausa content when the learner has chosen that locale, falling
+        // back to English (with a needs_translation flag) if not yet translated.
+        \App\Services\ContentLocalizer::apply($module, $user, ['title', 'description']);
+        if ($module->test) {
+            \App\Services\ContentLocalizer::applyToCollection($module->test->questions, $user, ['question', 'options', 'explanation']);
+        }
+        $module->topics->each(function ($topic) use ($user) {
+            \App\Services\ContentLocalizer::apply($topic, $user, ['title', 'write_up']);
+            if ($topic->test) {
+                \App\Services\ContentLocalizer::applyToCollection($topic->test->questions, $user, ['question', 'options', 'explanation']);
+            }
+        });
+
         return response()->json([
             'success' => true,
             'data' => [

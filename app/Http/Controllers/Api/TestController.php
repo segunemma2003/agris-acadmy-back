@@ -260,6 +260,8 @@ class TestController extends Controller
             ], 404);
         }
 
+        \App\Services\ContentLocalizer::applyToCollection($test->questions, $user, ['question', 'options', 'explanation']);
+
         // Get user's attempts
         $attempts = [];
         if ($user) {

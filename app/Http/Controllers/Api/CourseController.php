@@ -297,6 +297,8 @@ class CourseController extends Controller
         // happens server-side in ModuleController::show().
         $modules->each(function ($module) use ($user) {
             $module->lock_status = $module->lockStatusFor($user);
+            \App\Services\ContentLocalizer::apply($module, $user, ['title', 'description']);
+            $module->topics->each(fn ($topic) => \App\Services\ContentLocalizer::apply($topic, $user, ['title', 'write_up']));
         });
 
         return response()->json([

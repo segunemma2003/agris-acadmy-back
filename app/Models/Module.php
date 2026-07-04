@@ -12,7 +12,10 @@ class Module extends Model
         'course_id',
         'tutor_id',
         'title',
+        'title_ha',
         'description',
+        'description_ha',
+        'is_translated_ha',
         'total_topics',
         'sort_order',
         'is_active',
@@ -22,6 +25,7 @@ class Module extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_translated_ha' => 'boolean',
         ];
     }
 
@@ -59,6 +63,16 @@ class Module extends Model
 
         static::saved(function ($module) {
             $module->updateTotalTopics();
+        });
+
+        // Auto-translate to Hausa in the background whenever the source text changes
+        static::saved(function ($module) {
+            if ($module->wasChanged('title') || $module->wasChanged('description') || $module->wasRecentlyCreated) {
+                \App\Jobs\TranslateContentJob::dispatch(static::class, $module->id, [
+                    'title' => 'title_ha',
+                    'description' => 'description_ha',
+                ]);
+            }
         });
 
         // Send email notification when a new module is created and is active

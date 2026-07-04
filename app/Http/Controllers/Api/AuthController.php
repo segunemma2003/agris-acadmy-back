@@ -332,12 +332,13 @@ class AuthController extends Controller
             'bio'           => 'nullable|string|max:1000',
             'avatar'        => 'nullable|string|max:500',
             'password'      => 'nullable|string|min:8|confirmed',
+            'locale'        => 'nullable|string|in:en,ha',
         ]);
 
         $updateData = $request->only([
             'name', 'email', 'phone', 'gender', 'date_of_birth', 'age',
             'location', 'state', 'lga', 'occupation', 'referral',
-            'bio', 'avatar',
+            'bio', 'avatar', 'locale',
         ]);
 
         // Derive age when date_of_birth changes but age not supplied

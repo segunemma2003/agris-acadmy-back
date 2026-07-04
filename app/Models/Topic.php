@@ -12,6 +12,7 @@ class Topic extends Model
         'module_id',
         'tutor_id',
         'title',
+        'title_ha',
         'description',
         'video_url',
         'transcript',
@@ -19,6 +20,8 @@ class Topic extends Model
         'transcript_hausa',
         'transcription_completed',
         'write_up',
+        'write_up_ha',
+        'is_translated_ha',
         'duration_minutes',
         'content_type',
         'is_free',
@@ -32,6 +35,7 @@ class Topic extends Model
             'is_free' => 'boolean',
             'is_active' => 'boolean',
             'transcription_completed' => 'boolean',
+            'is_translated_ha' => 'boolean',
         ];
     }
 
@@ -92,6 +96,16 @@ class Topic extends Model
 
         static::deleted(function ($topic) {
             $topic->module->updateTotalTopics();
+        });
+
+        // Auto-translate to Hausa in the background whenever the source text changes
+        static::saved(function ($topic) {
+            if ($topic->wasChanged('title') || $topic->wasChanged('write_up') || $topic->wasRecentlyCreated) {
+                \App\Jobs\TranslateContentJob::dispatch(static::class, $topic->id, [
+                    'title' => 'title_ha',
+                    'write_up' => 'write_up_ha',
+                ]);
+            }
         });
     }
 }
