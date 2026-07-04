@@ -3559,7 +3559,54 @@
                         "description": "Module details with topics and tests"
                     },
                     "403": {
-                        "description": "Not enrolled"
+                        "description": "Not enrolled, or module locked until the previous module's quiz is passed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "locked": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You need 80% to unlock the next module. Your score: 45%."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "required_percentage": {
+                                                    "type": "number",
+                                                    "example": 80
+                                                },
+                                                "best_percentage": {
+                                                    "type": "number",
+                                                    "example": 45
+                                                },
+                                                "previous_module": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "title": {
+                                                            "type": "string",
+                                                            "example": "Module 3: Soil Health"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Course or module not found"

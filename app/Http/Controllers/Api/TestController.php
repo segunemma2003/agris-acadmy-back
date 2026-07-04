@@ -134,6 +134,19 @@ class TestController extends Controller
             ], 404);
         }
 
+        if ($test->max_attempts) {
+            $attemptCount = TestAttempt::where('module_test_id', $test->id)
+                ->where('user_id', $user->id)
+                ->count();
+
+            if ($attemptCount >= $test->max_attempts) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "You've used all {$test->max_attempts} allowed attempts for this quiz.",
+                ], 403);
+            }
+        }
+
         $request->validate([
             'answers' => 'required|array',
             'answers.*' => 'required',
@@ -318,6 +331,19 @@ class TestController extends Controller
                 'success' => false,
                 'message' => 'Test not found for this topic'
             ], 404);
+        }
+
+        if ($test->max_attempts) {
+            $attemptCount = TopicTestAttempt::where('topic_test_id', $test->id)
+                ->where('user_id', $user->id)
+                ->count();
+
+            if ($attemptCount >= $test->max_attempts) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "You've used all {$test->max_attempts} allowed attempts for this quiz.",
+                ], 403);
+            }
         }
 
         $request->validate([

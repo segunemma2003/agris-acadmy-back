@@ -15,6 +15,7 @@ class ModuleTest extends Model
         'title',
         'description',
         'passing_score',
+        'max_attempts',
         'time_limit_minutes',
         'total_questions',
         'is_active',

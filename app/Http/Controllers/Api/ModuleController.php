@@ -19,7 +19,19 @@ class ModuleController extends Controller
      *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Response(response=200, description="Module details with topics and tests"),
-     *     @OA\Response(response=403, description="Not enrolled"),
+     *     @OA\Response(response=403, description="Not enrolled, or module locked until the previous module's quiz is passed", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="locked", type="boolean", example=true),
+     *         @OA\Property(property="message", type="string", example="You need 80% to unlock the next module. Your score: 45%."),
+     *         @OA\Property(property="data", type="object",
+     *             @OA\Property(property="required_percentage", type="number", example=80),
+     *             @OA\Property(property="best_percentage", type="number", example=45),
+     *             @OA\Property(property="previous_module", type="object",
+     *                 @OA\Property(property="id", type="integer", example=3),
+     *                 @OA\Property(property="title", type="string", example="Module 3: Soil Health")
+     *             )
+     *         )
+     *     )),
      *     @OA\Response(response=404, description="Course or module not found")
      * )
      */
@@ -48,6 +60,19 @@ class ModuleController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'You must be enrolled in this course to access module details'
+            ], 403);
+        }
+
+        // Server-side enforcement: this module is gated behind passing the
+        // previous module's quiz. This cannot be bypassed by hitting the API
+        // directly — the check happens here regardless of what the frontend shows.
+        $lockStatus = $module->lockStatusFor($user);
+        if ($lockStatus['locked']) {
+            return response()->json([
+                'success' => false,
+                'locked' => true,
+                'message' => "You need {$lockStatus['required_percentage']}% to unlock the next module. Your score: {$lockStatus['best_percentage']}%.",
+                'data' => $lockStatus,
             ], 403);
         }
 

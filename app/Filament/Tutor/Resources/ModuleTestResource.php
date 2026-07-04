@@ -56,6 +56,11 @@ class ModuleTestResource extends Resource
                             ->maxValue(100)
                             ->default(70)
                             ->required(),
+                        Forms\Components\TextInput::make('max_attempts')
+                            ->label('Max Attempts')
+                            ->numeric()
+                            ->minValue(1)
+                            ->helperText('Leave empty for unlimited retries'),
                         Forms\Components\TextInput::make('time_limit_minutes')
                             ->label('Time Limit (minutes)')
                             ->numeric()

@@ -152,4 +152,60 @@ class Module extends Model
         $this->total_topics = $this->topics()->count();
         $this->saveQuietly();
     }
+
+    /**
+     * The module immediately before this one in the same course.
+     */
+    public function previousModule(): ?self
+    {
+        return static::where('course_id', $this->course_id)
+            ->where('is_active', true)
+            ->where('sort_order', '<', $this->sort_order)
+            ->orderByDesc('sort_order')
+            ->first();
+    }
+
+    public function activeTest(): ?ModuleTest
+    {
+        return $this->test()->where('is_active', true)->first();
+    }
+
+    /**
+     * Whether this module is gated behind passing the previous module's quiz,
+     * and if so, the learner's best attempt so far. A module with no previous
+     * module, or whose previous module has no active quiz, is never locked.
+     */
+    public function lockStatusFor(?User $user): array
+    {
+        $previousModule = $this->previousModule();
+
+        if (!$previousModule) {
+            return ['locked' => false];
+        }
+
+        $previousTest = $previousModule->activeTest();
+
+        if (!$previousTest) {
+            return ['locked' => false];
+        }
+
+        $bestAttempt = $user
+            ? TestAttempt::where('module_test_id', $previousTest->id)
+                ->where('user_id', $user->id)
+                ->orderByDesc('percentage')
+                ->first()
+            : null;
+
+        $passed = (bool) ($bestAttempt && $bestAttempt->is_passed);
+
+        return [
+            'locked' => !$passed,
+            'required_percentage' => (float) $previousTest->passing_score,
+            'best_percentage' => $bestAttempt ? (float) $bestAttempt->percentage : 0.0,
+            'previous_module' => [
+                'id' => $previousModule->id,
+                'title' => $previousModule->title,
+            ],
+        ];
+    }
 }

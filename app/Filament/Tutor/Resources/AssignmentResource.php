@@ -29,7 +29,11 @@ class AssignmentResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title')
+                            ->relationship('course', 'title', function ($query) {
+                                $tutorId = Auth::id();
+                                return $query->where('tutor_id', $tutorId)
+                                    ->orWhereHas('tutors', fn ($q) => $q->where('users.id', $tutorId));
+                            })
                             ->required()
                             ->searchable()
                             ->preload()

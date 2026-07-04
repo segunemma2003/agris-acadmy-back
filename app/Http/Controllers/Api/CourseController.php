@@ -290,6 +290,13 @@ class CourseController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        // Attach lock status per module so the curriculum sidebar can show
+        // padlocks without a round-trip per module. The real enforcement
+        // happens server-side in ModuleController::show().
+        $modules->each(function ($module) use ($user) {
+            $module->lock_status = $module->lockStatusFor($user);
+        });
+
         return response()->json([
             'success' => true,
             'data' => [

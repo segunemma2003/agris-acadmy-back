@@ -62,6 +62,10 @@ class TopicTestResource extends Resource
                             ->label('Passing Score (%)')
                             ->disabled()
                             ->dehydrated(),
+                        Forms\Components\TextInput::make('max_attempts')
+                            ->label('Max Attempts')
+                            ->disabled()
+                            ->dehydrated(),
                         Forms\Components\TextInput::make('time_limit_minutes')
                             ->label('Time Limit (minutes)')
                             ->disabled()
