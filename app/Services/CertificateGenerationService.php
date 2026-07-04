@@ -49,23 +49,24 @@ class CertificateGenerationService
     }
 
     /**
-     * Render the certificate and upload it to S3, returning the public URL.
+     * Render the certificate and store it, returning the public URL.
+     * Uses the 'public' disk, same as every other upload in this app
+     * (course images, avatars, resources) — the S3 bucket isn't reliably
+     * configured yet, so this avoids depending on it.
      */
     public function generateAndUpload(CertificateTemplate $template, string $name, string $storagePath, ?string $verificationCode = null): string
     {
         $contents = $this->render($template, $name, $verificationCode);
 
-        // The 's3' disk is configured with 'throw' => false and 'report' => false,
-        // so a failed write would otherwise return false silently with no
-        // exception and no log line. Force writes on this disk to throw so the
-        // real S3 error (e.g. bucket ACLs disabled, bad credentials) surfaces
-        // to the job's error handling instead of producing a dead link.
-        config(['filesystems.disks.s3.throw' => true]);
-        $disk = Storage::disk('s3');
-        $disk->put($storagePath, $contents, 'public');
+        // Force this write to throw on failure instead of silently returning
+        // false, so a real error surfaces to the job's error handling rather
+        // than producing a dead link.
+        config(['filesystems.disks.public.throw' => true]);
+        $disk = Storage::disk('public');
+        $disk->put($storagePath, $contents);
 
         if (!$disk->exists($storagePath)) {
-            throw new \RuntimeException("Certificate upload to S3 did not persist: {$storagePath}");
+            throw new \RuntimeException("Certificate upload did not persist: {$storagePath}");
         }
 
         return $disk->url($storagePath);
