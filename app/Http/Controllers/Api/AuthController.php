@@ -729,6 +729,40 @@ class AuthController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/user/certificates",
+     *     tags={"Certificates"},
+     *     summary="Get certificates for courses the authenticated user has completed",
+     *     description="Returns one certificate per completed course. Each certificate's file_path is a direct download URL for the generated PDF.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Certificates retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Certificates retrieved successfully"),
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="user_id", type="integer", example=12),
+     *                 @OA\Property(property="course_id", type="integer", example=4),
+     *                 @OA\Property(property="enrollment_id", type="integer", example=9),
+     *                 @OA\Property(property="certificate_template_id", type="integer", nullable=true, example=1),
+     *                 @OA\Property(property="certificate_number", type="string", example="CERT-AB12CD34EF56GH78"),
+     *                 @OA\Property(property="recipient_name", type="string", example="John Adebayo Okonkwo"),
+     *                 @OA\Property(property="issued_date", type="string", format="date", example="2026-07-04"),
+     *                 @OA\Property(property="file_path", type="string", format="uri", example="https://agrisiti-bucket.s3.amazonaws.com/certificates/4/john-adebayo-okonkwo-CERT-AB12CD34EF56GH78.pdf", description="Direct URL to download the certificate PDF"),
+     *                 @OA\Property(property="course", type="object",
+     *                     @OA\Property(property="id", type="integer", example=4),
+     *                     @OA\Property(property="title", type="string", example="TAGDev Agrisiti Rice & Aquaculture Value Chain Youth Empowerment Programme"),
+     *                     @OA\Property(property="image", type="string", nullable=true),
+     *                     @OA\Property(property="slug", type="string", example="rice-aquaculture-value-chain")
+     *                 )
+     *             ))
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Unauthenticated", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     *
      * Get user certificates
      */
     public function certificates(Request $request)

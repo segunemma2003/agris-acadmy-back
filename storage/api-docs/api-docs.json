@@ -589,6 +589,122 @@
                 ]
             }
         },
+        "/api/user/certificates": {
+            "get": {
+                "tags": [
+                    "Certificates"
+                ],
+                "summary": "Get certificates for courses the authenticated user has completed",
+                "description": "Returns one certificate per completed course. Each certificate's file_path is a direct download URL for the generated PDF.",
+                "operationId": "dd8c75c7aaec54a2eccaa045b2761e05",
+                "responses": {
+                    "200": {
+                        "description": "Certificates retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Certificates retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "user_id": {
+                                                        "type": "integer",
+                                                        "example": 12
+                                                    },
+                                                    "course_id": {
+                                                        "type": "integer",
+                                                        "example": 4
+                                                    },
+                                                    "enrollment_id": {
+                                                        "type": "integer",
+                                                        "example": 9
+                                                    },
+                                                    "certificate_template_id": {
+                                                        "type": "integer",
+                                                        "example": 1,
+                                                        "nullable": true
+                                                    },
+                                                    "certificate_number": {
+                                                        "type": "string",
+                                                        "example": "CERT-AB12CD34EF56GH78"
+                                                    },
+                                                    "recipient_name": {
+                                                        "type": "string",
+                                                        "example": "John Adebayo Okonkwo"
+                                                    },
+                                                    "issued_date": {
+                                                        "type": "string",
+                                                        "format": "date",
+                                                        "example": "2026-07-04"
+                                                    },
+                                                    "file_path": {
+                                                        "description": "Direct URL to download the certificate PDF",
+                                                        "type": "string",
+                                                        "format": "uri",
+                                                        "example": "https://agrisiti-bucket.s3.amazonaws.com/certificates/4/john-adebayo-okonkwo-CERT-AB12CD34EF56GH78.pdf"
+                                                    },
+                                                    "course": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 4
+                                                            },
+                                                            "title": {
+                                                                "type": "string",
+                                                                "example": "TAGDev Agrisiti Rice & Aquaculture Value Chain Youth Empowerment Programme"
+                                                            },
+                                                            "image": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "slug": {
+                                                                "type": "string",
+                                                                "example": "rice-aquaculture-value-chain"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/categories": {
             "get": {
                 "tags": [
@@ -4588,6 +4704,10 @@
         {
             "name": "Auth",
             "description": "Auth"
+        },
+        {
+            "name": "Certificates",
+            "description": "Certificates"
         },
         {
             "name": "Categories",

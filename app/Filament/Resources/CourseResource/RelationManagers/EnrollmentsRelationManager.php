@@ -85,7 +85,7 @@ class EnrollmentsRelationManager extends RelationManager
                         Forms\Components\Select::make('certificate_template_id')
                             ->label('Template')
                             ->options(fn () => CertificateTemplate::pluck('name', 'id'))
-                            ->default(fn () => CertificateTemplate::where('is_default', true)->value('id'))
+                            ->default(fn () => $this->defaultTemplateId())
                             ->required()
                             ->searchable(),
                         Forms\Components\TextInput::make('recipient_name')
@@ -118,7 +118,7 @@ class EnrollmentsRelationManager extends RelationManager
                             Forms\Components\Select::make('certificate_template_id')
                                 ->label('Template')
                                 ->options(fn () => CertificateTemplate::pluck('name', 'id'))
-                                ->default(fn () => CertificateTemplate::where('is_default', true)->value('id'))
+                                ->default(fn () => $this->defaultTemplateId())
                                 ->required()
                                 ->searchable()
                                 ->helperText('Every selected participant gets their account name printed on this template.'),
@@ -141,5 +141,15 @@ class EnrollmentsRelationManager extends RelationManager
                 ]),
             ])
             ->defaultSort('enrolled_at', 'desc');
+    }
+
+    /**
+     * The course's assigned certificate template, falling back to the global default.
+     */
+    private function defaultTemplateId(): ?int
+    {
+        $courseTemplateId = $this->getOwnerRecord()->certificate_template_id;
+
+        return $courseTemplateId ?? CertificateTemplate::where('is_default', true)->value('id');
     }
 }

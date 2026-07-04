@@ -35,6 +35,7 @@ class Course extends Model
         'is_published',
         'is_featured',
         'certificate_included',
+        'certificate_template_id',
         'duration_minutes',
         'level',
         'language',
@@ -86,6 +87,11 @@ class Course extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class);
+    }
+
+    public function certificateTemplate(): BelongsTo
+    {
+        return $this->belongsTo(CertificateTemplate::class);
     }
 
     public function reviews(): HasMany

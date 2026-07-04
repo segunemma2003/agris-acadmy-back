@@ -120,7 +120,15 @@ class CourseResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\Toggle::make('certificate_included')
                             ->label('Certificate Included')
-                            ->default(false),
+                            ->default(false)
+                            ->live(),
+                        Forms\Components\Select::make('certificate_template_id')
+                            ->label('Certificate Template')
+                            ->relationship('certificateTemplate', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->visible(fn (Forms\Get $get) => $get('certificate_included'))
+                            ->helperText('Template used when generating certificates for participants of this course. Defaults to the default template if left empty.'),
                         Forms\Components\TagsInput::make('tags')
                             ->columnSpanFull(),
                         Forms\Components\Repeater::make('course_information')

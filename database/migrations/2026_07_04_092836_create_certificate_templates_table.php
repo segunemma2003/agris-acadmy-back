@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('file_path'); // PDF template stored on the 'public' disk
             $table->boolean('is_default')->default(false);
-            $table->decimal('name_y_percent', 5, 2)->default(50); // vertical position of the name, % from top of page
+            $table->decimal('name_y_percent', 5, 2)->default(45); // vertical position of the name, % from top of page
             $table->unsignedInteger('font_size')->default(28);
             $table->string('font_color', 7)->default('#141414'); // hex color
             $table->string('font_family')->default('Helvetica');

@@ -30,7 +30,7 @@ class CertificateTemplateSeeder extends Seeder
             'name' => 'Course Completion Certificate',
             'file_path' => $storedPath,
             'is_default' => true,
-            'name_y_percent' => 50,
+            'name_y_percent' => 45,
             'font_size' => 28,
             'font_color' => '#141414',
             'font_family' => 'Helvetica',

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Mail\CertificateReadyMail;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Enrollment;
@@ -14,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class GenerateCertificateJob implements ShouldQueue
@@ -23,6 +25,8 @@ class GenerateCertificateJob implements ShouldQueue
     public $tries = 3;
     public $backoff = [30, 120];
     public $timeout = 120;
+
+    private const ADMIN_RECIPIENTS = ['admin@agrisiti.com', 'segun.bamidele@agrisiti.com'];
 
     public function __construct(
         public int $enrollmentId,
@@ -61,7 +65,7 @@ class GenerateCertificateJob implements ShouldQueue
 
             $url = $service->generateAndUpload($template, $name, $storagePath);
 
-            Certificate::updateOrCreate(
+            $certificate = Certificate::updateOrCreate(
                 ['user_id' => $user->id, 'course_id' => $course->id],
                 [
                     'enrollment_id' => $enrollment->id,
@@ -87,6 +91,9 @@ class GenerateCertificateJob implements ShouldQueue
                     'course_title' => $course->title,
                 ]
             );
+
+            Mail::to($user->email)->queue(new CertificateReadyMail($certificate));
+            Mail::to(self::ADMIN_RECIPIENTS)->queue(new CertificateReadyMail($certificate, isAdminCopy: true));
         } catch (\Throwable $e) {
             Log::error('Failed to generate certificate', [
                 'enrollment_id' => $this->enrollmentId,
