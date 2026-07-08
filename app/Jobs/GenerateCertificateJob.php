@@ -8,6 +8,7 @@ use App\Models\CertificateTemplate;
 use App\Models\Enrollment;
 use App\Services\CertificateGenerationService;
 use App\Services\NotificationService;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
 
 class GenerateCertificateJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
     public $backoff = [30, 120];
@@ -36,6 +37,11 @@ class GenerateCertificateJob implements ShouldQueue
 
     public function handle(CertificateGenerationService $service): void
     {
+        // If the batch was cancelled (e.g. too many failures), stop early.
+        if ($this->batch()?->cancelled()) {
+            return;
+        }
+
         $enrollment = Enrollment::with(['user', 'course'])->find($this->enrollmentId);
         $template = CertificateTemplate::find($this->certificateTemplateId);
 

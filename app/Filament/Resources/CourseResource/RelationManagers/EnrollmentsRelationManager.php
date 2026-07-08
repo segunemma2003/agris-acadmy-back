@@ -5,13 +5,17 @@ namespace App\Filament\Resources\CourseResource\RelationManagers;
 use App\Jobs\GenerateCertificateJob;
 use App\Models\CertificateTemplate;
 use App\Models\Enrollment;
+use App\Services\NotificationService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Bus\Batch;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Bus;
 
 class EnrollmentsRelationManager extends RelationManager
 {
@@ -172,30 +176,70 @@ class EnrollmentsRelationManager extends RelationManager
                         ])
                         ->action(function (Collection $records, array $data) {
                             $templateId = (int) $data['certificate_template_id'];
-                            $queued = 0;
-                            $skipped = 0;
+                            $adminId = Auth::id();
+                            $courseTitle = $this->getOwnerRecord()->title;
 
+                            // Build one queued job per selectable participant.
+                            $jobs = [];
+                            $skipped = 0;
                             foreach ($records as $enrollment) {
                                 // Skip rows with no linked user — a certificate can't be built without one.
                                 if (!$enrollment->user_id) {
                                     $skipped++;
                                     continue;
                                 }
-
-                                // Queued (not run inline) so even a large batch never blocks
-                                // the request. A queue worker processes them in the background;
-                                // supervisor keeps one running in production.
-                                GenerateCertificateJob::dispatch($enrollment->id, $templateId);
-                                $queued++;
+                                $jobs[] = new GenerateCertificateJob($enrollment->id, $templateId);
                             }
 
-                            $body = "{$queued} certificate(s) queued — they'll appear on each participant's account as the queue processes them.";
+                            if (empty($jobs)) {
+                                Notification::make()
+                                    ->title('Nothing to generate')
+                                    ->body("No selected rows had a linked participant account.")
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            // Dispatch as a batch so we get a single completion callback when
+                            // the whole selection has finished processing in the background.
+                            Bus::batch($jobs)
+                                ->name("Certificates: {$courseTitle}")
+                                ->finally(function (Batch $batch) use ($adminId, $courseTitle) {
+                                    if (!$adminId) {
+                                        return;
+                                    }
+                                    $done = $batch->processedJobs() - $batch->failedJobs;
+                                    $admin = \App\Models\User::find($adminId);
+                                    if (!$admin) {
+                                        return;
+                                    }
+
+                                    NotificationService::create(
+                                        $admin,
+                                        'certificate_batch',
+                                        'Certificate batch complete',
+                                        "{$done} of {$batch->totalJobs} certificate(s) generated for '{$courseTitle}'."
+                                            . ($batch->failedJobs > 0 ? " {$batch->failedJobs} failed — check the logs." : ''),
+                                        'course',
+                                        null,
+                                        [
+                                            'course_title' => $courseTitle,
+                                            'total' => $batch->totalJobs,
+                                            'generated' => $done,
+                                            'failed' => $batch->failedJobs,
+                                        ]
+                                    );
+                                })
+                                ->dispatch();
+
+                            $count = count($jobs);
+                            $body = "{$count} certificate(s) queued for '{$courseTitle}'. You'll get a dashboard notification when the batch finishes.";
                             if ($skipped > 0) {
                                 $body .= " {$skipped} skipped (no linked participant account).";
                             }
 
                             Notification::make()
-                                ->title($queued > 0 ? 'Certificates queued' : 'Nothing to generate')
+                                ->title('Certificate batch queued')
                                 ->body($body)
                                 ->success()
                                 ->send();
