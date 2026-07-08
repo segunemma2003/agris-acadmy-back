@@ -77,6 +77,43 @@ class EnrollmentsRelationManager extends RelationManager
                         'completed' => 'Completed',
                         'cancelled' => 'Cancelled',
                     ]),
+                Tables\Filters\Filter::make('progress_percentage')
+                    ->label('Progress (%)')
+                    ->form([
+                        Forms\Components\TextInput::make('min_progress')
+                            ->label('Min %')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->placeholder('0'),
+                        Forms\Components\TextInput::make('max_progress')
+                            ->label('Max %')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->placeholder('100'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when(
+                                $data['min_progress'] !== null && $data['min_progress'] !== '',
+                                fn ($q) => $q->where('progress_percentage', '>=', $data['min_progress'])
+                            )
+                            ->when(
+                                $data['max_progress'] !== null && $data['max_progress'] !== '',
+                                fn ($q) => $q->where('progress_percentage', '<=', $data['max_progress'])
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if (($data['min_progress'] ?? '') !== '') {
+                            $indicators[] = 'Progress ≥ ' . $data['min_progress'] . '%';
+                        }
+                        if (($data['max_progress'] ?? '') !== '') {
+                            $indicators[] = 'Progress ≤ ' . $data['max_progress'] . '%';
+                        }
+                        return $indicators;
+                    }),
             ])
             ->actions([
                 Tables\Actions\Action::make('view_certificate')
@@ -103,15 +140,17 @@ class EnrollmentsRelationManager extends RelationManager
                             ->required(),
                     ])
                     ->action(function (Enrollment $record, array $data) {
+                        // Queued so large batches never block the request; requires a
+                        // running queue worker (supervisor handles this in production).
                         GenerateCertificateJob::dispatch(
                             $record->id,
-                            $data['certificate_template_id'],
+                            (int) $data['certificate_template_id'],
                             $data['recipient_name']
                         );
 
                         Notification::make()
                             ->title('Certificate queued')
-                            ->body("Generating certificate for {$record->user->name}.")
+                            ->body("Generating certificate for {$record->user->name}. It'll appear shortly.")
                             ->success()
                             ->send();
                     }),
@@ -132,16 +171,32 @@ class EnrollmentsRelationManager extends RelationManager
                                 ->helperText('Every selected participant gets their account name printed on this template.'),
                         ])
                         ->action(function (Collection $records, array $data) {
+                            $templateId = (int) $data['certificate_template_id'];
+                            $queued = 0;
+                            $skipped = 0;
+
                             foreach ($records as $enrollment) {
-                                GenerateCertificateJob::dispatch(
-                                    $enrollment->id,
-                                    $data['certificate_template_id']
-                                );
+                                // Skip rows with no linked user — a certificate can't be built without one.
+                                if (!$enrollment->user_id) {
+                                    $skipped++;
+                                    continue;
+                                }
+
+                                // Queued (not run inline) so even a large batch never blocks
+                                // the request. A queue worker processes them in the background;
+                                // supervisor keeps one running in production.
+                                GenerateCertificateJob::dispatch($enrollment->id, $templateId);
+                                $queued++;
+                            }
+
+                            $body = "{$queued} certificate(s) queued — they'll appear on each participant's account as the queue processes them.";
+                            if ($skipped > 0) {
+                                $body .= " {$skipped} skipped (no linked participant account).";
                             }
 
                             Notification::make()
-                                ->title('Certificates queued')
-                                ->body("Generating {$records->count()} certificate(s) in the background. They'll appear on each participant's account shortly.")
+                                ->title($queued > 0 ? 'Certificates queued' : 'Nothing to generate')
+                                ->body($body)
                                 ->success()
                                 ->send();
                         })
