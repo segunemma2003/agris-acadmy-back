@@ -346,10 +346,18 @@ jobs:
             # frontend stay in sync with zero manual key configuration required. If
             # the secrets ARE set, they still take precedence.
             echo "Configuring Laravel Reverb WebSocket server..."
+            # Resolve the fallback in plain bash (${VAR:-default}) rather than trusting
+            # the GitHub Actions "||" expression operator — this is unambiguous regardless
+            # of how an empty-vs-unset secret is treated at the workflow-parsing layer.
+            _reverb_app_id="${{ secrets.REVERB_APP_ID }}"
+            _reverb_app_key="${{ secrets.REVERB_APP_KEY }}"
+            _reverb_app_secret="${{ secrets.REVERB_APP_SECRET }}"
             update_env "BROADCAST_CONNECTION" "reverb"
-            update_env "REVERB_APP_ID"     "${{ secrets.REVERB_APP_ID || 'agrisiti-chatbot' }}"
-            update_env "REVERB_APP_KEY"    "${{ secrets.REVERB_APP_KEY || 'agrisiti-chatbot-key' }}"
-            update_env "REVERB_APP_SECRET" "${{ secrets.REVERB_APP_SECRET || 'agrisiti-chatbot-secret' }}"
+            update_env "REVERB_APP_ID"     "${_reverb_app_id:-agrisiti-chatbot}"
+            update_env "REVERB_APP_KEY"    "${_reverb_app_key:-agrisiti-chatbot-key}"
+            update_env "REVERB_APP_SECRET" "${_reverb_app_secret:-agrisiti-chatbot-secret}"
+            echo "Verifying Reverb env values were actually written..."
+            grep -q '^REVERB_APP_KEY=.\+' .env && echo "✓ REVERB_APP_KEY is non-empty in .env" || echo "✗ REVERB_APP_KEY is still empty in .env — broadcaster will crash every request"
             update_env "REVERB_HOST"       "academy-backends.agrisiti.com"
             update_env "REVERB_PORT"       "443"
             update_env "REVERB_SCHEME"     "https"
