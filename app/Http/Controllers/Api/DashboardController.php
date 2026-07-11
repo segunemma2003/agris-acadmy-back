@@ -170,4 +170,112 @@ class DashboardController extends Controller
             ],
         ]);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/api/dashboard/course-breakdown",
+     *     tags={"Dashboard"},
+     *     summary="Per-course and per-module completion breakdown for the authenticated learner's enrolled courses",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Course/module completion breakdown")
+     * )
+     */
+    public function courseBreakdown(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'organisation') {
+            return response()->json(['success' => false, 'message' => 'Not available for organisation accounts'], 403);
+        }
+
+        $enrollments = $user->enrollments()->get()->keyBy('course_id');
+
+        $courses = Course::whereIn('id', $enrollments->keys())
+            ->with(['modules' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'), 'modules.topics'])
+            ->get();
+
+        $completedTopicIds = StudentProgress::where('user_id', $user->id)
+            ->where('is_completed', true)
+            ->pluck('topic_id')
+            ->all();
+
+        $breakdown = $courses->map(function ($course) use ($completedTopicIds, $enrollments) {
+            $modules = $course->modules
+                ->filter(fn ($module) => $module->topics->isNotEmpty())
+                ->map(function ($module) use ($completedTopicIds) {
+                    $totalTopics = $module->topics->count();
+                    $completedTopics = $module->topics->filter(fn ($t) => in_array($t->id, $completedTopicIds, true))->count();
+
+                    return [
+                        'id' => $module->id,
+                        'title' => $module->title,
+                        'completed' => $totalTopics > 0 && $completedTopics === $totalTopics,
+                        'completed_topics' => $completedTopics,
+                        'total_topics' => $totalTopics,
+                        'percentage' => $totalTopics > 0 ? round(($completedTopics / $totalTopics) * 100, 2) : 0,
+                    ];
+                })
+                ->values();
+
+            return [
+                'course_id' => $course->id,
+                'course_title' => $course->title,
+                'status' => $enrollments[$course->id]->status ?? 'active',
+                'completion_percentage' => (float) ($enrollments[$course->id]->progress_percentage ?? 0),
+                'modules_completed' => $modules->where('completed', true)->count(),
+                'total_modules' => $modules->count(),
+                'modules' => $modules,
+            ];
+        })->values();
+
+        return response()->json(['success' => true, 'data' => $breakdown]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/dashboard/quiz-history",
+     *     tags={"Dashboard"},
+     *     summary="Full quiz attempt history (module and topic tests) for the authenticated learner, most recent first",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Quiz attempt history")
+     * )
+     */
+    public function quizHistory(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'organisation') {
+            return response()->json(['success' => false, 'message' => 'Not available for organisation accounts'], 403);
+        }
+
+        $moduleAttempts = TestAttempt::where('user_id', $user->id)
+            ->with('moduleTest.course:id,title')
+            ->get()
+            ->map(fn ($attempt) => [
+                'percentage' => (float) $attempt->percentage,
+                'is_passed' => $attempt->is_passed,
+                'course_id' => $attempt->moduleTest?->course_id,
+                'course_title' => $attempt->moduleTest?->course?->title,
+                'test_title' => $attempt->moduleTest?->title,
+                'completed_at' => $attempt->completed_at,
+            ]);
+
+        $topicAttempts = TopicTestAttempt::where('user_id', $user->id)
+            ->with('topicTest.course:id,title')
+            ->get()
+            ->map(fn ($attempt) => [
+                'percentage' => (float) $attempt->percentage,
+                'is_passed' => $attempt->is_passed,
+                'course_id' => $attempt->topicTest?->course_id,
+                'course_title' => $attempt->topicTest?->course?->title,
+                'test_title' => $attempt->topicTest?->title,
+                'completed_at' => $attempt->completed_at,
+            ]);
+
+        $history = $moduleAttempts->concat($topicAttempts)
+            ->sortByDesc('completed_at')
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $history]);
+    }
 }
