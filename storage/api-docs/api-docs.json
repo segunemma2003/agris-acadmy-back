@@ -3570,7 +3570,7 @@
                         }
                     },
                     "403": {
-                        "description": "Code not valid for this account",
+                        "description": "Code not valid for this account, or the account is an organisation (organisations cannot enroll)",
                         "content": {
                             "application/json": {
                                 "schema": {

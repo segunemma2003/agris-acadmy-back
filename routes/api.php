@@ -212,6 +212,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/org/slots/{slot}', [ApprenticeshipSlotController::class, 'update']);
     Route::post('/org/slots/{slot}/close', [ApprenticeshipSlotController::class, 'close']);
     Route::get('/org/slots/{slot}/applicants', [ApprenticeshipController::class, 'applicants']);
+    Route::get('/org/interns', [ApprenticeshipController::class, 'interns']);
     Route::post('/org/applications/{apprenticeship}/review', [ApprenticeshipController::class, 'review']);
 
     // Career Pathways: apprenticeship daily logs (web)

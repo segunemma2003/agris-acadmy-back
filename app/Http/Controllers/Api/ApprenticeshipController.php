@@ -116,6 +116,34 @@ class ApprenticeshipController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/org/interns",
+     *     tags={"Career Pathways"},
+     *     summary="List all apprenticeship applications across the organisation's slots, for stats and the My Interns view",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="All applications for the authenticated organisation")
+     * )
+     */
+    public function interns(Request $request)
+    {
+        $organisation = $request->user()->organisation;
+
+        if (!$organisation) {
+            return response()->json(['success' => false, 'message' => 'No organisation profile found'], 403);
+        }
+
+        $applications = Apprenticeship::whereHas('slot', function ($query) use ($organisation) {
+            $query->where('organisation_id', $organisation->id);
+        })
+            ->with(['user:id,name,email,phone,state,lga', 'certificate', 'slot:id,title'])
+            ->withCount('logs')
+            ->latest()
+            ->get();
+
+        return response()->json(['success' => true, 'data' => $applications]);
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/org/applications/{apprenticeship}/review",
      *     tags={"Career Pathways"},

@@ -28,7 +28,7 @@ class EnrollmentController extends Controller
      *     ),
      *     @OA\Response(response=201, description="Enrolled successfully", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")))),
      *     @OA\Response(response=400, description="Already enrolled or invalid code", @OA\JsonContent(ref="#/components/schemas/ApiError")),
-     *     @OA\Response(response=403, description="Code not valid for this account", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     *     @OA\Response(response=403, description="Code not valid for this account, or the account is an organisation (organisations cannot enroll)", @OA\JsonContent(ref="#/components/schemas/ApiError"))
      * )
      */
     public function enroll(Request $request)
@@ -39,6 +39,14 @@ class EnrollmentController extends Controller
         ]);
 
         $user = $request->user();
+
+        if ($user->role === 'organisation') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organisation accounts cannot enroll in courses. Please register a student account to enroll.',
+            ], 403);
+        }
+
         $course = Course::findOrFail($request->course_id);
 
         // Check if course is published
