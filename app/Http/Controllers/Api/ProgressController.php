@@ -246,6 +246,8 @@ class ProgressController extends Controller
 
     private function updateEnrollmentProgress($user, $course)
     {
+        $user->recordActivity();
+
         $totalTopics = $course->modules()->withCount('topics')->get()->sum('topics_count');
         $completedTopics = $user->progress()
             ->where('course_id', $course->id)

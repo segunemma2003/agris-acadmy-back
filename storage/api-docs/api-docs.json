@@ -2861,6 +2861,123 @@
                 ]
             }
         },
+        "/api/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Learner dashboard summary: completion, modules completed, latest quiz score, time on platform, and activity streak",
+                "operationId": "d5fcadff7c52501c317a59bc00886f22",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "overall_completion_percentage": {
+                                                    "description": "Completed topics / total topics across every enrolled course",
+                                                    "type": "number"
+                                                },
+                                                "modules_completed": {
+                                                    "type": "integer"
+                                                },
+                                                "total_modules": {
+                                                    "type": "integer"
+                                                },
+                                                "latest_quiz": {
+                                                    "properties": {
+                                                        "percentage": {
+                                                            "type": "number"
+                                                        },
+                                                        "is_passed": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "course_title": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "test_title": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "completed_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "time_on_platform": {
+                                                    "description": "Video watch time summed across all lessons (quiz-page dwell time is not yet tracked)",
+                                                    "properties": {
+                                                        "total_seconds": {
+                                                            "type": "integer"
+                                                        },
+                                                        "hours": {
+                                                            "type": "integer"
+                                                        },
+                                                        "minutes": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "streak": {
+                                                    "properties": {
+                                                        "current": {
+                                                            "description": "0 if a full calendar day has passed with no activity",
+                                                            "type": "integer"
+                                                        },
+                                                        "longest": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "inactivity_warning": {
+                                                    "description": "True once 3+ days have passed since the last recorded activity",
+                                                    "type": "boolean"
+                                                },
+                                                "days_since_last_active": {
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "total_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "ongoing_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "completed_courses": {
+                                                    "type": "integer"
+                                                },
+                                                "certificates_acquired": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/enroll": {
             "post": {
                 "tags": [
@@ -5102,6 +5219,10 @@
         {
             "name": "Courses",
             "description": "Courses"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Dashboard"
         },
         {
             "name": "Enrollments",

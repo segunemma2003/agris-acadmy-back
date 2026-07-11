@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\CertificateVerificationController;
 use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -117,6 +118,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/progress/{studentProgress}', [ProgressController::class, 'update']);
     Route::post('/progress/sync', [ProgressController::class, 'sync']);
     Route::post('/courses/{course}/modules/{module}/tests/{test}/complete-quiz', [ProgressController::class, 'completeQuiz']);
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // Notes
     Route::get('/my-notes', [NoteController::class, 'myNotes']);

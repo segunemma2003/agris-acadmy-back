@@ -43,6 +43,9 @@ class User extends Authenticatable
         'is_in_facilitator_queue',
         'covered_states',
         'covered_lgas',
+        'current_streak',
+        'longest_streak',
+        'last_active_date',
     ];
 
     /**
@@ -71,6 +74,7 @@ class User extends Authenticatable
             'is_in_facilitator_queue' => 'boolean',
             'covered_states' => 'array',
             'covered_lgas' => 'array',
+            'last_active_date' => 'date',
         ];
     }
 
@@ -219,6 +223,30 @@ class User extends Authenticatable
     public function isStudent(): bool
     {
         return $this->role === 'student';
+    }
+
+    /**
+     * Record a learning event (topic completion, quiz submission, progress sync,
+     * etc.) toward this learner's daily activity streak. A calendar day only
+     * counts once no matter how many events land on it. Missing a full calendar
+     * day resets the streak to 1 on the next activity, per the dashboard's
+     * "streak resets to 0 if a full day is missed" rule (0 between visits,
+     * back to 1 the moment activity resumes).
+     */
+    public function recordActivity(): void
+    {
+        $today = now()->toDateString();
+
+        if ($this->last_active_date?->toDateString() === $today) {
+            return;
+        }
+
+        $wasYesterday = $this->last_active_date?->toDateString() === now()->subDay()->toDateString();
+
+        $this->current_streak = $wasYesterday ? $this->current_streak + 1 : 1;
+        $this->longest_streak = max($this->longest_streak, $this->current_streak);
+        $this->last_active_date = $today;
+        $this->saveQuietly();
     }
 
     /**

@@ -546,6 +546,8 @@ class UssdService
      */
     private function updateEnrollmentProgress(User $user, Course $course): void
     {
+        $user->recordActivity();
+
         $totalTopics = $course->modules()->withCount('topics')->get()->sum('topics_count');
         $completedTopics = StudentProgress::where('user_id', $user->id)
             ->where('course_id', $course->id)

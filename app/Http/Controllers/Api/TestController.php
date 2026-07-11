@@ -182,6 +182,8 @@ class TestController extends Controller
             'completed_at' => now(),
         ]);
 
+        $user->recordActivity();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -382,6 +384,8 @@ class TestController extends Controller
             'started_at' => now(),
             'completed_at' => now(),
         ]);
+
+        $user->recordActivity();
 
         return response()->json([
             'success' => true,
