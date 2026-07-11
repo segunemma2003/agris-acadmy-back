@@ -133,7 +133,7 @@ class DashboardController extends Controller
         // displayed value live so a visit with no new activity still shows 0
         // once a full calendar day has already been missed.
         $daysSinceActive = $user->last_active_date
-            ? now()->startOfDay()->diffInDays($user->last_active_date->copy()->startOfDay())
+            ? abs(now()->startOfDay()->diffInDays($user->last_active_date->copy()->startOfDay()))
             : null;
         $currentStreak = ($daysSinceActive !== null && $daysSinceActive <= 1) ? $user->current_streak : 0;
 
