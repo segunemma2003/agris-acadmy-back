@@ -91,6 +91,10 @@ class UssdService
             return $this->handleMyCourses($steps, $lang, $sessionId, $phoneNumber);
         }
 
+        if ($mainChoice === '5') {
+            return $this->handleApprenticeshipLog($steps, $lang, $sessionId, $phoneNumber);
+        }
+
         return $this->end($this->t($lang,
             "Invalid option. Please dial again.",
             "Zabin ba daidai ba. Da fatan za a sake bugawa."
@@ -100,9 +104,92 @@ class UssdService
     private function mainMenuText(string $lang): string
     {
         return $this->t($lang,
-            "Main Menu:\n1. Browse Courses\n2. Talk to Facilitator\n3. Register via SMS link\n4. My Courses",
-            "Babban Menu:\n1. Duba Darussan\n2. Magana da Taimakawa\n3. Yi Rijista ta SMS\n4. Darussana"
+            "Main Menu:\n1. Browse Courses\n2. Talk to Facilitator\n3. Register via SMS link\n4. My Courses\n5. Log Apprenticeship",
+            "Babban Menu:\n1. Duba Darussan\n2. Magana da Taimakawa\n3. Yi Rijista ta SMS\n4. Darussana\n5. Rubuta Horon Aiki"
         );
+    }
+
+    /**
+     * "Log today? 1=Yes, 2=No" -> optional short note, for a learner with an
+     * active (accepted) apprenticeship placement. Writes to the same
+     * apprenticeship_logs table the web daily-log form uses.
+     */
+    private function handleApprenticeshipLog(array $steps, string $lang, string $sessionId, string $phone): string
+    {
+        $depth = count($steps);
+        $user = $this->findUserByPhone($phone);
+
+        if (!$user) {
+            return $this->end($this->t($lang,
+                "No account found for this number. Dial 3 from the main menu to get a registration link by SMS.",
+                "Ba a sami asusu don wannan lambar ba. Ka buga 3 daga babban menu don karɓar hanyar rijista ta SMS."
+            ));
+        }
+
+        $apprenticeship = \App\Models\Apprenticeship::where('user_id', $user->id)
+            ->where('status', 'accepted')
+            ->first();
+
+        if (!$apprenticeship) {
+            return $this->end($this->t($lang,
+                "You have no active apprenticeship placement to log.",
+                "Ba ka da horon aiki mai aiki don rubutawa a yanzu."
+            ));
+        }
+
+        if ($depth === 2) {
+            return $this->con($this->t($lang,
+                "Log today? 1. Yes 2. No",
+                "Rubuta yau? 1. Ee 2. A'a"
+            ));
+        }
+
+        if ($depth === 3) {
+            $choice = $steps[2] ?? '';
+
+            if (!in_array($choice, ['1', '2'], true)) {
+                return $this->end($this->t($lang, "Invalid option.", "Zabin ba daidai ba."));
+            }
+
+            Cache::put("ussd_apprenticeship_attended_{$sessionId}", $choice === '1', self::SESSION_TTL);
+
+            return $this->con($this->t($lang,
+                "Add a short note (optional). Reply with a space to skip:",
+                "Ka rubuta gajeriyar bayani (ba dole ba ne). Ka rubuta sarari don tsallakewa:"
+            ));
+        }
+
+        if ($depth === 4) {
+            $attended = Cache::get("ussd_apprenticeship_attended_{$sessionId}");
+
+            if ($attended === null) {
+                return $this->end($this->t($lang,
+                    "Session expired. Please dial again.",
+                    "Zaman ya kare. Da fatan za a sake bugawa."
+                ));
+            }
+
+            $note = trim(mb_substr($steps[3] ?? '', 0, 160));
+
+            \App\Models\ApprenticeshipLog::updateOrCreate(
+                [
+                    'apprenticeship_id' => $apprenticeship->id,
+                    'log_date' => now()->toDateString(),
+                ],
+                [
+                    'attended' => $attended,
+                    'activity_description' => $note !== '' ? $note : null,
+                    'source' => 'ussd',
+                ]
+            );
+
+            return $this->end($this->t($lang,
+                "Thank you! Today's apprenticeship log has been recorded.",
+                "Na gode! An rubuta horon aiki na yau."
+            ));
+        }
+
+        return $this->end($this->t($lang, "Invalid option.", "Zabin ba daidai ba."));
     }
 
     private function handleBrowseCourses(array $steps, string $lang, string $sessionId, string $phone): string

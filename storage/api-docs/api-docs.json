@@ -19,6 +19,529 @@
         }
     ],
     "paths": {
+        "/api/career/apprenticeships/{slot}/express-interest": {
+            "post": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Express interest in an apprenticeship slot; the learner's certificate for the required course (if any) is attached automatically",
+                "operationId": "c3db69d18009c10c3bdf54a8ebb1c0fd",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Interest recorded"
+                    },
+                    "400": {
+                        "description": "Already applied, slot closed, or required course not completed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/career/my-applications": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "List the authenticated learner's apprenticeship applications and their status",
+                "operationId": "8aabe30b348178cf77a2c99b9ce55f4a",
+                "responses": {
+                    "200": {
+                        "description": "Learner's applications"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/slots/{slot}/applicants": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "List applicants for a slot the organisation owns, each with their attached certificate",
+                "operationId": "076d8870c7416dce988e155f6d817895",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Applicants list"
+                    },
+                    "403": {
+                        "description": "Not the owning organisation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/applications/{apprenticeship}/review": {
+            "post": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Accept or reject a learner's application; the learner is notified of the outcome",
+                "operationId": "2510fccc083945fe6209afa9f10b3d3f",
+                "parameters": [
+                    {
+                        "name": "apprenticeship",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accepted",
+                                            "rejected"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Application reviewed"
+                    },
+                    "403": {
+                        "description": "Not the owning organisation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/apprenticeships/{apprenticeship}/logs": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Full log history for an apprenticeship as a timeline, with days since acceptance that have no log flagged",
+                "operationId": "758c1f098007e517ee01e412dcd876c5",
+                "parameters": [
+                    {
+                        "name": "apprenticeship",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Timeline: logged days plus 'no log submitted' placeholders for missed days",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "has_log": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "attended": {
+                                                        "type": "boolean",
+                                                        "nullable": true
+                                                    },
+                                                    "activity_description": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "source": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the apprentice, host organisation, or an admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Log today's attendance/activity for an active apprenticeship (learner or host organisation)",
+                "operationId": "0ab402619a9a9602546f2b798cc0a08b",
+                "parameters": [
+                    {
+                        "name": "apprenticeship",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "log_date": {
+                                        "description": "Defaults to today",
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "attended": {
+                                        "type": "boolean",
+                                        "default": true
+                                    },
+                                    "activity_description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Log recorded (or updated, if one already existed for that date)"
+                    },
+                    "403": {
+                        "description": "Not the apprentice, host organisation, or an admin"
+                    },
+                    "400": {
+                        "description": "Apprenticeship is not in an active (accepted) state"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/career/apprenticeships": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Browse open apprenticeship slots (filterable by state, sector, and required course)",
+                "operationId": "d12721b27be5e05875ef87e8df4bb14f",
+                "parameters": [
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "lga",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sector",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "required_course_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "show_all",
+                        "in": "query",
+                        "description": "If false (default), only slots whose required course the learner has completed (or that require no course) are shown",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated apprenticeship slots from approved organisations"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/career/apprenticeships/{slot}": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Get a single apprenticeship slot's detail",
+                "operationId": "f7db9858ce9e9571d9dba41817e66e71",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slot detail"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/slots": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "List the authenticated organisation's own apprenticeship slots",
+                "operationId": "2a1d5da8891d392e623a153dfc6655d5",
+                "responses": {
+                    "200": {
+                        "description": "Organisation's slots with applicant counts"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Post a new apprenticeship slot (organisation must be admin-approved first)",
+                "operationId": "ba6b5c06b534544b757a435f53736035",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "state",
+                                    "duration"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "sector": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    },
+                                    "lga": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "duration": {
+                                        "type": "string",
+                                        "example": "3 months"
+                                    },
+                                    "required_course_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "openings": {
+                                        "type": "integer",
+                                        "default": 1
+                                    },
+                                    "application_deadline": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Slot created"
+                    },
+                    "403": {
+                        "description": "Organisation is not yet approved by an admin"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/slots/{slot}": {
+            "put": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Update an apprenticeship slot the organisation owns",
+                "operationId": "e070c03fbdc1e1c22071d604b8757135",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slot updated"
+                    },
+                    "403": {
+                        "description": "Not the owning organisation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/slots/{slot}/close": {
+            "post": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "Close an apprenticeship slot so it no longer appears in learner browsing",
+                "operationId": "e15b92f86ffd7274e4a692d048af9088",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Slot closed"
+                    },
+                    "403": {
+                        "description": "Not the owning organisation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/courses/{course}/assignments": {
             "get": {
                 "tags": [
@@ -4361,6 +4884,166 @@
                 ]
             }
         },
+        "/api/organisations/register": {
+            "post": {
+                "tags": [
+                    "Organisations"
+                ],
+                "summary": "Register a new organisation account (pending admin approval before it can post slots)",
+                "operationId": "6d85f9f99811db03ceab8d928b4e7a7b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "contact_name": {
+                                        "description": "Name of the person registering on behalf of the organisation",
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "name": {
+                                        "description": "Organisation name",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "sector": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "lga": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Organisation registered; account is pending admin approval"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/organisations/me": {
+            "get": {
+                "tags": [
+                    "Organisations"
+                ],
+                "summary": "Get the authenticated organisation's own profile",
+                "operationId": "a8d054b8107202c4b05f8a0d451ce13b",
+                "responses": {
+                    "200": {
+                        "description": "Organisation profile"
+                    },
+                    "404": {
+                        "description": "No organisation profile for this account"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Organisations"
+                ],
+                "summary": "Update the authenticated organisation's own profile",
+                "operationId": "594e8b400b901543dedee41b2e00a1f4",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "sector": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "lga": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Organisation profile updated"
+                    },
+                    "404": {
+                        "description": "No organisation profile for this account"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/courses/{course}/progress": {
             "get": {
                 "tags": [
@@ -4957,7 +5640,7 @@
                     "USSD"
                 ],
                 "summary": "Africa's Talking USSD gateway webhook",
-                "description": "Handles USSD session callbacks from Africa's Talking. Requires HMAC signature validation via X-AfricasTalking-Hash header. Menu tree: language (English/Hausa) -> Main Menu with 1) Browse Courses (anonymous lead capture), 2) Talk to Facilitator, 3) Register via SMS link, 4) My Courses (progress check / mark today's lesson complete / contact facilitator for an enrolled learner, matched by the calling phoneNumber against User.phone — no PIN step). 'My Courses' writes to the same student_progress/enrollments tables as the web and mobile apps, so completions show up immediately on the web dashboard. Sessions are tracked server-side and end gracefully with a 'Session ended' message after 90s of inactivity; the Africa's Talking USSD channel's own session-timeout setting (dashboard-configured) should also be set to 90s so the carrier-level cutoff matches.",
+                "description": "Handles USSD session callbacks from Africa's Talking. Requires HMAC signature validation via X-AfricasTalking-Hash header. Menu tree: language (English/Hausa) -> Main Menu with 1) Browse Courses (anonymous lead capture), 2) Talk to Facilitator, 3) Register via SMS link, 4) My Courses (progress check / mark today's lesson complete / contact facilitator for an enrolled learner, matched by the calling phoneNumber against User.phone — no PIN step), 5) Log Apprenticeship ('Log today? 1=Yes, 2=No' + an optional short note, for a learner with an active/accepted apprenticeship placement). 'My Courses' writes to the same student_progress/enrollments tables as the web and mobile apps, so completions show up immediately on the web dashboard; 'Log Apprenticeship' writes to the same apprenticeship_logs table as the web daily-log form. Sessions are tracked server-side and end gracefully with a 'Session ended' message after 90s of inactivity; the Africa's Talking USSD channel's own session-timeout setting (dashboard-configured) should also be set to 90s so the carrier-level cutoff matches.",
                 "operationId": "b9471d1153e5b1a63393f6743c868903",
                 "parameters": [
                     {
@@ -5197,6 +5880,10 @@
             "description": "All chatbot endpoints are PUBLIC — no Authorization header required.\n * Session identity uses session_token (UUID) in the request body, not auth headers.\n * Store this token in localStorage (web) or AsyncStorage (React Native).\n *\n * =====================================================================\n * COMPLETE USER JOURNEY — READ THIS BEFORE IMPLEMENTING\n * =====================================================================\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO A: First-time anonymous user (no token in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Storage has no chatbot_session_token. User is not logged in.\n * After a 3-second delay (or immediately on FAB tap):\n * Call POST /api/chatbot/session  body: session_token=null, user_id=null\n * Response: is_returning=false, fresh UUID session_token, messages=empty array.\n * Save the session_token to storage. Connect pusher-js to Reverb server.\n * Subscribe to public Reverb channel: chatbot.SESSION_TOKEN\n *\n * STEP 2 — Show greeting locally. NO API CALL.\n * Render this as an assistant chat bubble (no server call needed):\n * Hi! I am Agri, your Agrisiti Academy guide.\n * I will help you find the perfect course. First — what is your name?\n *\n * STEP 3 — User types their name and taps Send.\n * Add user bubble to UI immediately (optimistic, before API responds).\n * Insert empty assistant placeholder bubble. Show typing indicator.\n * Call POST /api/chatbot/message/ws  body: session_token, content: I am Amina\n * Response: 202 Accepted immediately. Actual reply arrives via Reverb.\n * Listen on channel — receive chunk events → append delta text to placeholder bubble.\n * Receive done event → remove typing indicator, unlock input.\n *\n * STEP 4 — Show quiz offer. NO API CALL.\n * After the assistant replies, render two buttons:\n * Button 1: Start Quiz\n * Button 2: Skip — just chat\n *\n * STEP 5 — User taps Start Quiz. Show Question 1 of 5. NO API CALL.\n * Question text: What best describes you?\n * Render chips: Farmer, Student, Agri-business owner, Researcher, Other\n * Also allow free text input.\n * Show a Skip Q1 link.\n * User taps chip or types free text → buffer answer in sessionStorage. No API call.\n * Transition to Q2.\n *\n * STEP 6 — Question 2 of 5. NO API CALL.\n * Question text: Which State and LGA are you in?\n * Render a free text input only — no chips for this question.\n * Placeholder hint: e.g. Kano, Nassarawa LGA\n * User types → buffer in sessionStorage. Transition to Q3.\n *\n * STEP 7 — Question 3 of 5. NO API CALL.\n * Question text: What is your main learning goal?\n * Render chips: Start a farm, Improve my farm, Learn agri-tech, Get certified, Other\n * User taps → buffer. Transition to Q4.\n *\n * STEP 8 — Question 4 of 5. NO API CALL.\n * Question text: What is your farming experience?\n * Render chips: None, Beginner, Intermediate, Expert\n * User taps → buffer. Transition to Q5.\n *\n * STEP 9 — Question 5 of 5. NO API CALL.\n * Question text: What is your preferred language?\n * Render two chips only: English and Hausa\n * English chip stores the string value en in the payload.\n * Hausa chip stores the string value ha in the payload.\n * User taps → buffer.\n *\n * STEP 10 — User answered Q5 (or tapped Skip All). TWO SEQUENTIAL API CALLS.\n * Show loading screen with text: Finding your courses...\n * API CALL 1: POST /api/chatbot/answers\n *   Body: session_token, plus any answered fields, plus skipped_questions array.\n *   On failure: show Retry button. Do NOT call /recommendations yet.\n * API CALL 2 (only after CALL 1 succeeds): POST /api/chatbot/recommendations\n *   Body: session_token only.\n *   On failure: show message Cannot load courses right now. You can still chat.\n * Also save answers to localStorage as chatbot_prefill for pre-filling on future visits.\n *\n * STEP 11 — Render course recommendation cards.\n * Use these fields for each card:\n *   label       — badge text e.g. Best Match (show as a coloured chip on the card)\n *   score       — float 0-1 (can show as percentage or hide from user)\n *   course.thumbnail     — image at top of card\n *   course.title         — large text below image\n *   course.category      — subtitle text\n *   course.level         — badge: beginner, intermediate, or advanced\n *   course.estimated_hours — e.g. 6h 30m\n *   course.languages     — array, show as small flags or text: English, Hausa\n *   course.rationale     — important: show this text as a description on the card\n *   course.id            — use this to navigate to course detail screen on tap\n *\n * STEP 12 — Post-recommendation free chat loop.\n * Chat input remains available below the cards.\n * Any message follows the same 3-tier transport chain as Step 3.\n * This loop continues indefinitely.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO B: Returning anonymous user (token exists in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Read storage: chatbot_session_token is an existing UUID.\n * Call POST /api/chatbot/session  body: session_token=existing UUID, user_id=null\n * Response: is_returning=true, same session_token, messages=full history array.\n * Display all previous messages immediately in chronological order.\n * Skip greeting and skip quiz entirely — open directly in free-chat mode.\n * Connect Reverb and subscribe to channel. Ready for new messages.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO C: Logged-in user\n * ──────────────────────────────────────────────────────────────────────\n *\n * Same as Scenario A or B, but include user_id from auth context:\n * Call POST /api/chatbot/session  body: session_token=null or stored, user_id=101\n * The session is linked to the user from the very start.\n * Quiz flow and chat flow are identical to Scenario A.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO D: Anonymous user who logs in during a session\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User chatted anonymously. session_token abc is in storage. user_id was null.\n * STEP 2 — User logs in or registers on any other screen in the app.\n * STEP 3 — Auth context detects user_id changed from null to 101.\n * STEP 4 — App automatically fires (fire-and-forget, requires no user action):\n * POST /api/chatbot/link-answers  body: session_token=abc, user_id=101\n * All quiz answers and conversation history are now owned by user 101.\n * STEP 5 — Any error from this call must be silently ignored.\n * The chat session still works fine on the current device regardless.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO E: User dismisses the chatbot\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User taps the close X button on the chatbot panel.\n * Immediately store chatbot_dismissed_at = current ISO timestamp in localStorage.\n * Call POST /api/chatbot/dismiss  body: session_token (fire-and-forget, do not await).\n * Collapse widget to FAB button immediately — do not wait for the API response.\n * Any error must be silently ignored.\n *\n * STEP 2 — Next app open within 24 hours.\n * Check: current time minus chatbot_dismissed_at is less than 24 hours.\n * POST /api/chatbot/session still fires (session init happens silently in background).\n * Widget stays collapsed as FAB. User can tap FAB to manually open the chat.\n *\n * STEP 3 — Next app open after 24 hours have elapsed.\n * Widget auto-opens normally with the 3-second delay.\n *\n * ──────────────────────────────────────────────────────────────────────\n * WIDGET STATES — implement all of these\n * ──────────────────────────────────────────────────────────────────────\n *\n * closed          Nothing visible. Timer has not fired yet.\n * minimized       FAB button only. After dismiss or manual collapse.\n * open            Full chat panel. Normal interactive state.\n * thinking        Typing indicator (3 dots animation) in assistant bubble. Waiting for first token.\n * streaming       Text appearing token by token in assistant bubble. Receiving Reverb or SSE chunks.\n * quiz            Quiz question with chip options rendered. No free-text input shown.\n * loading_recs    Spinner or shimmer cards. Between /answers and /recommendations calls.\n * recommendations Course cards rendered below the assistant message. Input still active.\n *\n * ──────────────────────────────────────────────────────────────────────\n * ERROR HANDLING — required behaviour for each failure case\n * ──────────────────────────────────────────────────────────────────────\n *\n * /chatbot/session fails         Silent retry once. If still fails, hide widget entirely.\n * Reverb connect fails           Silently switch to SSE (Tier 2). No error shown to user.\n * SSE fails                      Silently switch to plain REST (Tier 3). No error shown to user.\n * All 3 message tiers fail       Show error bubble: Could not reach server. Please try again.\n * /chatbot/answers fails         Show a Retry button in the quiz. Do NOT call /recommendations.\n * /chatbot/recommendations fails Show inline message: Could not load courses. You can still chat!\n * /chatbot/dismiss fails         Ignore silently. Widget collapses regardless.\n * /chatbot/link-answers fails    Ignore silently. Chat session still works on current device."
         },
         {
+            "name": "Career Pathways",
+            "description": "Career Pathways"
+        },
+        {
             "name": "Assignments",
             "description": "Assignments"
         },
@@ -5255,6 +5942,10 @@
         {
             "name": "Notifications",
             "description": "Notifications"
+        },
+        {
+            "name": "Organisations",
+            "description": "Organisations"
         },
         {
             "name": "Progress",

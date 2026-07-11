@@ -21,6 +21,10 @@ use App\Http\Controllers\Api\CertificateVerificationController;
 use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\OrganisationController;
+use App\Http\Controllers\Api\ApprenticeshipSlotController;
+use App\Http\Controllers\Api\ApprenticeshipController;
+use App\Http\Controllers\Api\ApprenticeshipLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +51,7 @@ Route::prefix('locations')->group(function () {
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/organisations/register', [OrganisationController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -190,6 +195,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/forum/posts/{post}/like', [ForumController::class, 'toggleLike']);
     Route::post('/forum/posts/{post}/share', [ForumController::class, 'share']);
     Route::post('/forum/comments/{comment}/like', [ForumController::class, 'toggleCommentLike']);
+
+    // Organisations (self-service org profile)
+    Route::get('/organisations/me', [OrganisationController::class, 'me']);
+    Route::put('/organisations/me', [OrganisationController::class, 'update']);
+
+    // Career Pathways: apprenticeship slots
+    Route::get('/career/apprenticeships', [ApprenticeshipSlotController::class, 'index']);
+    Route::get('/career/apprenticeships/{slot}', [ApprenticeshipSlotController::class, 'show']);
+    Route::post('/career/apprenticeships/{slot}/express-interest', [ApprenticeshipController::class, 'expressInterest']);
+    Route::get('/career/my-applications', [ApprenticeshipController::class, 'myApplications']);
+
+    // Career Pathways: organisation portal (slot management)
+    Route::get('/org/slots', [ApprenticeshipSlotController::class, 'mine']);
+    Route::post('/org/slots', [ApprenticeshipSlotController::class, 'store']);
+    Route::put('/org/slots/{slot}', [ApprenticeshipSlotController::class, 'update']);
+    Route::post('/org/slots/{slot}/close', [ApprenticeshipSlotController::class, 'close']);
+    Route::get('/org/slots/{slot}/applicants', [ApprenticeshipController::class, 'applicants']);
+    Route::post('/org/applications/{apprenticeship}/review', [ApprenticeshipController::class, 'review']);
+
+    // Career Pathways: apprenticeship daily logs (web)
+    Route::get('/apprenticeships/{apprenticeship}/logs', [ApprenticeshipLogController::class, 'index']);
+    Route::post('/apprenticeships/{apprenticeship}/logs', [ApprenticeshipLogController::class, 'store']);
 
     // Pusher channel authorization
     Route::post('/broadcasting/auth', function (Request $request) {

@@ -182,6 +182,18 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    // The organisation profile this user manages (role: organisation)
+    public function organisation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Organisation::class);
+    }
+
+    // Apprenticeship applications/placements this learner has expressed interest in
+    public function apprenticeships(): HasMany
+    {
+        return $this->hasMany(Apprenticeship::class);
+    }
+
     // Helper methods
     public function isAdmin(): bool
     {
