@@ -3492,6 +3492,9 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "description": "Not available for organisation accounts"
                     }
                 },
                 "security": [

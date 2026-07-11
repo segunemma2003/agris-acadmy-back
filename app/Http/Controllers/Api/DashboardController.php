@@ -52,12 +52,20 @@ class DashboardController extends Controller
      *                 @OA\Property(property="certificates_acquired", type="integer")
      *             )
      *         )
-     *     )
+     *     ),
+     *     @OA\Response(response=403, description="Not available for organisation accounts")
      * )
      */
     public function index(Request $request)
     {
         $user = $request->user();
+
+        if ($user->role === 'organisation') {
+            return response()->json([
+                'success' => false,
+                'message' => 'The learner dashboard is not available for organisation accounts',
+            ], 403);
+        }
 
         $enrollments = $user->enrollments()->get();
         $enrolledCourseIds = $enrollments->pluck('course_id');
