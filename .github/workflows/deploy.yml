@@ -185,12 +185,22 @@ jobs:
                 # Value has spaces or special chars - escape quotes and wrap in double quotes
                 # Escape backslashes first, then escape double quotes
                 local escaped_value=$(printf '%s\n' "$value" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
-                # Update with quoted value
-                sudo sed -i "s|^${key}=.*|${key}=\"${escaped_value}\"|g" .env
+                local final_line="${key}=\"${escaped_value}\""
               else
                 # No spaces or special chars - no quotes needed, but still escape for sed
                 local escaped_value=$(printf '%s\n' "$value" | sed 's/[[\.*^$()+?{|]/\\&/g')
-                sudo sed -i "s|^${key}=.*|${key}=${escaped_value}|g" .env
+                local final_line="${key}=${escaped_value}"
+              fi
+              # sed's s|pattern|replacement| only rewrites a line that already exists —
+              # it silently does nothing for a key that's absent from .env.example, which
+              # is exactly what let BROADCAST_CONNECTION=reverb activate for weeks with
+              # REVERB_APP_KEY silently never actually being written. Append instead of
+              # no-op when the key isn't present yet, so update_env can never again
+              # "succeed" at writing a value that never lands in the file.
+              if grep -q "^${key}=" .env; then
+                sudo sed -i "s|^${key}=.*|${final_line}|g" .env
+              else
+                echo "${final_line}" | sudo tee -a .env > /dev/null
               fi
             }
 
