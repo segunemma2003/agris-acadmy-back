@@ -337,11 +337,19 @@ jobs:
             fi
 
             # ── Laravel Reverb (WebSocket server for chatbot real-time streaming) ──
+            # Laravel resolves the broadcaster eagerly, so BROADCAST_CONNECTION=reverb
+            # with an empty key/secret 500s *every* request, not just the chatbot's
+            # real-time path — that's what took the site down. Rather than depend on
+            # GitHub secrets that can silently be unset, fall back to the same fixed
+            # 'agrisiti-chatbot-*' values config/reverb.php and the frontend's
+            # chatbotService.ts already both default to independently, so backend and
+            # frontend stay in sync with zero manual key configuration required. If
+            # the secrets ARE set, they still take precedence.
             echo "Configuring Laravel Reverb WebSocket server..."
             update_env "BROADCAST_CONNECTION" "reverb"
-            update_env "REVERB_APP_ID"     "${{ secrets.REVERB_APP_ID }}"
-            update_env "REVERB_APP_KEY"    "${{ secrets.REVERB_APP_KEY }}"
-            update_env "REVERB_APP_SECRET" "${{ secrets.REVERB_APP_SECRET }}"
+            update_env "REVERB_APP_ID"     "${{ secrets.REVERB_APP_ID || 'agrisiti-chatbot' }}"
+            update_env "REVERB_APP_KEY"    "${{ secrets.REVERB_APP_KEY || 'agrisiti-chatbot-key' }}"
+            update_env "REVERB_APP_SECRET" "${{ secrets.REVERB_APP_SECRET || 'agrisiti-chatbot-secret' }}"
             update_env "REVERB_HOST"       "academy-backends.agrisiti.com"
             update_env "REVERB_PORT"       "443"
             update_env "REVERB_SCHEME"     "https"
