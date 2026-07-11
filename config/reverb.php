@@ -25,6 +25,23 @@ return [
             'max_request_size'     => env('REVERB_MAX_REQUEST_SIZE', 10_000),
             'ping_interval'        => env('REVERB_SERVER_PING_INTERVAL', 60),
             'max_payload_size'     => env('REVERB_MAX_PAYLOAD_SIZE', 10_000),
+            // Required by laravel/reverb's ReverbServerProvider (reads
+            // config['scaling']['enabled'] unconditionally in its constructor);
+            // this project runs a single Reverb instance, so scaling stays off.
+            'scaling' => [
+                'enabled' => env('REVERB_SCALING_ENABLED', false),
+                'channel' => env('REVERB_SCALING_CHANNEL', 'reverb'),
+                'server' => [
+                    'url' => env('REDIS_URL'),
+                    'host' => env('REDIS_HOST', '127.0.0.1'),
+                    'port' => env('REDIS_PORT', '6379'),
+                    'username' => env('REDIS_USERNAME'),
+                    'password' => env('REDIS_PASSWORD'),
+                    'database' => env('REDIS_DB', '0'),
+                    'timeout' => env('REDIS_TIMEOUT', 60),
+                    'persistent' => env('REDIS_PERSISTENT', true),
+                ],
+            ],
         ],
     ],
 
