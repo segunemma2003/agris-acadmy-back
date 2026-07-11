@@ -5,6 +5,11 @@ on:
     branches: [main, develop, master]
   pull_request:
     branches: [main, develop, master]
+  # Lets a failed/stuck run (e.g. one GitHub rejects with a transient
+  # "workflow file issue" before any job starts, which isn't retryable via
+  # `gh run rerun`) be kicked off again from the Actions tab without needing
+  # a throwaway commit.
+  workflow_dispatch:
 
 jobs:
   test:
