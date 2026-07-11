@@ -262,12 +262,18 @@ class UssdService
             }
 
             $course = $courses[$courseIndex];
-            $desc = $this->truncate(
-                $course['title'] . ": " . ($course['short_description'] ?? '') .
-                "\n1. " . $this->t($lang, "I'm interested", "Ina sha'awa") .
-                "\n2. " . $this->t($lang, "Back", "Koma"),
-                self::MAX_CHARS
-            );
+
+            // Truncate only the description, never the menu: a long
+            // short_description used to eat the "1. I'm interested / 2. Back"
+            // options entirely, leaving the learner with cut-off text and no
+            // visible way to proceed or go back.
+            $header = $course['title'] . ": ";
+            $menuSuffix = "\n1. " . $this->t($lang, "I'm interested", "Ina sha'awa") .
+                "\n2. " . $this->t($lang, "Back", "Koma");
+            $descriptionBudget = (self::MAX_CHARS - 4) - mb_strlen($header) - mb_strlen($menuSuffix);
+            $description = $this->truncateToLength($course['short_description'] ?? '', $descriptionBudget);
+
+            $desc = $header . $description . $menuSuffix;
 
             // Cache selected course for this session
             Cache::put("ussd_course_{$sessionId}", $course, self::SESSION_TTL);
@@ -784,14 +790,24 @@ class UssdService
     public function truncate(string $text, int $max = self::MAX_CHARS): string
     {
         // Account for "CON " or "END " prefix (4 chars)
-        $limit = $max - 4;
+        return $this->truncateToLength($text, $max - 4);
+    }
 
+    /**
+     * Truncate at a word boundary to an exact character budget (no CON/END
+     * prefix reservation). Used when only part of a message — e.g. a course
+     * description — should be shortened, leaving a fixed suffix like a menu
+     * untouched, rather than truncating the whole combined string and risking
+     * cutting the menu options off entirely.
+     */
+    private function truncateToLength(string $text, int $limit): string
+    {
         if (mb_strlen($text) <= $limit) {
             return $text;
         }
 
         // Truncate at word boundary
-        $truncated = mb_substr($text, 0, $limit);
+        $truncated = mb_substr($text, 0, max($limit, 0));
         $lastSpace = mb_strrpos($truncated, ' ');
 
         return $lastSpace ? mb_substr($truncated, 0, $lastSpace) . '...' : $truncated;

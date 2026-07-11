@@ -16,7 +16,10 @@ class CertificateBatchNotificationsWidget extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?int $sort = -3;
+    // High sort value so this always renders below the stats widgets (which
+    // top out around 3) at the bottom of the dashboard, regardless of what
+    // else gets added there later.
+    protected static ?int $sort = 100;
 
     /**
      * Only show the widget when the current admin actually has batch notices.
