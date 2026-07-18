@@ -102,6 +102,25 @@
                 ]
             }
         },
+        "/api/org/interns": {
+            "get": {
+                "tags": [
+                    "Career Pathways"
+                ],
+                "summary": "List all apprenticeship applications across the organisation's slots, for stats and the My Interns view",
+                "operationId": "55466f351044135c76aa5b1d8621508d",
+                "responses": {
+                    "200": {
+                        "description": "All applications for the authenticated organisation"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/org/applications/{apprenticeship}/review": {
             "post": {
                 "tags": [
@@ -3504,6 +3523,44 @@
                 ]
             }
         },
+        "/api/dashboard/course-breakdown": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Per-course and per-module completion breakdown for the authenticated learner's enrolled courses",
+                "operationId": "531536ff5dad4a806f409f0403b32c84",
+                "responses": {
+                    "200": {
+                        "description": "Course/module completion breakdown"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/quiz-history": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Full quiz attempt history (module and topic tests) for the authenticated learner, most recent first",
+                "operationId": "d52dd8ec9760a3c79757a2e1d5984391",
+                "responses": {
+                    "200": {
+                        "description": "Quiz attempt history"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/enroll": {
             "post": {
                 "tags": [
@@ -5387,6 +5444,61 @@
                 ]
             }
         },
+        "/api/support-messages": {
+            "post": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Submit a support/contact message (public; if the request carries a valid auth token, it is linked to that account)",
+                "operationId": "aeb22462df4d812cee17984e0e155654",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "subject",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "subject": {
+                                        "type": "string"
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Support message received"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/courses/{course}/modules/{module}/test": {
             "get": {
                 "tags": [
@@ -5953,6 +6065,10 @@
         {
             "name": "Progress",
             "description": "Progress"
+        },
+        {
+            "name": "Support",
+            "description": "Support"
         },
         {
             "name": "Tests",

@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\OrganisationController;
 use App\Http\Controllers\Api\ApprenticeshipSlotController;
 use App\Http\Controllers\Api\ApprenticeshipController;
 use App\Http\Controllers\Api\ApprenticeshipLogController;
+use App\Http\Controllers\Api\SupportMessageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +56,7 @@ Route::post('/organisations/register', [OrganisationController::class, 'register
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/support-messages', [SupportMessageController::class, 'store'])->middleware('throttle:10,1');
 
 // Categories (public)
 Route::get('/categories', [CategoryController::class, 'index']);
