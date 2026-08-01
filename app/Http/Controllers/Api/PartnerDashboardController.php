@@ -202,7 +202,6 @@ class PartnerDashboardController extends Controller
             'students' => $students,
             'list' => $enrollments,
             'certificates' => $certificates,
-            'catalog' => $this->courseCatalog(),
             'companies' => $companies,
             'slots' => $slots,
             'placements' => $placements,
@@ -537,10 +536,11 @@ class PartnerDashboardController extends Controller
             'category:id,name',
             'tutor:id,name',
             'modules' => fn ($q) => $q->orderBy('sort_order')->with([
-                'topics' => fn ($tq) => $tq->orderBy('sort_order')->select(
-                    'id', 'module_id', 'title', 'description', 'video_url', 'duration_minutes',
-                    'is_free', 'is_active', 'content_type', 'write_up'
-                ),
+                'topics' => fn ($tq) => $tq->orderBy('sort_order')->with([
+                    'test' => fn ($testQ) => $testQ->where('is_active', true)->with([
+                        'questions' => fn ($qq) => $qq->orderBy('sort_order'),
+                    ]),
+                ]),
             ]),
         ])
             ->orderByDesc('enrollment_count')
@@ -548,22 +548,50 @@ class PartnerDashboardController extends Controller
             ->get()
             ->map(function (Course $course) {
                 $modules = $course->modules->map(function ($module) {
-                    $topics = $module->topics->map(fn ($topic) => [
-                        'id' => $topic->id,
-                        'title' => $topic->title,
-                        'description' => $topic->description,
-                        'has_video' => filled($topic->video_url),
-                        'duration_minutes' => (int) ($topic->duration_minutes ?? 0),
-                        'is_free' => (bool) $topic->is_free,
-                        'is_active' => (bool) $topic->is_active,
-                        'content_type' => $topic->content_type,
-                        'has_write_up' => filled($topic->write_up),
-                    ])->values();
+                    $topics = $module->topics->map(function ($topic) {
+                        $quizzes = $topic->test->map(function ($test) {
+                            $questions = $test->questions->map(fn ($question) => [
+                                'id' => $question->id,
+                                'question' => $this->plainText($question->question),
+                                'question_type' => $question->question_type,
+                                'options' => $this->normalizeStringList($question->options ?? []),
+                                'explanation' => $this->plainText($question->explanation),
+                                'points' => (int) ($question->points ?? 1),
+                            ])->values();
+
+                            return [
+                                'id' => $test->id,
+                                'title' => $this->plainText($test->title) ?: 'Topic quiz',
+                                'description' => $this->plainText($test->description),
+                                'passing_score' => (int) ($test->passing_score ?? 0),
+                                'max_attempts' => (int) ($test->max_attempts ?? 0),
+                                'time_limit_minutes' => (int) ($test->time_limit_minutes ?? 0),
+                                'total_questions' => $questions->count(),
+                                'questions' => $questions,
+                            ];
+                        })->values();
+
+                        return [
+                            'id' => $topic->id,
+                            'title' => $topic->title,
+                            'description' => $this->plainText($topic->description),
+                            'write_up' => $this->plainText($topic->write_up),
+                            'has_video' => filled($topic->video_url),
+                            'duration_minutes' => (int) ($topic->duration_minutes ?? 0),
+                            'is_free' => (bool) $topic->is_free,
+                            'is_active' => (bool) $topic->is_active,
+                            'content_type' => $topic->content_type,
+                            'has_write_up' => filled($topic->write_up),
+                            'quizzes' => $quizzes,
+                            'quizzes_count' => $quizzes->count(),
+                            'questions_count' => $quizzes->sum('total_questions'),
+                        ];
+                    })->values();
 
                     return [
                         'id' => $module->id,
                         'title' => $module->title,
-                        'description' => $module->description,
+                        'description' => $this->plainText($module->description),
                         'topics_count' => $topics->count(),
                         'videos_count' => $topics->where('has_video', true)->count(),
                         'topics' => $topics,
@@ -574,8 +602,8 @@ class PartnerDashboardController extends Controller
 
                 $requirements = $course->requirements;
                 if (is_string($requirements)) {
-                    $requirementsText = $requirements;
-                    $requirementsList = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $requirements) ?: [])));
+                    $requirementsText = $this->plainText($requirements);
+                    $requirementsList = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $requirementsText ?? '') ?: [])));
                 } elseif (is_array($requirements)) {
                     $requirementsList = $this->normalizeStringList($requirements);
                     $requirementsText = implode("\n", $requirementsList) ?: null;
@@ -592,12 +620,12 @@ class PartnerDashboardController extends Controller
                     'title' => $course->title,
                     'category' => $course->category?->name,
                     'tutor' => $course->tutor?->name,
-                    'short_description' => $course->short_description,
-                    'description' => $course->description,
-                    'about' => $course->about,
+                    'short_description' => $this->plainText($course->short_description),
+                    'description' => $this->plainText($course->description),
+                    'about' => $this->plainText($course->about),
                     'requirements' => $requirementsText,
                     'requirements_list' => $requirementsList,
-                    'what_to_expect' => $course->what_to_expect,
+                    'what_to_expect' => $this->plainText($course->what_to_expect),
                     'what_you_will_learn' => $learn,
                     'what_you_will_get' => $get,
                     'level' => $course->level,
@@ -959,7 +987,7 @@ class PartnerDashboardController extends Controller
     private function normalizeStringList($value): array
     {
         if (is_string($value)) {
-            return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $value) ?: [])));
+            return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $this->plainText($value)) ?: [])));
         }
 
         if (! is_array($value)) {
@@ -969,13 +997,13 @@ class PartnerDashboardController extends Controller
         return collect($value)
             ->map(function ($row) {
                 if (is_string($row) || is_numeric($row)) {
-                    return trim((string) $row);
+                    return $this->plainText((string) $row);
                 }
 
                 if (is_array($row)) {
-                    foreach (['item', 'label', 'text', 'value', 'title'] as $key) {
+                    foreach (['item', 'label', 'text', 'value', 'title', 'option', 'question', 'explanation'] as $key) {
                         if (isset($row[$key]) && (is_string($row[$key]) || is_numeric($row[$key]))) {
-                            return trim((string) $row[$key]);
+                            return $this->plainText((string) $row[$key]);
                         }
                     }
                 }
@@ -985,5 +1013,24 @@ class PartnerDashboardController extends Controller
             ->filter()
             ->values()
             ->all();
+    }
+
+    private function plainText(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $value) ?? $value;
+        $text = preg_replace('/<\s*\/\s*p\s*>/i', "\n\n", $text) ?? $text;
+        $text = preg_replace('/<\s*\/\s*li\s*>/i', "\n", $text) ?? $text;
+        $text = preg_replace('/<\s*li[^>]*>/i', '• ', $text) ?? $text;
+        $text = strip_tags($text);
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+
+        $trimmed = trim($text);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 }
