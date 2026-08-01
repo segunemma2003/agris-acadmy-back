@@ -88,8 +88,10 @@ class GenerateCertificateJob implements ShouldQueue
             NotificationService::create(
                 $user,
                 'certificate_ready',
-                'Certificate Ready 🎓',
-                "Your certificate for '{$course->title}' is ready to download.",
+                ($user->locale ?? 'en') === 'ha' ? 'Takardar Shaida A Shirye' : 'Certificate Ready',
+                ($user->locale ?? 'en') === 'ha'
+                    ? "Takardar shaidarka ta '{$course->title}' a shirye take — duba imel ɗinka."
+                    : "Your certificate for '{$course->title}' is ready — check your email for the PDF.",
                 'certificate',
                 $enrollment->id,
                 [
@@ -98,8 +100,12 @@ class GenerateCertificateJob implements ShouldQueue
                 ]
             );
 
-            Mail::to($user->email)->queue(new CertificateReadyMail($certificate));
-            Mail::to(self::ADMIN_RECIPIENTS)->queue(new CertificateReadyMail($certificate, isAdminCopy: true));
+            // Queue immediately so the learner receives the email well within 5 minutes
+            // of completion (depends on a running queue worker). Respect email prefs for learners.
+            if (\App\Support\NotificationPreferences::allowsEmail($user->notification_preferences, 'certificate_ready')) {
+                Mail::to($user->email)->queue(new CertificateReadyMail($certificate->fresh(['user', 'course'])));
+            }
+            Mail::to(self::ADMIN_RECIPIENTS)->queue(new CertificateReadyMail($certificate->fresh(['user', 'course']), isAdminCopy: true));
         } catch (\Throwable $e) {
             Log::error('Failed to generate certificate', [
                 'enrollment_id' => $this->enrollmentId,

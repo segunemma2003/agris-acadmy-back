@@ -137,8 +137,12 @@ class MessageController extends Controller
             // Broadcast message sent event for real-time updates
             broadcast(new MessageSent($message))->toOthers();
             
-            // Send email notification
-            if ($recipient && $recipient->email) {
+            // Send email notification (respect recipient prefs when they are a learner)
+            if (
+                $recipient
+                && $recipient->email
+                && \App\Support\NotificationPreferences::allowsEmail($recipient->notification_preferences, 'message_sent')
+            ) {
                 try {
                     $subject = $request->subject ?? 'Message from Agrisiti Academy';
                     $body = $request->message;
@@ -198,9 +202,13 @@ class MessageController extends Controller
         // Broadcast message sent event for real-time updates
         broadcast(new MessageSent($message))->toOthers();
 
-        // Send same message to recipient's email
+        // Send same message to recipient's email (respect prefs for learners)
         $recipient = User::find($request->recipient_id);
-        if ($recipient && $recipient->email) {
+        if (
+            $recipient
+            && $recipient->email
+            && \App\Support\NotificationPreferences::allowsEmail($recipient->notification_preferences, 'message_sent')
+        ) {
             try {
                 $subject = $request->subject ?? 'Message from Agrisiti Academy';
                 $body = $request->message;

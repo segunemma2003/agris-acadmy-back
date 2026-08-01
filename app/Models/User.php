@@ -26,6 +26,7 @@ class User extends Authenticatable
         'password',
         'role',
         'locale',
+        'notification_preferences',
         'phone',
         'gender',
         'location',
@@ -77,6 +78,7 @@ class User extends Authenticatable
             'covered_lgas' => 'array',
             'dashboard_permissions' => 'array',
             'last_active_date' => 'date',
+            'notification_preferences' => 'array',
         ];
     }
 

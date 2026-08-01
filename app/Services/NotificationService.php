@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\NotificationPreferences;
 
 class NotificationService
 {
     /**
-     * Create a notification for a user
+     * Create a notification for a user (respects in-app preference for the type).
      */
     public static function create(
         User $user,
@@ -18,7 +19,11 @@ class NotificationService
         ?string $actionType = null,
         ?int $actionId = null,
         ?array $data = null
-    ): Notification {
+    ): ?Notification {
+        if (!NotificationPreferences::allowsInApp($user->notification_preferences, $type)) {
+            return null;
+        }
+
         return Notification::create([
             'user_id' => $user->id,
             'type' => $type,
@@ -34,7 +39,7 @@ class NotificationService
      * Create notifications for multiple users
      */
     public static function createForUsers(
-        $users, // Can be array of User objects or Collection
+        $users,
         string $type,
         string $title,
         string $message,
@@ -43,27 +48,38 @@ class NotificationService
         ?array $data = null
     ): void {
         $notifications = [];
+        $now = now();
+
         foreach ($users as $user) {
-            // Handle both User objects and arrays
-            $userId = is_object($user) ? $user->id : (is_array($user) ? $user['id'] : $user);
-            
-            if (!$userId) {
+            if (!$user instanceof User) {
+                $userId = is_array($user) ? ($user['id'] ?? null) : $user;
+                if (!$userId) {
+                    continue;
+                }
+                $user = User::find($userId);
+                if (!$user) {
+                    continue;
+                }
+            }
+
+            if (!NotificationPreferences::allowsInApp($user->notification_preferences, $type)) {
                 continue;
             }
-            
+
             $notifications[] = [
-                'user_id' => $userId,
+                'user_id' => $user->id,
                 'type' => $type,
                 'title' => $title,
                 'message' => $message,
                 'action_type' => $actionType,
                 'action_id' => $actionId,
-                'data' => $data,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'data' => $data ? json_encode($data) : null,
+                'is_read' => false,
+                'created_at' => $now,
+                'updated_at' => $now,
             ];
         }
-        
+
         if (!empty($notifications)) {
             Notification::insert($notifications);
         }
@@ -84,7 +100,7 @@ class NotificationService
         $users = User::where('role', $role)
             ->where('is_active', true)
             ->get();
-        
+
         self::createForUsers($users, $type, $title, $message, $actionType, $actionId, $data);
     }
 
@@ -104,7 +120,7 @@ class NotificationService
             ->where('status', 'active')
             ->with('user')
             ->get();
-        
+
         $users = $enrollments->pluck('user')->filter();
         self::createForUsers($users, $type, $title, $message, $actionType, $actionId, $data);
     }

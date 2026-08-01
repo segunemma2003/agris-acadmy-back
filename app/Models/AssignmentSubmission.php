@@ -99,8 +99,10 @@ class AssignmentSubmission extends Model
                         ]
                     );
 
-                    \Illuminate\Support\Facades\Mail::to($user->email)
-                        ->queue(new \App\Mail\AssignmentGradedMail($submission));
+                    if (\App\Support\NotificationPreferences::allowsEmail($user->notification_preferences, 'assignment_graded')) {
+                        \Illuminate\Support\Facades\Mail::to($user->email)
+                            ->queue(new \App\Mail\AssignmentGradedMail($submission));
+                    }
                 }
             }
         });

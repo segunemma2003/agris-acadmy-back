@@ -126,11 +126,6 @@ class PartnerDashboardController extends Controller
         $genderFilters = $this->genderFilters();
         $locationFilters = $this->locationFilters();
         $byAge = $this->ageBreakdown();
-        $enrollments = $this->enrollmentDirectory();
-        $certificates = $this->certificateDirectory();
-        $companies = $this->companyDirectory();
-        $slots = $this->slotDirectory();
-        $placements = $this->placementDirectory();
 
         $totalEnrollments = Enrollment::count();
         $activeEnrollments = Enrollment::where('status', 'active')->count();
@@ -140,6 +135,7 @@ class PartnerDashboardController extends Controller
         $publishedCourses = Course::where('is_published', true)->count();
         $activeStudents = User::where('role', 'student')->where('is_active', true)->count();
         $placedInterns = Apprenticeship::whereIn('status', ['accepted', 'completed'])->count();
+        $hostCompanies = Organisation::count();
 
         $breakdowns = collect([
             ['title' => 'Students by Gender', 'items' => $genderFilters->map(fn ($row) => [
@@ -178,7 +174,7 @@ class PartnerDashboardController extends Controller
                 ['key' => 'total_enrollments', 'label' => 'Enrollments', 'value' => $totalEnrollments, 'unit' => 'count'],
                 ['key' => 'completion_rate', 'label' => 'Completion Rate', 'value' => $totalEnrollments > 0 ? round(($completedEnrollments / $totalEnrollments) * 100, 1) : 0, 'unit' => 'percentage'],
                 ['key' => 'certificates_issued', 'label' => 'Certificates', 'value' => Certificate::count(), 'unit' => 'count'],
-                ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $companies->count(), 'unit' => 'count'],
+                ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $hostCompanies, 'unit' => 'count'],
                 ['key' => 'placed_interns', 'label' => 'Placed / Employed', 'value' => $placedInterns, 'unit' => 'count'],
                 ['key' => 'total_tutors', 'label' => 'Tutors', 'value' => User::where('role', 'tutor')->count(), 'unit' => 'count'],
                 ['key' => 'total_facilitators', 'label' => 'Facilitators', 'value' => User::where('role', 'facilitator')->count(), 'unit' => 'count'],
@@ -199,12 +195,8 @@ class PartnerDashboardController extends Controller
             'breakdowns' => $breakdowns,
             'gender_filters' => $genderFilters,
             'location_filters' => $locationFilters,
+            // Students retained for client-side chart filters only (overview UI never renders a table).
             'students' => $students,
-            'list' => $enrollments,
-            'certificates' => $certificates,
-            'companies' => $companies,
-            'slots' => $slots,
-            'placements' => $placements,
             'trend' => [
                 'title' => 'New Student Signups',
                 'unit' => 'count',
@@ -331,7 +323,13 @@ class PartnerDashboardController extends Controller
                 ['key' => 'total_students', 'label' => 'Students', 'value' => $students->count(), 'unit' => 'count'],
                 ['key' => 'profiled_learners', 'label' => 'With Gender', 'value' => User::where('role', 'student')->whereNotNull('gender')->where('gender', '!=', '')->count(), 'unit' => 'count'],
                 ['key' => 'with_age', 'label' => 'With Age', 'value' => User::where('role', 'student')->whereNotNull('age')->count(), 'unit' => 'count'],
-                ['key' => 'with_location', 'label' => 'With Location', 'value' => User::where('role', 'student')->whereNotNull('state')->where('state', '!=', '')->count(), 'unit' => 'count'],
+                ['key' => 'with_location', 'label' => 'With Location', 'value' => User::where('role', 'student')->where(function ($q) {
+                    $q->where(function ($inner) {
+                        $inner->whereNotNull('state')->where('state', '!=', '');
+                    })->orWhere(function ($inner) {
+                        $inner->whereNotNull('location')->where('location', '!=', '');
+                    });
+                })->count(), 'unit' => 'count'],
             ],
             'breakdowns' => $breakdowns,
             'gender_filters' => $genderFilters,
@@ -837,19 +835,24 @@ class PartnerDashboardController extends Controller
         return User::where('role', 'student')
             ->withCount('enrollments')
             ->orderByDesc('created_at')
-            ->get(['id', 'name', 'email', 'gender', 'state', 'lga', 'age', 'is_active', 'created_at'])
-            ->map(fn (User $student) => [
-                'id' => $student->id,
-                'name' => $student->name,
-                'email' => $student->email,
-                'gender' => $student->gender ? ucfirst(strtolower(trim($student->gender))) : null,
-                'state' => $student->state ? trim($student->state) : null,
-                'lga' => $student->lga ? trim($student->lga) : null,
-                'age' => $student->age,
-                'is_active' => (bool) $student->is_active,
-                'enrollments_count' => (int) $student->enrollments_count,
-                'joined_at' => optional($student->created_at)?->toDateString(),
-            ])
+            ->get(['id', 'name', 'email', 'gender', 'state', 'location', 'lga', 'age', 'is_active', 'created_at'])
+            ->map(function (User $student) {
+                $locationKey = $this->normalizeLocationKey($student->state, $student->location);
+
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'email' => $student->email,
+                    'gender' => $student->gender ? ucfirst(strtolower(trim($student->gender))) : null,
+                    'state' => $student->state ? trim($student->state) : ($student->location ? trim($student->location) : null),
+                    'location_key' => $locationKey,
+                    'lga' => $student->lga ? trim($student->lga) : null,
+                    'age' => $student->age,
+                    'is_active' => (bool) $student->is_active,
+                    'enrollments_count' => (int) $student->enrollments_count,
+                    'joined_at' => optional($student->created_at)?->toDateString(),
+                ];
+            })
             ->values();
     }
 
@@ -870,17 +873,28 @@ class PartnerDashboardController extends Controller
 
     private function locationFilters()
     {
+        // Case-insensitive grouping; fall back to free-text `location` when `state` is empty.
+        // Without LOWER(), "Lagos" / "lagos" split counts and the UI filter key never matches every row.
         return User::where('role', 'student')
-            ->selectRaw("COALESCE(NULLIF(TRIM(state), ''), 'unspecified') as location_key, COUNT(*) as value")
-            ->groupByRaw("COALESCE(NULLIF(TRIM(state), ''), 'unspecified')")
+            ->selectRaw("LOWER(COALESCE(NULLIF(TRIM(state), ''), NULLIF(TRIM(location), ''), 'unspecified')) as location_key, COUNT(*) as value")
+            ->groupByRaw("LOWER(COALESCE(NULLIF(TRIM(state), ''), NULLIF(TRIM(location), ''), 'unspecified'))")
             ->orderByDesc('value')
             ->get()
             ->map(fn ($row) => [
-                'label' => $row->location_key === 'unspecified' ? 'Unspecified' : $row->location_key,
+                'label' => $row->location_key === 'unspecified'
+                    ? 'Unspecified'
+                    : ucwords(str_replace(['_', '-'], ' ', (string) $row->location_key)),
                 'value' => (int) $row->value,
-                'key' => strtolower((string) $row->location_key),
+                'key' => (string) $row->location_key,
             ])
             ->values();
+    }
+
+    private function normalizeLocationKey(?string $state, ?string $location = null): string
+    {
+        $raw = trim((string) ($state ?: $location ?: ''));
+
+        return $raw === '' ? 'unspecified' : strtolower($raw);
     }
 
     private function ageBreakdown()

@@ -281,6 +281,10 @@ class AuthController extends Controller
         });
         
         $userData = $user->toArray();
+        $userData['locale'] = $user->locale ?? 'en';
+        $userData['notification_preferences'] = \App\Support\NotificationPreferences::merge(
+            $user->notification_preferences
+        );
         $userData['stats'] = $stats;
         
         return response()->json($userData);
@@ -333,14 +337,22 @@ class AuthController extends Controller
             'avatar'        => 'nullable|string|max:500',
             'password'      => 'nullable|string|min:8|confirmed',
             'locale'        => 'nullable|string|in:en,ha',
+            'notification_preferences' => 'nullable|array',
+            'notification_preferences.in_app' => 'nullable|array',
+            'notification_preferences.email' => 'nullable|array',
         ]);
 
         $updateData = $request->only([
             'name', 'email', 'phone', 'gender', 'date_of_birth', 'age',
             'location', 'state', 'lga', 'occupation', 'referral',
-            'bio', 'avatar', 'locale',
+            'bio', 'avatar', 'locale', 'notification_preferences',
         ]);
 
+        if (isset($updateData['notification_preferences'])) {
+            $updateData['notification_preferences'] = \App\Support\NotificationPreferences::merge(
+                $updateData['notification_preferences']
+            );
+        }
         // Derive age when date_of_birth changes but age not supplied
         if (isset($updateData['date_of_birth']) && !isset($updateData['age'])) {
             $updateData['age'] = Carbon::parse($updateData['date_of_birth'])->age;
@@ -390,7 +402,11 @@ class AuthController extends Controller
             'bio'            => $user->bio,
             'avatar'         => $user->avatar,
             'role'           => $user->role,
+            'locale'         => $user->locale ?? 'en',
             'facilitator_id' => $user->facilitator_id,
+            'notification_preferences' => \App\Support\NotificationPreferences::merge(
+                $user->notification_preferences
+            ),
         ];
     }
 

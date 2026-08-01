@@ -77,7 +77,8 @@ class Enrollment extends Model
             }
         });
 
-        // Create notification when course is completed
+        // Create notification when course is completed, and auto-generate
+        // the certificate email (PDF attached) when the course includes one.
         static::updated(function ($enrollment) {
             if ($enrollment->status === 'completed' && $enrollment->wasChanged('status')) {
                 $user = $enrollment->user;
@@ -88,8 +89,8 @@ class Enrollment extends Model
                         $user,
                         'course_completed',
                         'Course Completed! 🎉',
-                        "Congratulations! You have completed '{$course->title}'. " . 
-                        ($course->certificate_included ? "Your certificate is available." : ""),
+                        "Congratulations! You have completed '{$course->title}'. " .
+                        ($course->certificate_included ? "Your certificate is being prepared and will arrive by email shortly." : ""),
                         'enrollment',
                         $enrollment->id,
                         [
@@ -100,6 +101,20 @@ class Enrollment extends Model
                             'certificate_included' => $course->certificate_included,
                         ]
                     );
+
+                    if ($course->certificate_included && $course->certificate_template_id) {
+                        $alreadyIssued = \App\Models\Certificate::where('user_id', $user->id)
+                            ->where('course_id', $course->id)
+                            ->whereNotNull('file_path')
+                            ->exists();
+
+                        if (!$alreadyIssued) {
+                            \App\Jobs\GenerateCertificateJob::dispatch(
+                                (int) $enrollment->id,
+                                (int) $course->certificate_template_id,
+                            );
+                        }
+                    }
                 }
             }
         });

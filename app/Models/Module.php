@@ -134,21 +134,27 @@ class Module extends Model
                         ]);
                     }
 
-                    // Send email notification (existing functionality)
-                    if ($enrollment->user->email) {
-                    try {
-                        \Illuminate\Support\Facades\Mail::to($enrollment->user->email)
-                            ->queue(new \App\Mail\NewModuleNotificationMail(
-                                $enrollment->user,
-                                $course,
-                                $this
-                            ));
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to queue new module notification email', [
-                            'user_id' => $enrollment->user->id,
-                            'module_id' => $this->id,
-                            'error' => $e->getMessage(),
-                        ]);
+                    // Send email notification when the learner opted in for this type
+                    if (
+                        $enrollment->user->email
+                        && \App\Support\NotificationPreferences::allowsEmail(
+                            $enrollment->user->notification_preferences,
+                            'module_added'
+                        )
+                    ) {
+                        try {
+                            \Illuminate\Support\Facades\Mail::to($enrollment->user->email)
+                                ->queue(new \App\Mail\NewModuleNotificationMail(
+                                    $enrollment->user,
+                                    $course,
+                                    $this
+                                ));
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to queue new module notification email', [
+                                'user_id' => $enrollment->user->id,
+                                'module_id' => $this->id,
+                                'error' => $e->getMessage(),
+                            ]);
                         }
                     }
                 }

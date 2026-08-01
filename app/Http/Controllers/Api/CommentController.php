@@ -315,29 +315,43 @@ class CommentController extends Controller
         $request->validate([
             'comment' => 'required|string|max:2000',
             'parent_id' => 'nullable|exists:course_comments,id',
-            'module_id' => 'nullable|exists:modules,id',
+            'module_id' => [
+                'nullable',
+                'integer',
+                \Illuminate\Validation\Rule::exists('modules', 'id')->where(fn ($q) => $q->where('course_id', $course->id)),
+            ],
         ]);
 
         $user = $request->user();
+        $parentId = $request->parent_id;
+        $moduleId = $request->module_id;
+
+        // Replies inherit the parent thread's module scope when not provided.
+        if ($parentId && !$moduleId) {
+            $moduleId = CourseComment::where('id', $parentId)
+                ->where('course_id', $course->id)
+                ->value('module_id');
+        }
 
         $comment = CourseComment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
-            'module_id' => $request->module_id,
+            'module_id' => $moduleId,
             'comment' => $request->comment,
-            'parent_id' => $request->parent_id,
+            'parent_id' => $parentId,
         ]);
 
         // Notify everyone else who's part of this thread that a new reply landed.
-        if ($request->parent_id) {
-            $thread = CourseComment::find($request->parent_id);
-            if ($thread) {
-                $participantIds = CourseComment::where('id', $thread->id)
-                    ->orWhere('parent_id', $thread->id)
+        if ($parentId) {
+            $thread = CourseComment::find($parentId);
+            if ($thread && (int) $thread->course_id === (int) $course->id) {
+                $participantIds = CourseComment::where(function ($q) use ($thread) {
+                    $q->where('id', $thread->id)->orWhere('parent_id', $thread->id);
+                })
                     ->pluck('user_id')
                     ->push($thread->user_id)
                     ->unique()
-                    ->reject(fn ($id) => $id === $user->id);
+                    ->reject(fn ($id) => (int) $id === (int) $user->id);
 
                 $participants = \App\Models\User::whereIn('id', $participantIds)->get();
                 foreach ($participants as $participant) {
@@ -348,7 +362,7 @@ class CommentController extends Controller
                         "{$user->name} replied in '{$course->title}': " . \Illuminate\Support\Str::limit($request->comment, 80),
                         'course',
                         $course->id,
-                        ['course_id' => $course->id, 'thread_id' => $thread->id]
+                        ['course_id' => $course->id, 'thread_id' => $thread->id, 'module_id' => $thread->module_id]
                     );
                 }
             }
@@ -359,7 +373,7 @@ class CommentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $comment->load('user:id,name,avatar'),
+            'data' => $comment->load(['user:id,name,avatar', 'module:id,title']),
             'message' => 'Comment added successfully'
         ], 201);
     }

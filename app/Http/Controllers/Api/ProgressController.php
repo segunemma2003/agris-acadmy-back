@@ -263,7 +263,8 @@ class ProgressController extends Controller
         if ($enrollment) {
             $enrollment->update(['progress_percentage' => round($progressPercentage, 2)]);
 
-            // Mark as completed if 100% (no automatic email; admin sends "course finished" to all when ready)
+            // Mark as completed at 100% — Enrollment observer auto-dispatches
+            // GenerateCertificateJob (email + PDF) when the course includes a certificate.
             if ($progressPercentage >= 100 && $enrollment->status !== 'completed') {
                 $enrollment->update([
                     'status' => 'completed',

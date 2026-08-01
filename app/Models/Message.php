@@ -60,25 +60,29 @@ class Message extends Model
     {
         parent::boot();
 
-        // Create notification when a message is sent
+        // Create notification when a message is sent (course-scoped or location-based)
         static::created(function ($message) {
             $recipient = $message->recipient;
             $sender = $message->sender;
-            $course = $message->course;
+            $course = $message->course_id && (int) $message->course_id > 0
+                ? $message->course
+                : null;
 
-            if ($recipient && $sender && $course) {
+            if ($recipient && $sender) {
+                $about = $course?->title
+                    ? " regarding {$course->title}"
+                    : '';
+
                 \App\Services\NotificationService::create(
                     $recipient,
                     'message_sent',
                     'New Message Received',
-                    $sender->role === 'admin' 
-                        ? "You have received a message from {$sender->name} regarding {$course->title}"
-                        : "You have received a message from {$sender->name} regarding {$course->title}",
+                    "You have received a message from {$sender->name}{$about}",
                     'message',
                     $message->id,
                     [
-                        'course_id' => $course->id,
-                        'course_title' => $course->title,
+                        'course_id' => $course?->id,
+                        'course_title' => $course?->title,
                         'sender_id' => $sender->id,
                         'sender_name' => $sender->name,
                         'subject' => $message->subject,

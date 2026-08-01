@@ -45,6 +45,11 @@ return [
         'hash_key' => env('AT_HASH_KEY'),
     ],
 
+    // Academy SPA base URL (Path B links in certificate emails, etc.)
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'https://academy.agrisiti.com'),
+    ],
+
     'pusher' => [
         'driver' => 'pusher',
         'key' => env('PUSHER_APP_KEY'),
