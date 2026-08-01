@@ -1036,11 +1036,16 @@ class PartnerDashboardController extends Controller
         }
 
         $text = preg_replace('/<\s*br\s*\/?>/i', "\n", $value) ?? $value;
-        $text = preg_replace('/<\s*\/\s*p\s*>/i', "\n\n", $text) ?? $text;
+        $text = preg_replace('/<\s*\/\s*(p|div|h[1-6]|tr|blockquote|section|article)\s*>/i', "\n\n", $text) ?? $text;
         $text = preg_replace('/<\s*\/\s*li\s*>/i', "\n", $text) ?? $text;
         $text = preg_replace('/<\s*li[^>]*>/i', '• ', $text) ?? $text;
+        $text = preg_replace('/<\s*\/\s*(ul|ol)\s*>/i', "\n", $text) ?? $text;
+        $text = preg_replace('/<\s*(ul|ol)[^>]*>/i', "\n", $text) ?? $text;
         $text = strip_tags($text);
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/([^\n])\s*•\s+/u', "$1\n• ", $text) ?? $text;
+        $text = preg_replace('/([.!?])\s+(Step\s+\d+:)/i', "$1\n\n$2", $text) ?? $text;
+        $text = preg_replace('/([.!?])\s+(Expected Outcome|Submission Format)\b/i', "$1\n\n$2", $text) ?? $text;
         $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
 
         $trimmed = trim($text);
