@@ -48,9 +48,12 @@ class UserResource extends Resource
                                 'student' => 'Student',
                                 'tagdev' => 'TagDev',
                                 'facilitator' => 'Facilitator',
+                                'organisation' => 'Partner',
                             ])
                             ->required()
-                            ->default('student'),
+                            ->default('student')
+                            ->live()
+                            ->helperText('Partner accounts can only be created by admins. Partners cannot self-register.'),
                         Forms\Components\Textarea::make('bio')
                             ->rows(3)
                             ->columnSpanFull(),
@@ -73,6 +76,35 @@ class UserResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->default(true),
                     ])->columns(2),
+                Forms\Components\Section::make('Partner organisation')
+                    ->description('Required for Partner role — creates the organisation profile and partner-dashboard access.')
+                    ->schema([
+                        Forms\Components\TextInput::make('organisation_name')
+                            ->label('Organisation name')
+                            ->required(fn (callable $get) => $get('role') === 'organisation')
+                            ->maxLength(255)
+                            ->dehydrated(false),
+                        Forms\Components\TextInput::make('organisation_sector')
+                            ->label('Sector')
+                            ->maxLength(255)
+                            ->dehydrated(false),
+                        Forms\Components\TextInput::make('organisation_state')
+                            ->label('State')
+                            ->maxLength(255)
+                            ->dehydrated(false),
+                        Forms\Components\Toggle::make('organisation_is_approved')
+                            ->label('Approved to post internship slots')
+                            ->default(false)
+                            ->dehydrated(false),
+                        Forms\Components\CheckboxList::make('dashboard_permissions')
+                            ->label('Partner dashboard sections')
+                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
+                            ->columns(2)
+                            ->columnSpanFull()
+                            ->dehydrated(false),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (callable $get) => $get('role') === 'organisation'),
                 Forms\Components\Section::make('Password')
                     ->schema([
                         Forms\Components\TextInput::make('password')
@@ -97,12 +129,18 @@ class UserResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('role')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'organisation' => 'Partner',
+                        'tagdev' => 'TagDev',
+                        default => ucfirst($state),
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'admin' => 'danger',
                         'tutor' => 'warning',
                         'student' => 'success',
                         'tagdev' => 'info',
                         'facilitator' => 'primary',
+                        'organisation' => 'success',
                         default => 'gray',
                     }),
                 Tables\Columns\IconColumn::make('is_active')
@@ -120,6 +158,7 @@ class UserResource extends Resource
                         'student' => 'Student',
                         'tagdev' => 'TagDev',
                         'facilitator' => 'Facilitator',
+                        'organisation' => 'Partner',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),

@@ -205,26 +205,17 @@ class User extends Authenticatable
      */
     public function canAccessPanel(string $panel): bool
     {
-        // Always return true for admin panel to bypass Filament's check
-        // We'll handle authorization in middleware if needed
-        if ($panel === 'admin') {
-            \Log::info('canAccessPanel: Bypassing check for admin panel', [
-                'user_id' => $this->id,
-                'email' => $this->email,
-                'role' => $this->role,
-                'is_active' => $this->is_active,
-            ]);
-            return true;
+        if (! $this->is_active) {
+            return false;
         }
-        
-        $result = match($panel) {
-            'tutor' => $this->role === 'tutor' && $this->is_active,
-            'tagdev' => $this->role === 'tagdev' && $this->is_active,
-            'facilitator' => $this->role === 'facilitator' && $this->is_active,
+
+        return match ($panel) {
+            'admin' => $this->role === 'admin',
+            'tutor' => $this->role === 'tutor',
+            'tagdev' => $this->role === 'tagdev',
+            'facilitator' => $this->role === 'facilitator',
             default => false,
         };
-        
-        return $result;
     }
 
     public function isTutor(): bool

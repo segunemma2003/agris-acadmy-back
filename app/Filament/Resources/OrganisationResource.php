@@ -18,9 +18,33 @@ class OrganisationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationLabel = 'Organisations (Career Pathways)';
+    protected static ?string $navigationLabel = 'Partners (Organisations)';
+
+    protected static ?string $modelLabel = 'Partner';
+
+    protected static ?string $pluralModelLabel = 'Partners';
 
     protected static ?string $navigationGroup = 'User Management';
+
+    public static function canViewAny(): bool
+    {
+        return Auth::user()?->isAdmin() ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user()?->isAdmin() ?? false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Auth::user()?->isAdmin() ?? false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Auth::user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {

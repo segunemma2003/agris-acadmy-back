@@ -84,6 +84,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 CustomFilamentAuthenticate::class,
+                EnsureUserIsAdmin::class,
             ])
             ->authGuard('web')
             ->authPasswordBroker('users');
