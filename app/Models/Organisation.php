@@ -26,6 +26,8 @@ class Organisation extends Model
         return [
             'is_approved' => 'boolean',
             'approved_at' => 'datetime',
+            // Kept for transitional partner-dashboard accounts created before the partner role split.
+            'dashboard_permissions' => 'array',
         ];
     }
 

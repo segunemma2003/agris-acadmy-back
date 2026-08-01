@@ -915,14 +915,38 @@ class PartnerDashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'partner') {
+        // Preferred: dedicated funder role.
+        if ($user->role === 'partner') {
+            return $user;
+        }
+
+        // Transitional: pre-split accounts used organisation + dashboard_permissions.
+        if ($user->role === 'organisation') {
+            $organisation = $user->organisation;
+            $granted = $organisation?->dashboard_permissions
+                ?? $user->dashboard_permissions
+                ?? [];
+
+            if ($organisation && ! empty($granted)) {
+                // Expose permissions on the user object so the rest of the controller stays role-agnostic.
+                $user->dashboard_permissions = $granted;
+                if (! $user->name && $organisation->name) {
+                    $user->name = $organisation->name;
+                }
+
+                return $user;
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'The partner dashboard is only available for partner (funder) accounts.',
+                'message' => 'This organisation account has no partner dashboard access. Ask an admin to create a Partner (funder) account, or grant dashboard sections.',
             ], 403);
         }
 
-        return $user;
+        return response()->json([
+            'success' => false,
+            'message' => 'The partner dashboard is only available for partner (funder) accounts.',
+        ], 403);
     }
 
     /**

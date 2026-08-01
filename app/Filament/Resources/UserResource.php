@@ -78,14 +78,16 @@ class UserResource extends Resource
                             ->default(true),
                     ])->columns(2),
                 Forms\Components\Section::make('Partner (funder) access')
-                    ->description('Partners gave funding and can view program analytics. They do not host interns.')
+                    ->description('Partners gave funding and can view program analytics. They do not host interns. You must tick at least one section or the dashboard will be empty.')
                     ->schema([
                         Forms\Components\CheckboxList::make('dashboard_permissions')
                             ->label('Partner dashboard sections')
                             ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
-                            ->helperText('Nothing checked = no dashboard access yet.')
+                            ->default(fn () => array_keys(config('partner_dashboard.sections')))
+                            ->helperText('Tip: select Platform Overview plus any other sections this funder should see.')
                             ->columns(2)
                             ->columnSpanFull()
+                            ->required(fn (callable $get) => $get('role') === 'partner')
                             ->dehydrated(fn (callable $get) => $get('role') === 'partner'),
                     ])
                     ->visible(fn (callable $get) => $get('role') === 'partner'),
