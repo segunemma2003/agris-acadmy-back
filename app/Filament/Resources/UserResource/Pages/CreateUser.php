@@ -13,16 +13,21 @@ class CreateUser extends CreateRecord
     protected static string $resource = UserResource::class;
 
     /** @var array<string, mixed> */
-    protected array $partnerData = [];
+    protected array $hostData = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $this->partnerData = [
+        if (($data['role'] ?? null) === 'partner') {
+            $data['dashboard_permissions'] = $this->data['dashboard_permissions'] ?? [];
+        } else {
+            $data['dashboard_permissions'] = null;
+        }
+
+        $this->hostData = [
             'organisation_name' => $this->data['organisation_name'] ?? null,
             'organisation_sector' => $this->data['organisation_sector'] ?? null,
             'organisation_state' => $this->data['organisation_state'] ?? null,
             'organisation_is_approved' => (bool) ($this->data['organisation_is_approved'] ?? false),
-            'dashboard_permissions' => $this->data['dashboard_permissions'] ?? [],
         ];
 
         return $data;
@@ -33,17 +38,16 @@ class CreateUser extends CreateRecord
         $user = parent::handleRecordCreation($data);
 
         if ($user->role === 'organisation') {
-            $approved = $this->partnerData['organisation_is_approved'] ?? false;
+            $approved = $this->hostData['organisation_is_approved'] ?? false;
 
             Organisation::create([
                 'user_id' => $user->id,
-                'name' => $this->partnerData['organisation_name'] ?: $user->name,
-                'sector' => $this->partnerData['organisation_sector'] ?: null,
-                'state' => $this->partnerData['organisation_state'] ?: null,
+                'name' => $this->hostData['organisation_name'] ?: $user->name,
+                'sector' => $this->hostData['organisation_sector'] ?: null,
+                'state' => $this->hostData['organisation_state'] ?: null,
                 'is_approved' => $approved,
                 'approved_at' => $approved ? now() : null,
                 'approved_by' => $approved ? Auth::id() : null,
-                'dashboard_permissions' => $this->partnerData['dashboard_permissions'] ?: [],
             ]);
         }
 

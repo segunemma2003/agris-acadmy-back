@@ -18,11 +18,11 @@ class OrganisationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationLabel = 'Partners (Organisations)';
+    protected static ?string $navigationLabel = 'Organisations (Hosts)';
 
-    protected static ?string $modelLabel = 'Partner';
+    protected static ?string $modelLabel = 'Organisation';
 
-    protected static ?string $pluralModelLabel = 'Partners';
+    protected static ?string $pluralModelLabel = 'Organisations';
 
     protected static ?string $navigationGroup = 'User Management';
 
@@ -50,8 +50,8 @@ class OrganisationResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Partner Contact Account')
-                    ->description('Creates the login the partner will use on the partner dashboard.')
+                Forms\Components\Section::make('Host contact account')
+                    ->description('Creates the login this organisation uses to post internship slots. This is not a Partner (funder) account.')
                     ->schema([
                         Forms\Components\TextInput::make('contact_name')
                             ->label('Contact name')
@@ -72,6 +72,7 @@ class OrganisationResource extends Resource
                     ->columns(2)
                     ->visibleOn('create'),
                 Forms\Components\Section::make('Organisation')
+                    ->description('Companies that host interns / post apprenticeship slots.')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -87,27 +88,13 @@ class OrganisationResource extends Resource
                 Forms\Components\Section::make('Approval')
                     ->schema([
                         Forms\Components\Toggle::make('is_approved')
-                            ->label('Approved to post apprenticeship slots')
+                            ->label('Approved to post internship slots')
                             ->live()
                             ->afterStateUpdated(fn ($state, callable $set) => $set('approved_at', $state ? now() : null)),
                         Forms\Components\DateTimePicker::make('approved_at')
                             ->disabled()
                             ->dehydrated(),
                     ])->columns(2),
-                Forms\Components\Section::make('Partner Dashboard Access')
-                    ->description('Choose exactly what this partner can see on their dashboard. Nothing checked = no dashboard access yet.')
-                    ->schema([
-                        Forms\Components\CheckboxList::make('dashboard_permissions')
-                            ->label('Visible sections')
-                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
-                            ->helperText(fn ($state) => collect($state ?? [])
-                                ->map(fn ($key) => config("partner_dashboard.sections.$key.description"))
-                                ->filter()
-                                ->implode(' '))
-                            ->live()
-                            ->columns(2)
-                            ->columnSpanFull(),
-                    ]),
             ]);
     }
 

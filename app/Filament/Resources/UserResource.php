@@ -48,12 +48,13 @@ class UserResource extends Resource
                                 'student' => 'Student',
                                 'tagdev' => 'TagDev',
                                 'facilitator' => 'Facilitator',
-                                'organisation' => 'Partner',
+                                'organisation' => 'Organisation (host)',
+                                'partner' => 'Partner (funder)',
                             ])
                             ->required()
                             ->default('student')
                             ->live()
-                            ->helperText('Partner accounts can only be created by admins. Partners cannot self-register.'),
+                            ->helperText('Organisation = hosts interns. Partner = funder who views the program dashboard. Only admins create either.'),
                         Forms\Components\Textarea::make('bio')
                             ->rows(3)
                             ->columnSpanFull(),
@@ -76,8 +77,20 @@ class UserResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->default(true),
                     ])->columns(2),
-                Forms\Components\Section::make('Partner organisation')
-                    ->description('Required for Partner role — creates the organisation profile and partner-dashboard access.')
+                Forms\Components\Section::make('Partner (funder) access')
+                    ->description('Partners gave funding and can view program analytics. They do not host interns.')
+                    ->schema([
+                        Forms\Components\CheckboxList::make('dashboard_permissions')
+                            ->label('Partner dashboard sections')
+                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
+                            ->helperText('Nothing checked = no dashboard access yet.')
+                            ->columns(2)
+                            ->columnSpanFull()
+                            ->dehydrated(fn (callable $get) => $get('role') === 'partner'),
+                    ])
+                    ->visible(fn (callable $get) => $get('role') === 'partner'),
+                Forms\Components\Section::make('Organisation (host) profile')
+                    ->description('Organisations host interns and post internship slots. They do not get the partner analytics dashboard.')
                     ->schema([
                         Forms\Components\TextInput::make('organisation_name')
                             ->label('Organisation name')
@@ -95,12 +108,6 @@ class UserResource extends Resource
                         Forms\Components\Toggle::make('organisation_is_approved')
                             ->label('Approved to post internship slots')
                             ->default(false)
-                            ->dehydrated(false),
-                        Forms\Components\CheckboxList::make('dashboard_permissions')
-                            ->label('Partner dashboard sections')
-                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
-                            ->columns(2)
-                            ->columnSpanFull()
                             ->dehydrated(false),
                     ])
                     ->columns(2)
@@ -130,7 +137,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('role')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'organisation' => 'Partner',
+                        'organisation' => 'Organisation',
+                        'partner' => 'Partner',
                         'tagdev' => 'TagDev',
                         default => ucfirst($state),
                     })
@@ -140,7 +148,8 @@ class UserResource extends Resource
                         'student' => 'success',
                         'tagdev' => 'info',
                         'facilitator' => 'primary',
-                        'organisation' => 'success',
+                        'organisation' => 'warning',
+                        'partner' => 'success',
                         default => 'gray',
                     }),
                 Tables\Columns\IconColumn::make('is_active')
@@ -158,7 +167,8 @@ class UserResource extends Resource
                         'student' => 'Student',
                         'tagdev' => 'TagDev',
                         'facilitator' => 'Facilitator',
-                        'organisation' => 'Partner',
+                        'organisation' => 'Organisation (host)',
+                        'partner' => 'Partner (funder)',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),

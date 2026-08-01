@@ -30,21 +30,21 @@ class PartnerDashboardController extends Controller
      * @OA\Get(
      *     path="/api/partner/permissions",
      *     tags={"Partner Dashboard"},
-     *     summary="Which dashboard sections the authenticated partner (organisation) account is allowed to see",
+     *     summary="Which dashboard sections the authenticated partner (funder) account is allowed to see",
      *     security={{"sanctumAuth":{}}},
      *     @OA\Response(response=200, description="Granted sections and their labels"),
-     *     @OA\Response(response=403, description="Not an organisation account")
+     *     @OA\Response(response=403, description="Not a partner account")
      * )
      */
     public function permissions(Request $request)
     {
-        $organisation = $this->resolveOrganisation($request);
+        $partner = $this->resolvePartner($request);
 
-        if ($organisation instanceof \Illuminate\Http\JsonResponse) {
-            return $organisation;
+        if ($partner instanceof \Illuminate\Http\JsonResponse) {
+            return $partner;
         }
 
-        $granted = $organisation->dashboard_permissions ?? [];
+        $granted = $partner->dashboard_permissions ?? [];
         $catalog = config('partner_dashboard.sections');
 
         $sections = collect(array_keys($catalog))
@@ -60,7 +60,8 @@ class PartnerDashboardController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'organisation_name' => $organisation->name,
+                'partner_name' => $partner->name,
+                'organisation_name' => $partner->name, // backwards compatible with older clients
                 'has_access' => $sections->isNotEmpty(),
                 'sections' => $sections,
             ],
@@ -71,21 +72,21 @@ class PartnerDashboardController extends Controller
      * @OA\Get(
      *     path="/api/partner/dashboard",
      *     tags={"Partner Dashboard"},
-     *     summary="Partner dashboard data (stats, breakdowns, 6-month trends), filtered server-side to only the sections the admin has granted this organisation",
+     *     summary="Partner dashboard data (stats, breakdowns, 6-month trends), filtered server-side to only the sections the admin has granted this funder",
      *     security={{"sanctumAuth":{}}},
      *     @OA\Response(response=200, description="Dashboard data for granted sections only"),
-     *     @OA\Response(response=403, description="Not an organisation account or no sections granted")
+     *     @OA\Response(response=403, description="Not a partner account or no sections granted")
      * )
      */
     public function index(Request $request)
     {
-        $organisation = $this->resolveOrganisation($request);
+        $partner = $this->resolvePartner($request);
 
-        if ($organisation instanceof \Illuminate\Http\JsonResponse) {
-            return $organisation;
+        if ($partner instanceof \Illuminate\Http\JsonResponse) {
+            return $partner;
         }
 
-        $granted = $organisation->dashboard_permissions ?? [];
+        $granted = $partner->dashboard_permissions ?? [];
 
         if (empty($granted)) {
             return response()->json([
@@ -99,7 +100,7 @@ class PartnerDashboardController extends Controller
 
         foreach ($orderedSections as $section) {
             $data[$section] = match ($section) {
-                'platform_overview' => $this->platformOverview($organisation),
+                'platform_overview' => $this->platformOverview(),
                 'courses' => $this->coursesSection(),
                 'course_performance' => $this->coursePerformanceSection(),
                 'learners' => $this->learnersSection(),
@@ -107,7 +108,7 @@ class PartnerDashboardController extends Controller
                 'geography' => $this->geographySection(),
                 'engagement' => $this->engagementSection(),
                 'enrollments' => $this->enrollmentsSection(),
-                'apprenticeships' => $this->apprenticeshipsSection($organisation),
+                'apprenticeships' => $this->apprenticeshipsSection(),
                 'certificates' => $this->certificatesSection(),
                 default => null,
             };
@@ -116,7 +117,7 @@ class PartnerDashboardController extends Controller
         return response()->json(['success' => true, 'data' => $data]);
     }
 
-    private function platformOverview(Organisation $organisation): array
+    private function platformOverview(): array
     {
         $topicsCount = Topic::count();
         $videosCount = Topic::whereNotNull('video_url')->where('video_url', '!=', '')->count();
@@ -127,9 +128,9 @@ class PartnerDashboardController extends Controller
         $byAge = $this->ageBreakdown();
         $enrollments = $this->enrollmentDirectory();
         $certificates = $this->certificateDirectory();
-        $companies = $this->companyDirectory($organisation);
-        $slots = $this->slotDirectory($organisation);
-        $placements = $this->placementDirectory($organisation);
+        $companies = $this->companyDirectory();
+        $slots = $this->slotDirectory();
+        $placements = $this->placementDirectory();
 
         $totalEnrollments = Enrollment::count();
         $activeEnrollments = Enrollment::where('status', 'active')->count();
@@ -448,55 +449,40 @@ class PartnerDashboardController extends Controller
         ];
     }
 
-    private function apprenticeshipsSection(Organisation $organisation): array
+    private function apprenticeshipsSection(): array
     {
-        $ownSlotsQuery = $organisation->slots();
-        $slotsPosted = (clone $ownSlotsQuery)->count();
-        $openSlots = (clone $ownSlotsQuery)->where('is_active', true)->count();
+        $companies = $this->companyDirectory();
+        $slots = $this->slotDirectory();
+        $placements = $this->placementDirectory();
 
-        $ownApplicants = fn () => Apprenticeship::whereHas('slot', fn ($q) => $q->where('organisation_id', $organisation->id));
-
-        $totalApplicants = $ownApplicants()->count();
-        $activeInterns = $ownApplicants()->where('status', 'accepted')->count();
-        $pending = $ownApplicants()->where('status', 'interested')->count();
-        $rejected = $ownApplicants()->where('status', 'rejected')->count();
-        $completed = $ownApplicants()->where('status', 'completed')->count();
+        $openSlots = ApprenticeshipSlot::where('is_active', true)->count();
+        $totalApplicants = Apprenticeship::count();
+        $activeInterns = Apprenticeship::where('status', 'accepted')->count();
+        $pending = Apprenticeship::where('status', 'interested')->count();
+        $rejected = Apprenticeship::where('status', 'rejected')->count();
+        $completed = Apprenticeship::where('status', 'completed')->count();
         $employed = $activeInterns + $completed;
 
-        $logsQuery = ApprenticeshipLog::whereHas(
-            'apprenticeship.slot',
-            fn ($q) => $q->where('organisation_id', $organisation->id)
-        );
-        $logsSubmitted = (clone $logsQuery)->count();
-        $daysAttended = (clone $logsQuery)->where('attended', true)->count();
+        $logsSubmitted = ApprenticeshipLog::count();
+        $daysAttended = ApprenticeshipLog::where('attended', true)->count();
         $attendanceRate = $logsSubmitted > 0 ? round(($daysAttended / $logsSubmitted) * 100, 1) : 0;
-
-        $platformCompanies = $this->companyDirectory($organisation);
-        $slots = $this->slotDirectory($organisation);
-        $placements = $this->placementDirectory($organisation);
-
-        $platformPlaced = Apprenticeship::whereIn('status', ['accepted', 'completed'])->count();
-        $platformCompaniesCount = $platformCompanies->count();
-        $platformOpenSlots = ApprenticeshipSlot::where('is_active', true)->count();
 
         return [
             'stats' => [
-                ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $platformCompaniesCount, 'unit' => 'count'],
-                ['key' => 'platform_open_slots', 'label' => 'Open Slots (Platform)', 'value' => $platformOpenSlots, 'unit' => 'count'],
-                ['key' => 'slots_posted', 'label' => 'Your Slots', 'value' => $slotsPosted, 'unit' => 'count'],
-                ['key' => 'open_slots', 'label' => 'Your Open Slots', 'value' => $openSlots, 'unit' => 'count'],
-                ['key' => 'total_applicants', 'label' => 'Your Applicants', 'value' => $totalApplicants, 'unit' => 'count'],
+                ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $companies->count(), 'unit' => 'count'],
+                ['key' => 'platform_open_slots', 'label' => 'Open Slots', 'value' => $openSlots, 'unit' => 'count'],
+                ['key' => 'total_slots', 'label' => 'Total Slots', 'value' => ApprenticeshipSlot::count(), 'unit' => 'count'],
+                ['key' => 'total_applicants', 'label' => 'Applicants', 'value' => $totalApplicants, 'unit' => 'count'],
                 ['key' => 'active_interns', 'label' => 'Active Interns', 'value' => $activeInterns, 'unit' => 'count'],
                 ['key' => 'employed', 'label' => 'Placed / Employed', 'value' => $employed, 'unit' => 'count'],
                 ['key' => 'completed_placements', 'label' => 'Completed', 'value' => $completed, 'unit' => 'count'],
                 ['key' => 'pending_review', 'label' => 'Pending Review', 'value' => $pending, 'unit' => 'count'],
                 ['key' => 'logs_submitted', 'label' => 'Daily Logs', 'value' => $logsSubmitted, 'unit' => 'count'],
                 ['key' => 'attendance_rate', 'label' => 'Attendance Rate', 'value' => $attendanceRate, 'unit' => 'percentage'],
-                ['key' => 'platform_placed', 'label' => 'Platform Placed', 'value' => $platformPlaced, 'unit' => 'count'],
             ],
             'breakdowns' => [
                 [
-                    'title' => 'Your Applications by Status',
+                    'title' => 'Applications by Status',
                     'items' => collect([
                         ['label' => 'Pending Review', 'value' => $pending],
                         ['label' => 'Accepted (Employed)', 'value' => $activeInterns],
@@ -506,20 +492,20 @@ class PartnerDashboardController extends Controller
                 ],
                 [
                     'title' => 'Companies by Open Slots',
-                    'items' => $platformCompanies
+                    'items' => $companies
                         ->sortByDesc('open_slots_count')
                         ->take(8)
                         ->map(fn ($c) => ['label' => $c['name'], 'value' => $c['open_slots_count']])
                         ->values(),
                 ],
             ],
-            'companies' => $platformCompanies,
+            'companies' => $companies,
             'slots' => $slots,
             'placements' => $placements,
             'trend' => [
-                'title' => 'Your Applicants',
+                'title' => 'New Applicants',
                 'unit' => 'count',
-                'points' => $this->monthlyTrend($ownApplicants()),
+                'points' => $this->monthlyTrend(Apprenticeship::query()),
             ],
         ];
     }
@@ -686,7 +672,7 @@ class PartnerDashboardController extends Controller
             ->values();
     }
 
-    private function companyDirectory(Organisation $organisation)
+    private function companyDirectory()
     {
         return Organisation::query()
             ->withCount([
@@ -695,7 +681,7 @@ class PartnerDashboardController extends Controller
             ])
             ->orderBy('name')
             ->get()
-            ->map(function (Organisation $org) use ($organisation) {
+            ->map(function (Organisation $org) {
                 $slotIds = $org->slots()->pluck('id');
                 $placed = $slotIds->isEmpty()
                     ? 0
@@ -720,14 +706,13 @@ class PartnerDashboardController extends Controller
                     'open_slots_count' => (int) $org->open_slots_count,
                     'placed_count' => $placed,
                     'completed_count' => $completedCount,
-                    'is_own' => $org->id === $organisation->id,
                 ];
             })
-            ->filter(fn ($row) => $row['slots_count'] > 0 || $row['is_own'])
+            ->filter(fn ($row) => $row['slots_count'] > 0 || $row['is_approved'])
             ->values();
     }
 
-    private function slotDirectory(Organisation $organisation)
+    private function slotDirectory()
     {
         return ApprenticeshipSlot::with([
             'organisation:id,name,sector,state',
@@ -762,12 +747,11 @@ class PartnerDashboardController extends Controller
                 'accepted_count' => (int) $slot->accepted_count,
                 'completed_count' => (int) $slot->completed_count,
                 'rejected_count' => (int) $slot->rejected_count,
-                'is_own' => $slot->organisation_id === $organisation->id,
             ])
             ->values();
     }
 
-    private function placementDirectory(Organisation $organisation)
+    private function placementDirectory()
     {
         return Apprenticeship::with([
             'user:id,name,email,gender,state',
@@ -787,7 +771,7 @@ class PartnerDashboardController extends Controller
                 default => 3,
             })
             ->values()
-            ->map(function (Apprenticeship $row) use ($organisation) {
+            ->map(function (Apprenticeship $row) {
                 $logs = (int) $row->logs_count;
                 $attended = (int) $row->attended_days;
 
@@ -815,7 +799,6 @@ class PartnerDashboardController extends Controller
                     'completion_start_date' => optional($row->completion_start_date)?->toDateString(),
                     'completion_end_date' => optional($row->completion_end_date)?->toDateString(),
                     'certificate_number' => $row->certificate?->certificate_number,
-                    'is_own' => $row->slot?->organisation_id === $organisation->id,
                 ];
             })
             ->values();
@@ -928,26 +911,17 @@ class PartnerDashboardController extends Controller
         return $points;
     }
 
-    private function resolveOrganisation(Request $request)
+    private function resolvePartner(Request $request)
     {
         $user = $request->user();
 
-        if ($user->role !== 'organisation') {
+        if ($user->role !== 'partner') {
             return response()->json([
                 'success' => false,
-                'message' => 'The partner dashboard is only available for organisation accounts.',
+                'message' => 'The partner dashboard is only available for partner (funder) accounts.',
             ], 403);
         }
 
-        $organisation = $user->organisation;
-
-        if (!$organisation) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No organisation profile found for this account.',
-            ], 404);
-        }
-
-        return $organisation;
+        return $user;
     }
 }

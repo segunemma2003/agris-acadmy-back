@@ -13,9 +13,10 @@ class CreateOrganisation extends CreateRecord
     protected static string $resource = OrganisationResource::class;
 
     /**
-     * Partner accounts have no public self-registration flow, so creating an
-     * Organisation here must also create its linked User (role: organisation)
-     * from the contact fields collected on the form.
+     * Host organisations have no public self-registration for admin-created
+     * accounts, so creating an Organisation here also creates its linked User
+     * (role: organisation) from the contact fields. Partners (funders) are
+     * created separately via Users → Partner (funder).
      */
     protected function handleRecordCreation(array $data): Model
     {

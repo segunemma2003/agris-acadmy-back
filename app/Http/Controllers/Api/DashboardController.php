@@ -60,7 +60,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'organisation') {
+        if ($user->role === 'organisation' || $user->role === 'partner') {
             return response()->json([
                 'success' => false,
                 'message' => 'The learner dashboard is not available for organisation accounts',
@@ -184,7 +184,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'organisation') {
+        if ($user->role === 'organisation' || $user->role === 'partner') {
             return response()->json(['success' => false, 'message' => 'Not available for organisation accounts'], 403);
         }
 
@@ -244,7 +244,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role === 'organisation') {
+        if ($user->role === 'organisation' || $user->role === 'partner') {
             return response()->json(['success' => false, 'message' => 'Not available for organisation accounts'], 403);
         }
 

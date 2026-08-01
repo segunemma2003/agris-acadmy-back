@@ -1,9 +1,8 @@
 <?php
 
-// Single source of truth for which dashboard sections a partner (organisation)
-// account can be granted. Used by both the Filament admin checkbox list
-// (App\Filament\Resources\OrganisationResource) and the partner dashboard API
-// (App\Http\Controllers\Api\PartnerDashboardController) so the two never drift.
+// Single source of truth for which dashboard sections a Partner (funder) account
+// can be granted. Used by Filament admin (UserResource) and PartnerDashboardController.
+// Organisations (internship hosts) are a separate role and do not use this config.
 return [
     'sections' => [
         'platform_overview' => [

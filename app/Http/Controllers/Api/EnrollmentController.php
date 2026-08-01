@@ -40,7 +40,7 @@ class EnrollmentController extends Controller
 
         $user = $request->user();
 
-        if ($user->role === 'organisation') {
+        if ($user->role === 'organisation' || $user->role === 'partner') {
             return response()->json([
                 'success' => false,
                 'message' => 'Organisation accounts cannot enroll in courses. Please register a student account to enroll.',

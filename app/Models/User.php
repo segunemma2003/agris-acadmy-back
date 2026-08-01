@@ -38,6 +38,7 @@ class User extends Authenticatable
         'bio',
         'avatar',
         'is_active',
+        'dashboard_permissions',
         'last_login_at',
         'facilitator_id',
         'is_in_facilitator_queue',
@@ -74,6 +75,7 @@ class User extends Authenticatable
             'is_in_facilitator_queue' => 'boolean',
             'covered_states' => 'array',
             'covered_lgas' => 'array',
+            'dashboard_permissions' => 'array',
             'last_active_date' => 'date',
         ];
     }
@@ -182,10 +184,28 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
-    // The organisation profile this user manages (role: organisation)
+    // The organisation profile this user manages (role: organisation = internship host)
     public function organisation(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Organisation::class);
+    }
+
+    public function isPartner(): bool
+    {
+        return $this->role === 'partner' && $this->is_active;
+    }
+
+    public function isOrganisation(): bool
+    {
+        return $this->role === 'organisation' && $this->is_active;
+    }
+
+    /**
+     * Whether this funder partner can see the given partner-dashboard section.
+     */
+    public function canViewPartnerSection(string $section): bool
+    {
+        return in_array($section, $this->dashboard_permissions ?? [], true);
     }
 
     // Apprenticeship applications/placements this learner has expressed interest in
