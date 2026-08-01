@@ -45,7 +45,7 @@ class ApprenticeshipSlotController extends Controller
         }
 
         if ($sector = $request->query('sector')) {
-            $query->where('sector', $sector);
+            $query->where('sector', 'like', '%' . $sector . '%');
         }
 
         if ($requiredCourseId = $request->query('required_course_id')) {

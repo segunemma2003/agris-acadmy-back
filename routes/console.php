@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\RefreshCohortHeatMapCache;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -25,3 +26,15 @@ Schedule::command('queue:prune-failed --hours=168')
     ->daily()
     ->at('02:00')
     ->withoutOverlapping();
+
+// Cohort heat map: daily refresh (not realtime) for facilitator/admin panels.
+Schedule::command('cohort:refresh-heatmap --sync')
+    ->dailyAt('01:15')
+    ->withoutOverlapping()
+    ->name('cohort-heatmap-refresh');
+
+// Learner intervention alerts → email admin@agrisiti.com (inactive 7d / quiz failed twice).
+Schedule::command('learners:send-intervention-alerts')
+    ->dailyAt('01:45')
+    ->withoutOverlapping()
+    ->name('learner-intervention-alerts');

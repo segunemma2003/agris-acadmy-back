@@ -53,6 +53,11 @@ class ApprenticeshipController extends Controller
             $certificateId = Certificate::where('user_id', $user->id)
                 ->where('course_id', $slot->required_course_id)
                 ->value('id');
+        } else {
+            // Open slots: attach the learner's most recent certificate when available.
+            $certificateId = Certificate::where('user_id', $user->id)
+                ->latest('issued_date')
+                ->value('id');
         }
 
         $apprenticeship = Apprenticeship::create([
@@ -108,9 +113,67 @@ class ApprenticeshipController extends Controller
         }
 
         $applicants = $slot->apprenticeships()
-            ->with(['user:id,name,email,phone,state,lga', 'certificate'])
+            ->with([
+                'user:id,name,email,phone,gender,age,date_of_birth,occupation,bio,avatar,state,lga,location',
+                'user.enrollments' => function ($query) {
+                    $query->where('status', 'completed')
+                        ->with('course:id,title,slug')
+                        ->latest();
+                },
+                'certificate:id,user_id,course_id,certificate_number,issued_date,file_path,recipient_name',
+                'certificate.course:id,title,slug',
+            ])
             ->latest()
-            ->get();
+            ->get()
+            ->map(function (Apprenticeship $apprenticeship) {
+                $user = $apprenticeship->user;
+                $completedCourses = $user?->enrollments
+                    ?->pluck('course')
+                    ->filter()
+                    ->unique('id')
+                    ->values()
+                    ->map(fn ($course) => [
+                        'id' => $course->id,
+                        'title' => $course->title,
+                        'slug' => $course->slug,
+                    ])
+                    ->all() ?? [];
+
+                return [
+                    'id' => $apprenticeship->id,
+                    'status' => $apprenticeship->status,
+                    'created_at' => $apprenticeship->created_at,
+                    'reviewed_at' => $apprenticeship->reviewed_at,
+                    'user' => $user ? [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'gender' => $user->gender,
+                        'age' => $user->age,
+                        'date_of_birth' => $user->date_of_birth,
+                        'occupation' => $user->occupation,
+                        'bio' => $user->bio,
+                        'avatar' => $user->avatar,
+                        'state' => $user->state,
+                        'lga' => $user->lga,
+                        'location' => $user->location,
+                        'completed_courses' => $completedCourses,
+                    ] : null,
+                    'certificate' => $apprenticeship->certificate ? [
+                        'id' => $apprenticeship->certificate->id,
+                        'certificate_number' => $apprenticeship->certificate->certificate_number,
+                        'issued_date' => $apprenticeship->certificate->issued_date,
+                        'file_path' => $apprenticeship->certificate->file_path,
+                        'recipient_name' => $apprenticeship->certificate->recipient_name,
+                        'course' => $apprenticeship->certificate->course ? [
+                            'id' => $apprenticeship->certificate->course->id,
+                            'title' => $apprenticeship->certificate->course->title,
+                            'slug' => $apprenticeship->certificate->course->slug,
+                        ] : null,
+                    ] : null,
+                ];
+            });
 
         return response()->json(['success' => true, 'data' => $applicants]);
     }

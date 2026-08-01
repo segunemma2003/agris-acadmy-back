@@ -114,6 +114,39 @@ class UserResource extends Resource
                     ])
                     ->columns(2)
                     ->visible(fn (callable $get) => $get('role') === 'organisation'),
+                Forms\Components\Section::make('Facilitator coverage (auto-assign by location)')
+                    ->description('Learners are assigned automatically on register / state-LGA change: LGA match first, then state. Leave coverage empty and students in those areas will queue for manual assignment.')
+                    ->schema([
+                        Forms\Components\TagsInput::make('covered_states')
+                            ->label('Covered states')
+                            ->placeholder('Add a state name (e.g. Kano)')
+                            ->helperText('Must match the learner\'s state field exactly for auto-assignment.'),
+                        Forms\Components\TagsInput::make('covered_lgas')
+                            ->label('Covered LGAs')
+                            ->placeholder('Add an LGA name')
+                            ->helperText('Preferred match when both state and LGA are set on the learner.'),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (callable $get) => $get('role') === 'facilitator'),
+                Forms\Components\Section::make('Learner facilitator assignment')
+                    ->description('Override automatic location-based assignment when needed. Queued learners had no matching facilitator coverage.')
+                    ->schema([
+                        Forms\Components\Select::make('facilitator_id')
+                            ->label('Assigned facilitator')
+                            ->relationship(
+                                'facilitator',
+                                'name',
+                                fn ($query) => $query->where('role', 'facilitator')->where('is_active', true)
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+                        Forms\Components\Toggle::make('is_in_facilitator_queue')
+                            ->label('In facilitator assignment queue')
+                            ->helperText('Turn off after manually assigning a facilitator.'),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (callable $get) => $get('role') === 'student'),
                 Forms\Components\Section::make('Password')
                     ->schema([
                         Forms\Components\TextInput::make('password')
@@ -154,6 +187,14 @@ class UserResource extends Resource
                         'partner' => 'success',
                         default => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('facilitator.name')
+                    ->label('Facilitator')
+                    ->toggleable()
+                    ->placeholder('—'),
+                Tables\Columns\IconColumn::make('is_in_facilitator_queue')
+                    ->label('Queued')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -174,6 +215,8 @@ class UserResource extends Resource
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),
+                Tables\Filters\TernaryFilter::make('is_in_facilitator_queue')
+                    ->label('In facilitator queue'),
             ])
             ->headerActions([
                 Tables\Actions\ExportAction::make()

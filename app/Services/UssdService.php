@@ -23,7 +23,7 @@ class UssdService
     // All per-session cache (language, in-progress lead capture, selected course)
     // shares this TTL so it expires together with the session itself: 90s of
     // inactivity ends the USSD session gracefully (see the timeout guard in handle()).
-    private const SESSION_TTL = 100;
+    private const SESSION_TTL = 90;
 
     public function validateHmac(string $rawBody, string $providedHash, string $hashKey): bool
     {
@@ -50,8 +50,8 @@ class UssdService
         // with a clear message instead of silently restarting the menu tree.
         if ($depth > 0 && !Cache::has("ussd_active_{$sessionId}")) {
             return $this->end($this->t($lang,
-                "Session ended due to inactivity. Please dial again.",
-                "An kawo karshen zaman saboda rashin aiki. Da fatan za a sake bugawa."
+                "Session ended. Please dial again.",
+                "Zaman ya kare. Da fatan za a sake bugawa."
             ));
         }
         Cache::put("ussd_active_{$sessionId}", true, self::SESSION_TTL);
@@ -504,10 +504,34 @@ class UssdService
             return $this->handleMyCourses(array_slice($steps, 0, 2), $lang, $sessionId, $phone);
         }
 
-        if ($action === '1') {
-            return $this->end($this->buildProgressMessage($user, $course, $lang));
+        // Check my progress → show Module X of Y, then offer Mark today's lesson done
+        if ($action === '1' && $depth === 4) {
+            $progress = $this->buildProgressMessage($user, $course, $lang);
+            $markLabel = $this->t($lang, "Mark today's lesson done", "Kammala darasin yau");
+            $backLabel = $this->t($lang, "Back", "Koma");
+            $menuSuffix = "\n1. {$markLabel}\n2. {$backLabel}";
+            $budget = (self::MAX_CHARS - 4) - mb_strlen($menuSuffix);
+            $body = $this->truncateToLength($progress, $budget);
+
+            return $this->con($body . $menuSuffix);
         }
 
+        // After progress screen: mark lesson or return to course actions
+        if ($action === '1' && $depth === 5) {
+            $progressAction = $steps[4] ?? '';
+
+            if ($progressAction === '2') {
+                return $this->handleMyCourses(array_slice($steps, 0, 3), $lang, $sessionId, $phone);
+            }
+
+            if ($progressAction === '1') {
+                return $this->end($this->completeTodaysLesson($user, $course, $lang));
+            }
+
+            return $this->end($this->t($lang, "Invalid option.", "Zabin ba daidai ba."));
+        }
+
+        // Continue course → mark next incomplete lesson (same student_progress write path)
         if ($action === '2') {
             return $this->end($this->completeTodaysLesson($user, $course, $lang));
         }
@@ -577,10 +601,10 @@ class UssdService
                 && $module->topics->every(fn ($topic) => in_array($topic->id, $completedTopicIds, true));
         })->count();
 
-        return $this->truncate($this->t($lang,
-            "{$course->title}\nModule {$completedModules} of {$totalModules} complete.",
-            "{$course->title}\nAn kammala Darasi {$completedModules} daga cikin {$totalModules}."
-        ));
+        return $this->t($lang,
+            "{$course->title}\nModule {$completedModules} of {$totalModules} complete",
+            "{$course->title}\nAn kammala Darasi {$completedModules} daga cikin {$totalModules}"
+        );
     }
 
     /**
@@ -624,12 +648,23 @@ class UssdService
 
         $this->updateEnrollmentProgress($user, $course);
 
-        $completedCount = count($completedTopicIds) + 1;
-        $totalCount = $topics->count();
+        // Recompute module progress after the write so the learner sees the
+        // updated "Module X of Y complete" line (same wording as Check progress).
+        $modules = $course->modules()->where('is_active', true)->with('topics')->get();
+        $totalModules = $modules->count();
+        $completedTopicIds = StudentProgress::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->where('is_completed', true)
+            ->pluck('topic_id')
+            ->all();
+        $completedModules = $modules->filter(function ($module) use ($completedTopicIds) {
+            return $module->topics->isNotEmpty()
+                && $module->topics->every(fn ($topic) => in_array($topic->id, $completedTopicIds, true));
+        })->count();
 
         return $this->truncate($this->t($lang,
-            "'{$nextTopic->title}' marked as complete! ({$completedCount} of {$totalCount} lessons done in {$course->title}.)",
-            "An kammala '{$nextTopic->title}'! ({$completedCount} daga cikin {$totalCount} darussa a {$course->title}.)"
+            "'{$nextTopic->title}' marked as complete!\nModule {$completedModules} of {$totalModules} complete",
+            "An kammala '{$nextTopic->title}'!\nAn kammala Darasi {$completedModules} daga cikin {$totalModules}"
         ));
     }
 
