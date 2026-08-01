@@ -14,12 +14,21 @@ class Apprenticeship extends Model
         'certificate_id',
         'status',
         'reviewed_at',
+        'completion_role',
+        'completion_key_skills',
+        'completion_start_date',
+        'completion_end_date',
+        'completion_requested_at',
     ];
 
     protected function casts(): array
     {
         return [
             'reviewed_at' => 'datetime',
+            'completion_key_skills' => 'array',
+            'completion_start_date' => 'date',
+            'completion_end_date' => 'date',
+            'completion_requested_at' => 'datetime',
         ];
     }
 

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\UssdController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OrganisationController;
+use App\Http\Controllers\Api\PartnerDashboardController;
 use App\Http\Controllers\Api\ApprenticeshipSlotController;
 use App\Http\Controllers\Api\ApprenticeshipController;
 use App\Http\Controllers\Api\ApprenticeshipLogController;
@@ -52,7 +53,6 @@ Route::prefix('locations')->group(function () {
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/organisations/register', [OrganisationController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -203,6 +203,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Organisations (self-service org profile)
     Route::get('/organisations/me', [OrganisationController::class, 'me']);
     Route::put('/organisations/me', [OrganisationController::class, 'update']);
+
+    // Partner dashboard (admin-controlled visibility per organisation)
+    Route::get('/partner/permissions', [PartnerDashboardController::class, 'permissions']);
+    Route::get('/partner/dashboard', [PartnerDashboardController::class, 'index']);
 
     // Career Pathways: apprenticeship slots
     Route::get('/career/apprenticeships', [ApprenticeshipSlotController::class, 'index']);

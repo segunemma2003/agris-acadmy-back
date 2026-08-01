@@ -26,6 +26,27 @@ class OrganisationResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Section::make('Partner Contact Account')
+                    ->description('Creates the login the partner will use on the partner dashboard.')
+                    ->schema([
+                        Forms\Components\TextInput::make('contact_name')
+                            ->label('Contact name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('contact_email')
+                            ->label('Contact email')
+                            ->email()
+                            ->required()
+                            ->unique(table: 'users', column: 'email'),
+                        Forms\Components\TextInput::make('contact_password')
+                            ->label('Password')
+                            ->password()
+                            ->revealable()
+                            ->required()
+                            ->minLength(8),
+                    ])
+                    ->columns(2)
+                    ->visibleOn('create'),
                 Forms\Components\Section::make('Organisation')
                     ->schema([
                         Forms\Components\TextInput::make('name')
@@ -49,6 +70,20 @@ class OrganisationResource extends Resource
                             ->disabled()
                             ->dehydrated(),
                     ])->columns(2),
+                Forms\Components\Section::make('Partner Dashboard Access')
+                    ->description('Choose exactly what this partner can see on their dashboard. Nothing checked = no dashboard access yet.')
+                    ->schema([
+                        Forms\Components\CheckboxList::make('dashboard_permissions')
+                            ->label('Visible sections')
+                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
+                            ->helperText(fn ($state) => collect($state ?? [])
+                                ->map(fn ($key) => config("partner_dashboard.sections.$key.description"))
+                                ->filter()
+                                ->implode(' '))
+                            ->live()
+                            ->columns(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -113,12 +148,8 @@ class OrganisationResource extends Resource
     {
         return [
             'index' => Pages\ListOrganisations::route('/'),
+            'create' => Pages\CreateOrganisation::route('/create'),
             'edit' => Pages\EditOrganisation::route('/{record}/edit'),
         ];
-    }
-
-    public static function canCreate(): bool
-    {
-        return false;
     }
 }
