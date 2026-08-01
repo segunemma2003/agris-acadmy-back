@@ -577,15 +577,15 @@ class PartnerDashboardController extends Controller
                     $requirementsText = $requirements;
                     $requirementsList = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $requirements) ?: [])));
                 } elseif (is_array($requirements)) {
-                    $requirementsList = array_values(array_filter($requirements));
-                    $requirementsText = implode("\n", $requirementsList);
+                    $requirementsList = $this->normalizeStringList($requirements);
+                    $requirementsText = implode("\n", $requirementsList) ?: null;
                 } else {
                     $requirementsList = [];
                     $requirementsText = null;
                 }
 
-                $learn = is_array($course->what_you_will_learn) ? array_values(array_filter($course->what_you_will_learn)) : [];
-                $get = is_array($course->what_you_will_get) ? array_values(array_filter($course->what_you_will_get)) : [];
+                $learn = $this->normalizeStringList($course->what_you_will_learn);
+                $get = $this->normalizeStringList($course->what_you_will_get);
 
                 return [
                     'id' => $course->id,
@@ -923,5 +923,43 @@ class PartnerDashboardController extends Controller
         }
 
         return $user;
+    }
+
+    /**
+     * Filament repeaters store rows as [{item: "..."}], while some fields are plain strings.
+     * Always return a flat list of non-empty strings for the partner UI.
+     *
+     * @param  mixed  $value
+     * @return list<string>
+     */
+    private function normalizeStringList($value): array
+    {
+        if (is_string($value)) {
+            return array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $value) ?: [])));
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(function ($row) {
+                if (is_string($row) || is_numeric($row)) {
+                    return trim((string) $row);
+                }
+
+                if (is_array($row)) {
+                    foreach (['item', 'label', 'text', 'value', 'title'] as $key) {
+                        if (isset($row[$key]) && (is_string($row[$key]) || is_numeric($row[$key]))) {
+                            return trim((string) $row[$key]);
+                        }
+                    }
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 }
