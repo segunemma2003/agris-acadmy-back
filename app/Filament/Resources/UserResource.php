@@ -78,16 +78,23 @@ class UserResource extends Resource
                             ->default(true),
                     ])->columns(2),
                 Forms\Components\Section::make('Partner (funder) access')
-                    ->description('Partners gave funding and can view program analytics. They do not host interns. You must tick at least one section or the dashboard will be empty.')
+                    ->description('Partners gave funding and can view program analytics. They do not host interns. Programme Reports always appears for partners (reports you send them). Tick other sections they should see.')
                     ->schema([
                         Forms\Components\CheckboxList::make('dashboard_permissions')
                             ->label('Partner dashboard sections')
-                            ->options(collect(config('partner_dashboard.sections'))->map(fn ($s) => $s['label'])->all())
-                            ->default(fn () => array_keys(config('partner_dashboard.sections')))
-                            ->helperText('Tip: select Platform Overview plus any other sections this funder should see.')
+                            ->options(
+                                collect(config('partner_dashboard.sections'))
+                                    ->reject(fn ($_, $key) => $key === 'reports')
+                                    ->map(fn ($s) => $s['label'])
+                                    ->all()
+                            )
+                            ->default(fn () => array_values(array_filter(
+                                array_keys(config('partner_dashboard.sections')),
+                                fn ($key) => $key !== 'reports'
+                            )))
+                            ->helperText('Programme Reports is always available even if nothing else is ticked. Select Platform Overview plus any other analytics sections this funder should see.')
                             ->columns(2)
                             ->columnSpanFull()
-                            ->required(fn (callable $get) => $get('role') === 'partner')
                             ->dehydrated(fn (callable $get) => $get('role') === 'partner'),
                     ])
                     ->visible(fn (callable $get) => $get('role') === 'partner'),

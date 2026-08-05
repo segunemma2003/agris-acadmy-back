@@ -6,6 +6,7 @@ use App\Filament\Resources\PartnerReportResource\Pages;
 use App\Models\PartnerReport;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\PartnerReportSheetImporter;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -15,6 +16,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class PartnerReportResource extends Resource
 {
@@ -157,28 +160,51 @@ class PartnerReportResource extends Resource
                     ->columns(3),
 
                 Forms\Components\Section::make('Participants registered / reached')
-                    ->description('Detailed list partners can download from their dashboard.')
+                    ->description('Upload an Excel/CSV sheet or edit the table manually. Partners see and can download this list.')
                     ->schema([
+                        self::participantSheetUpload('participants_registered', 'participants_registered_count', 'Registered / reached'),
                         self::participantRepeater('participants_registered', 'participants_registered_count'),
                     ])
-                    ->collapsed(),
+                    ->collapsed(false),
 
                 Forms\Components\Section::make('Participants selected for the programme')
+                    ->description('Upload Excel/CSV to replace this table, or edit rows manually.')
                     ->schema([
+                        self::participantSheetUpload('participants_selected', 'participants_selected_count', 'Selected'),
                         self::participantRepeater('participants_selected', 'participants_selected_count'),
                     ])
                     ->collapsed(),
 
                 Forms\Components\Section::make('Enrolled participants')
-                    ->description('People captured as enrolled for this period.')
+                    ->description('People captured as enrolled for this period. Excel upload replaces the current table.')
                     ->schema([
+                        self::participantSheetUpload('participants_enrolled', 'participants_enrolled_count', 'Enrolled'),
                         self::participantRepeater('participants_enrolled', 'participants_enrolled_count'),
                     ])
                     ->collapsed(),
 
                 Forms\Components\Section::make('Activity links & media')
-                    ->description('Share Google Docs and photo URLs from programme activities.')
+                    ->description('Share Google Docs and photo URLs. You can upload an Excel/CSV (columns: title, url, type) to fill both tables.')
                     ->schema([
+                        Forms\Components\FileUpload::make('activity_links_sheet')
+                            ->label('Upload activity links Excel / CSV')
+                            ->helperText('Columns: title, url, type (google_doc or image). Replaces Google Doc and image link tables.')
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                                'text/csv',
+                                'text/plain',
+                                'application/csv',
+                            ])
+                            ->disk('local')
+                            ->directory('partner-report-imports')
+                            ->visibility('private')
+                            ->dehydrated(false)
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                self::importActivityLinksFromUpload($state, $set);
+                            })
+                            ->columnSpanFull(),
                         Forms\Components\Repeater::make('google_doc_links')
                             ->label('Google Doc links')
                             ->schema([
@@ -216,6 +242,106 @@ class PartnerReportResource extends Resource
                             ->columnSpanFull(),
                     ]),
             ]);
+    }
+
+    protected static function participantSheetUpload(string $field, string $countField, string $label): Forms\Components\FileUpload
+    {
+        return Forms\Components\FileUpload::make("{$field}_sheet")
+            ->label("Upload {$label} Excel / CSV")
+            ->helperText('Headers: name, email, phone, gender, state, lga, occupation, notes. Upload replaces the table below (partners will see the updated list).')
+            ->acceptedFileTypes([
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel',
+                'text/csv',
+                'text/plain',
+                'application/csv',
+            ])
+            ->disk('local')
+            ->directory('partner-report-imports')
+            ->visibility('private')
+            ->dehydrated(false)
+            ->live()
+            ->afterStateUpdated(function ($state, Set $set) use ($field, $countField, $label) {
+                self::importParticipantsFromUpload($state, $set, $field, $countField, $label);
+            })
+            ->columnSpanFull();
+    }
+
+    protected static function importParticipantsFromUpload(mixed $state, Set $set, string $field, string $countField, string $label): void
+    {
+        $path = self::resolveUploadAbsolutePath($state);
+        if (! $path) {
+            return;
+        }
+
+        try {
+            $rows = PartnerReportSheetImporter::importParticipants($path);
+            $set($field, $rows);
+            $set($countField, count($rows));
+
+            Notification::make()
+                ->title("{$label} sheet imported")
+                ->body(count($rows).' participant row(s) loaded into the table.')
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Could not import sheet')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    protected static function importActivityLinksFromUpload(mixed $state, Set $set): void
+    {
+        $path = self::resolveUploadAbsolutePath($state);
+        if (! $path) {
+            return;
+        }
+
+        try {
+            $parsed = PartnerReportSheetImporter::importActivityLinks($path);
+            $set('google_doc_links', $parsed['google_docs']);
+            $set('image_links', $parsed['images']);
+
+            Notification::make()
+                ->title('Activity links imported')
+                ->body(count($parsed['google_docs']).' doc(s) and '.count($parsed['images']).' image(s) loaded.')
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Could not import activity links')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    protected static function resolveUploadAbsolutePath(mixed $state): ?string
+    {
+        $file = is_array($state) ? ($state[0] ?? null) : $state;
+        if (! $file) {
+            return null;
+        }
+
+        if ($file instanceof TemporaryUploadedFile) {
+            return $file->getRealPath() ?: null;
+        }
+
+        if (is_string($file)) {
+            if (is_file($file)) {
+                return $file;
+            }
+
+            $storagePath = Storage::disk('local')->path($file);
+            if (is_file($storagePath)) {
+                return $storagePath;
+            }
+        }
+
+        return null;
     }
 
     protected static function participantRepeater(string $field, string $countField): Forms\Components\Repeater

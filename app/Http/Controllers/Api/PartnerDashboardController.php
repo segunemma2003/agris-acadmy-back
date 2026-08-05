@@ -45,7 +45,7 @@ class PartnerDashboardController extends Controller
             return $partner;
         }
 
-        $granted = $partner->dashboard_permissions ?? [];
+        $granted = $this->grantedSectionKeys($partner);
         $catalog = config('partner_dashboard.sections');
 
         $sections = collect(array_keys($catalog))
@@ -87,7 +87,7 @@ class PartnerDashboardController extends Controller
             return $partner;
         }
 
-        $granted = $partner->dashboard_permissions ?? [];
+        $granted = $this->grantedSectionKeys($partner);
 
         if (empty($granted)) {
             return response()->json([
@@ -117,6 +117,26 @@ class PartnerDashboardController extends Controller
         }
 
         return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    /**
+     * Programme Reports are always available to partners (reports are sent to them).
+     * Other sections still require an admin grant via dashboard_permissions.
+     *
+     * @return list<string>
+     */
+    private function grantedSectionKeys(User $partner): array
+    {
+        $granted = array_values(array_filter(
+            is_array($partner->dashboard_permissions) ? $partner->dashboard_permissions : [],
+            fn ($key) => is_string($key) && $key !== ''
+        ));
+
+        if (! in_array('reports', $granted, true)) {
+            $granted[] = 'reports';
+        }
+
+        return $granted;
     }
 
     private function platformOverview(): array
