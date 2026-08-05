@@ -55,5 +55,10 @@ return [
             'description' => 'Certificates issued with recipient and course details.',
             'icon' => 'certificate',
         ],
+        'reports' => [
+            'label' => 'Programme Reports',
+            'description' => 'Weekly, monthly and custom impact reports sent by Agrisiti — with stats, participant lists, media and PDF download.',
+            'icon' => 'document',
+        ],
     ],
 ];

@@ -216,6 +216,12 @@ class User extends Authenticatable
         return $this->hasMany(Apprenticeship::class);
     }
 
+    /** Programme reports published to this partner (funder) account. */
+    public function partnerReports(): HasMany
+    {
+        return $this->hasMany(PartnerReport::class, 'partner_id');
+    }
+
     // Helper methods
     public function isAdmin(): bool
     {

@@ -12,6 +12,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Module;
 use App\Models\Organisation;
+use App\Models\PartnerReport;
 use App\Models\StudentProgress;
 use App\Models\TestAttempt;
 use App\Models\Topic;
@@ -110,6 +111,7 @@ class PartnerDashboardController extends Controller
                 'enrollments' => $this->enrollmentsSection(),
                 'apprenticeships' => $this->apprenticeshipsSection(),
                 'certificates' => $this->certificatesSection(),
+                'reports' => $this->reportsSection($partner),
                 default => null,
             };
         }
@@ -895,6 +897,87 @@ class PartnerDashboardController extends Controller
         $raw = trim((string) ($state ?: $location ?: ''));
 
         return $raw === '' ? 'unspecified' : strtolower($raw);
+    }
+
+    private function reportsSection(User $partner): array
+    {
+        $reports = PartnerReport::query()
+            ->where('partner_id', $partner->id)
+            ->where('status', 'published')
+            ->latest('published_at')
+            ->latest('id')
+            ->get();
+
+        $payloads = $reports->map(fn (PartnerReport $report) => $report->toPartnerPayload())->values();
+
+        $totals = [
+            'reports' => $payloads->count(),
+            'registered' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_registered')['value'] ?? 0),
+            'selected' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_selected')['value'] ?? 0),
+            'enrolled' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_enrolled')['value'] ?? 0),
+            'jobs_created' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'jobs_created')['value'] ?? 0),
+            'enterprises' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'enterprises_created')['value'] ?? 0),
+            'demo_hubs' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'demo_hubs')['value'] ?? 0),
+        ];
+
+        $byPeriod = $payloads
+            ->groupBy('period_type')
+            ->map(fn ($group, $type) => ['label' => ucfirst((string) $type), 'value' => $group->count()])
+            ->values()
+            ->all();
+
+        $trendPoints = $reports
+            ->sortBy(fn (PartnerReport $r) => $r->published_at?->timestamp ?? $r->created_at?->timestamp ?? 0)
+            ->values()
+            ->map(fn (PartnerReport $r) => [
+                'label' => $r->title,
+                'value' => max(
+                    (int) $r->participants_enrolled_count,
+                    count($r->participants_enrolled ?? [])
+                ),
+            ])
+            ->take(-8)
+            ->values()
+            ->all();
+
+        return [
+            'stats' => [
+                ['key' => 'reports_sent', 'label' => 'Reports received', 'value' => $totals['reports'], 'unit' => 'count'],
+                ['key' => 'registered_total', 'label' => 'Registered / reached (all reports)', 'value' => $totals['registered'], 'unit' => 'count'],
+                ['key' => 'selected_total', 'label' => 'Selected (all reports)', 'value' => $totals['selected'], 'unit' => 'count'],
+                ['key' => 'enrolled_total', 'label' => 'Enrolled (all reports)', 'value' => $totals['enrolled'], 'unit' => 'count'],
+                ['key' => 'jobs_created_total', 'label' => 'Jobs created (all reports)', 'value' => $totals['jobs_created'], 'unit' => 'count'],
+                ['key' => 'demo_hubs_total', 'label' => 'Demo hubs (all reports)', 'value' => $totals['demo_hubs'], 'unit' => 'count'],
+                ['key' => 'enterprises_total', 'label' => 'Enterprises created (all reports)', 'value' => $totals['enterprises'], 'unit' => 'count'],
+            ],
+            'breakdowns' => array_values(array_filter([
+                count($byPeriod) > 0 ? ['title' => 'Reports by period type', 'items' => $byPeriod] : null,
+                [
+                    'title' => 'Cumulative participant funnel',
+                    'items' => [
+                        ['label' => 'Registered / reached', 'value' => $totals['registered']],
+                        ['label' => 'Selected', 'value' => $totals['selected']],
+                        ['label' => 'Enrolled', 'value' => $totals['enrolled']],
+                    ],
+                ],
+                [
+                    'title' => 'Cumulative jobs & enterprise',
+                    'items' => [
+                        ['label' => 'Jobs created', 'value' => $totals['jobs_created']],
+                        ['label' => 'Demo hubs', 'value' => $totals['demo_hubs']],
+                        ['label' => 'Enterprises', 'value' => $totals['enterprises']],
+                    ],
+                ],
+            ])),
+            'trend' => $trendPoints
+                ? [
+                    'title' => 'Enrolled per report',
+                    'unit' => 'count',
+                    'points' => $trendPoints,
+                ]
+                : null,
+            'reports' => $payloads->all(),
+        ];
     }
 
     private function ageBreakdown()
