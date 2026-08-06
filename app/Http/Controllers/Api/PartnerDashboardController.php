@@ -18,6 +18,7 @@ use App\Models\TestAttempt;
 use App\Models\Topic;
 use App\Models\TopicTestAttempt;
 use App\Models\User;
+use App\Support\ProgrammeImpactDataset;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -100,7 +101,7 @@ class PartnerDashboardController extends Controller
         $orderedSections = array_filter(array_keys(config('partner_dashboard.sections')), fn ($key) => in_array($key, $granted, true));
 
         foreach ($orderedSections as $section) {
-            $data[$section] = match ($section) {
+            $payload = match ($section) {
                 'platform_overview' => $this->platformOverview(),
                 'courses' => $this->coursesSection(),
                 'course_performance' => $this->coursePerformanceSection(),
@@ -114,6 +115,13 @@ class PartnerDashboardController extends Controller
                 'reports' => $this->reportsSection($partner),
                 default => null,
             };
+
+            // Replace programme-related KPI figures; catalogs / name lists stay from live data.
+            if (is_array($payload) && $section !== 'reports') {
+                $payload = ProgrammeImpactDataset::applyFigures($payload, $section);
+            }
+
+            $data[$section] = $payload;
         }
 
         return response()->json(['success' => true, 'data' => $data]);
@@ -928,74 +936,49 @@ class PartnerDashboardController extends Controller
             ->latest('id')
             ->get();
 
-        $payloads = $reports->map(fn (PartnerReport $report) => $report->toPartnerPayload())->values();
+        $adminPayloads = $reports->map(fn (PartnerReport $report) => $report->toPartnerPayload())->values();
 
-        $totals = [
-            'reports' => $payloads->count(),
-            'registered' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_registered')['value'] ?? 0),
-            'selected' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_selected')['value'] ?? 0),
-            'enrolled' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'participants_enrolled')['value'] ?? 0),
-            'jobs_created' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'jobs_created')['value'] ?? 0),
-            'enterprises' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'enterprises_created')['value'] ?? 0),
-            'demo_hubs' => $payloads->sum(fn ($r) => (int) collect($r['stats'])->firstWhere('key', 'demo_hubs')['value'] ?? 0),
+        // Replace outcome figures with programme impact stats/tabs; keep uploaded name lists & media.
+        if ($adminPayloads->isEmpty()) {
+            $payloads = collect([ProgrammeImpactDataset::toPartnerReportPayload(-1)]);
+        } else {
+            $payloads = $adminPayloads
+                ->map(fn (array $payload) => ProgrammeImpactDataset::overlayOn($payload))
+                ->values();
+        }
+
+        $glance = collect(ProgrammeImpactDataset::glanceStats());
+        $glanceValue = fn (string $key): int|float => (float) ($glance->firstWhere('key', $key)['value'] ?? 0);
+
+        $trendPoints = [
+            ['label' => 'Applications', 'value' => (int) $glanceValue('total_applications')],
+            ['label' => 'Selected', 'value' => (int) $glanceValue('participants_selected')],
+            ['label' => 'LMS enrolled', 'value' => (int) $glanceValue('lms_enrolled')],
+            ['label' => 'Active learners', 'value' => (int) $glanceValue('active_learners')],
+            ['label' => 'Pitch entries', 'value' => (int) $glanceValue('pitch_entries')],
+            ['label' => 'Grant winners', 'value' => (int) $glanceValue('grant_winners')],
         ];
 
-        $byPeriod = $payloads
-            ->groupBy('period_type')
-            ->map(fn ($group, $type) => ['label' => ucfirst((string) $type), 'value' => $group->count()])
-            ->values()
-            ->all();
-
-        $trendPoints = $reports
-            ->sortBy(fn (PartnerReport $r) => $r->published_at?->timestamp ?? $r->created_at?->timestamp ?? 0)
-            ->values()
-            ->map(fn (PartnerReport $r) => [
-                'label' => $r->title,
-                'value' => max(
-                    (int) $r->participants_enrolled_count,
-                    count($r->participants_enrolled ?? [])
-                ),
-            ])
-            ->take(-8)
-            ->values()
-            ->all();
-
         return [
-            'stats' => [
-                ['key' => 'reports_sent', 'label' => 'Reports received', 'value' => $totals['reports'], 'unit' => 'count'],
-                ['key' => 'registered_total', 'label' => 'Registered / reached (all reports)', 'value' => $totals['registered'], 'unit' => 'count'],
-                ['key' => 'selected_total', 'label' => 'Selected (all reports)', 'value' => $totals['selected'], 'unit' => 'count'],
-                ['key' => 'enrolled_total', 'label' => 'Enrolled (all reports)', 'value' => $totals['enrolled'], 'unit' => 'count'],
-                ['key' => 'jobs_created_total', 'label' => 'Jobs created (all reports)', 'value' => $totals['jobs_created'], 'unit' => 'count'],
-                ['key' => 'demo_hubs_total', 'label' => 'Demo hubs (all reports)', 'value' => $totals['demo_hubs'], 'unit' => 'count'],
-                ['key' => 'enterprises_total', 'label' => 'Enterprises created (all reports)', 'value' => $totals['enterprises'], 'unit' => 'count'],
+            'stats' => array_merge(
+                [
+                    [
+                        'key' => 'reports_sent',
+                        'label' => 'Reports available',
+                        'value' => $payloads->count(),
+                        'unit' => 'count',
+                    ],
+                ],
+                ProgrammeImpactDataset::glanceStats()
+            ),
+            'breakdowns' => ProgrammeImpactDataset::programmeBreakdowns(),
+            'gender_filters' => ProgrammeImpactDataset::genderFilters(),
+            'location_filters' => ProgrammeImpactDataset::locationFilters(),
+            'trend' => [
+                'title' => 'Programme funnel',
+                'unit' => 'count',
+                'points' => $trendPoints,
             ],
-            'breakdowns' => array_values(array_filter([
-                count($byPeriod) > 0 ? ['title' => 'Reports by period type', 'items' => $byPeriod] : null,
-                [
-                    'title' => 'Cumulative participant funnel',
-                    'items' => [
-                        ['label' => 'Registered / reached', 'value' => $totals['registered']],
-                        ['label' => 'Selected', 'value' => $totals['selected']],
-                        ['label' => 'Enrolled', 'value' => $totals['enrolled']],
-                    ],
-                ],
-                [
-                    'title' => 'Cumulative jobs & enterprise',
-                    'items' => [
-                        ['label' => 'Jobs created', 'value' => $totals['jobs_created']],
-                        ['label' => 'Demo hubs', 'value' => $totals['demo_hubs']],
-                        ['label' => 'Enterprises', 'value' => $totals['enterprises']],
-                    ],
-                ],
-            ])),
-            'trend' => $trendPoints
-                ? [
-                    'title' => 'Enrolled per report',
-                    'unit' => 'count',
-                    'points' => $trendPoints,
-                ]
-                : null,
             'reports' => $payloads->all(),
         ];
     }
