@@ -979,6 +979,7 @@ class PartnerDashboardController extends Controller
                 'unit' => 'count',
                 'points' => $trendPoints,
             ],
+            'programme_impact' => true,
             'reports' => $payloads->all(),
         ];
     }

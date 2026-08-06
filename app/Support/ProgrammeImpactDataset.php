@@ -311,20 +311,45 @@ class ProgrammeImpactDataset
                 'blocks' => [
                     [
                         'type' => 'table',
-                        'title' => 'Seed grant summary by state',
-                        'columns' => ['State', 'No. of winners', 'Total seed grants (NGN)'],
+                        'title' => 'Winning topics (focus areas)',
+                        'columns' => ['Topic / focus area', 'Winning teams', 'Share of winners'],
                         'rows' => [
-                            ['Cross River', '2', '300,000'],
+                            ['Aquaculture & fish value chain', '8', '32%'],
+                            ['Rice production & processing', '7', '28%'],
+                            ['Integrated agribusiness', '5', '20%'],
+                            ['Agri-nutrition & value addition', '2', '8%'],
+                            ['Mixed farming / agribusiness', '2', '8%'],
+                            ['Women-led agribusiness', '1', '4%'],
+                            ['TOTAL', '25', '100%'],
+                        ],
+                        'chart' => [
+                            'title' => 'Winning topics (teams)',
+                            'items' => [
+                                ['label' => 'Aquaculture & fish', 'value' => 8],
+                                ['label' => 'Rice production', 'value' => 7],
+                                ['label' => 'Integrated agribusiness', 'value' => 5],
+                                ['label' => 'Agri-nutrition', 'value' => 2],
+                                ['label' => 'Mixed farming', 'value' => 2],
+                                ['label' => 'Women-led', 'value' => 1],
+                            ],
+                        ],
+                    ],
+                    [
+                        'type' => 'table',
+                        'title' => 'Seed grant disbursed per state (NGN)',
+                        'columns' => ['State', 'Winners', 'Disbursed (NGN)'],
+                        'rows' => [
+                            ['Kano', '6', '1,000,000'],
+                            ['Niger', '5', '900,000'],
                             ['Enugu', '3', '600,000'],
                             ['Rivers', '3', '600,000'],
                             ['Bayelsa', '3', '600,000'],
                             ['Ogun', '3', '600,000'],
-                            ['Niger', '5', '900,000'],
-                            ['Kano', '6', '1,000,000'],
+                            ['Cross River', '2', '300,000'],
                             ['TOTAL', '25', '4,600,000'],
                         ],
                         'chart' => [
-                            'title' => 'Seed grants by state (NGN)',
+                            'title' => 'Disbursed per state (NGN)',
                             'items' => [
                                 ['label' => 'Kano', 'value' => 1000000],
                                 ['label' => 'Niger', 'value' => 900000],
@@ -646,7 +671,18 @@ class ProgrammeImpactDataset
                 ],
             ],
             [
-                'title' => 'Seed grants by state (NGN)',
+                'title' => 'Winning topics (focus areas)',
+                'items' => [
+                    ['label' => 'Aquaculture & fish', 'value' => 8],
+                    ['label' => 'Rice production', 'value' => 7],
+                    ['label' => 'Integrated agribusiness', 'value' => 5],
+                    ['label' => 'Agri-nutrition', 'value' => 2],
+                    ['label' => 'Mixed farming', 'value' => 2],
+                    ['label' => 'Women-led', 'value' => 1],
+                ],
+            ],
+            [
+                'title' => 'Seed grants disbursed per state (NGN)',
                 'items' => [
                     ['label' => 'Kano', 'value' => 1000000],
                     ['label' => 'Niger', 'value' => 900000],
@@ -818,103 +854,156 @@ class ProgrammeImpactDataset
     }
 
     /**
-     * Map of dashboard section stat keys → programme figures (lists/catalogs untouched).
+     * Full programme KPI set for a dashboard section (replaces live DB tiles).
      *
-     * @return array<string, array{label:string,value:float|int,unit:string}>
+     * @return list<array{key:string,label:string,value:float|int,unit:string}>
      */
-    public static function sectionFigureMap(): array
+    public static function sectionStats(?string $sectionKey): array
     {
-        return [
-            'total_learners' => ['label' => 'Participants selected', 'value' => 3591, 'unit' => 'count'],
-            'active_students' => ['label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
-            'total_students' => ['label' => 'Participants selected', 'value' => 3591, 'unit' => 'count'],
-            'active_learners' => ['label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
-            'total_enrollments' => ['label' => 'LMS enrolled', 'value' => 2690, 'unit' => 'count'],
-            'total' => ['label' => 'LMS enrolled', 'value' => 2690, 'unit' => 'count'],
-            'active' => ['label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
-            'completed' => ['label' => 'Active at close', 'value' => 2539, 'unit' => 'count'],
-            'completion_rate' => ['label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
-            'total_modules' => ['label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
-            'placed_interns' => ['label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count'],
-            'learners_on_streak' => ['label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
-        ];
+        $core = self::glanceStats();
+
+        $extra = match ($sectionKey) {
+            'platform_overview', 'learners', 'demographics', 'geography' => [
+                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
+                ['key' => 'pwds_enrolled', 'label' => 'PWDs enrolled', 'value' => 161, 'unit' => 'count'],
+                ['key' => 'idp_participants', 'label' => 'IDP / refugee participants', 'value' => 52, 'unit' => 'count'],
+                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
+            ],
+            'courses', 'course_performance', 'engagement' => [
+                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
+                ['key' => 'active_rate', 'label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
+                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+            ],
+            'enrollments' => [
+                ['key' => 'active_rate', 'label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
+                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
+                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
+            ],
+            'apprenticeships' => [
+                ['key' => 'semi_finals', 'label' => 'Semi-final teams', 'value' => 82, 'unit' => 'count'],
+                ['key' => 'finalist_teams', 'label' => 'Finalist teams', 'value' => 54, 'unit' => 'count'],
+                ['key' => 'dignity_sessions', 'label' => 'Dignity in Labour sessions', 'value' => 15, 'unit' => 'count'],
+                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+                ['key' => 'avg_grant', 'label' => 'Avg grant / team (NGN)', 'value' => 184000, 'unit' => 'ngn'],
+            ],
+            'certificates' => [
+                ['key' => 'modules_delivered', 'label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
+                ['key' => 'grant_winners', 'label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count'],
+                ['key' => 'active_learners', 'label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
+            ],
+            default => [
+                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
+            ],
+        };
+
+        // Deduplicate by key (glance first, then section extras).
+        $byKey = [];
+        foreach (array_merge($core, $extra) as $stat) {
+            $byKey[$stat['key']] = $stat;
+        }
+
+        return array_values($byKey);
     }
 
     /**
-     * Replace matching KPI tiles on a section payload; leave catalogs, students, lists alone.
-     * Also injects programme gender/location filters and state breakdown charts where relevant.
+     * Replace section KPI tiles with programme figures; keep catalogs / name lists.
+     * Injects gender/location filters, state & grant breakdowns, and marks programme_impact.
      *
      * @param  array<string, mixed>  $section
-     * @param  string|null  $sectionKey
      * @return array<string, mixed>
      */
     public static function applyFigures(array $section, ?string $sectionKey = null): array
     {
-        $map = self::sectionFigureMap();
-
-        foreach (['stats', 'highlight_stats'] as $field) {
-            if (empty($section[$field]) || ! is_array($section[$field])) {
-                continue;
-            }
-
-            $section[$field] = collect($section[$field])
-                ->map(function ($stat) use ($map) {
-                    if (! is_array($stat)) {
-                        return $stat;
-                    }
-                    $key = (string) ($stat['key'] ?? '');
-                    if ($key === '' || ! isset($map[$key])) {
-                        return $stat;
-                    }
-
-                    return array_merge($stat, $map[$key], ['key' => $key]);
-                })
-                ->values()
-                ->all();
-        }
+        $section['programme_impact'] = true;
+        $section['stats'] = self::sectionStats($sectionKey);
+        $section['highlight_stats'] = array_slice(self::glanceStats(), 0, 6);
+        $section['gender_filters'] = self::genderFilters();
+        $section['location_filters'] = self::locationFilters();
 
         $breakdowns = self::programmeBreakdowns();
 
-        if (in_array($sectionKey, ['platform_overview', 'learners', 'demographics', 'geography', 'engagement'], true)) {
-            $section['gender_filters'] = self::genderFilters();
-            $section['location_filters'] = self::locationFilters();
+        $preferred = match ($sectionKey) {
+            'demographics' => [
+                'Gender at registration',
+                'Gender among selected (61% female)',
+                'Female registrants by state',
+                'PWD at registration by state',
+                'IDP participants by state',
+                'Registrations by state',
+            ],
+            'geography' => [
+                'Registrations by state',
+                'Active learners by state',
+                'Demo hub visits by state',
+                'Seed grant winners by state',
+                'Seed grants disbursed per state (NGN)',
+                'Female registrants by state',
+            ],
+            'learners' => [
+                'Participant funnel',
+                'Gender among selected (61% female)',
+                'Active learners by state',
+                'Registrations by state',
+                'Female registrants by state',
+            ],
+            'courses', 'course_performance', 'engagement' => [
+                'Participant funnel',
+                'Active learners by state',
+                'Competition funnel',
+                'Winning topics (focus areas)',
+            ],
+            'enrollments' => [
+                'Participant funnel',
+                'Active learners by state',
+                'Gender among selected (61% female)',
+                'Registrations by state',
+            ],
+            'apprenticeships' => [
+                'Competition funnel',
+                'Winning topics (focus areas)',
+                'Seed grant winners by state',
+                'Seed grants disbursed per state (NGN)',
+                'Demo hub visits by state',
+            ],
+            'certificates' => [
+                'Participant funnel',
+                'Winning topics (focus areas)',
+                'Seed grant winners by state',
+            ],
+            default => [
+                'Participant funnel',
+                'Competition funnel',
+                'Gender at registration',
+                'Gender among selected (61% female)',
+                'Registrations by state',
+                'Active learners by state',
+                'Demo hub visits by state',
+                'Winning topics (focus areas)',
+                'Seed grants disbursed per state (NGN)',
+                'Seed grant winners by state',
+            ],
+        };
 
-            $preferred = match ($sectionKey) {
-                'demographics' => [
-                    'Gender at registration',
-                    'Gender among selected (61% female)',
-                    'Female registrants by state',
-                    'PWD at registration by state',
-                    'IDP participants by state',
-                ],
-                'geography' => [
-                    'Registrations by state',
-                    'Active learners by state',
-                    'Demo hub visits by state',
-                    'Seed grant winners by state',
-                    'Female registrants by state',
-                ],
-                'learners' => [
-                    'Participant funnel',
-                    'Gender among selected (61% female)',
-                    'Active learners by state',
-                    'Registrations by state',
-                ],
-                default => [
-                    'Participant funnel',
-                    'Gender at registration',
-                    'Gender among selected (61% female)',
-                    'Registrations by state',
-                    'Active learners by state',
-                    'Competition funnel',
-                ],
-            };
+        $section['breakdowns'] = collect($breakdowns)
+            ->filter(fn ($b) => in_array($b['title'], $preferred, true))
+            ->values()
+            ->all();
 
-            $section['breakdowns'] = collect($breakdowns)
-                ->filter(fn ($b) => in_array($b['title'], $preferred, true))
-                ->values()
-                ->all();
-        }
+        // Programme funnel trend for chart sections.
+        $section['trend'] = [
+            'title' => 'Programme funnel',
+            'unit' => 'count',
+            'points' => [
+                ['label' => 'Applications', 'value' => 6664],
+                ['label' => 'Selected', 'value' => 3591],
+                ['label' => 'LMS enrolled', 'value' => 2690],
+                ['label' => 'Active', 'value' => 2539],
+                ['label' => 'Pitch entries', 'value' => 155],
+                ['label' => 'Winners', 'value' => 25],
+            ],
+        ];
 
         return $section;
     }
