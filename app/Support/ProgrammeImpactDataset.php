@@ -20,7 +20,7 @@ class ProgrammeImpactDataset
     }
 
     /**
-     * Headline KPIs used for report stats tiles / charts.
+     * Headline KPIs used for report stats tiles / charts (full programme set from screenshots).
      *
      * @return list<array{key:string,label:string,value:float|int,unit:string}>
      */
@@ -31,11 +31,24 @@ class ProgrammeImpactDataset
             ['key' => 'participants_selected', 'label' => 'Participants selected', 'value' => 3591, 'unit' => 'count'],
             ['key' => 'lms_enrolled', 'label' => 'LMS enrolled', 'value' => 2690, 'unit' => 'count'],
             ['key' => 'active_learners', 'label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
+            ['key' => 'active_rate', 'label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
             ['key' => 'modules_delivered', 'label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
+            ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
             ['key' => 'demo_hub_visits', 'label' => 'Demo hub visits', 'value' => 117, 'unit' => 'count'],
+            ['key' => 'dignity_sessions', 'label' => 'Dignity in Labour sessions', 'value' => 15, 'unit' => 'count'],
             ['key' => 'pitch_entries', 'label' => 'Pitch entries', 'value' => 155, 'unit' => 'count'],
+            ['key' => 'semi_finals', 'label' => 'Semi-final teams', 'value' => 82, 'unit' => 'count'],
+            ['key' => 'finalist_teams', 'label' => 'Finalist teams', 'value' => 54, 'unit' => 'count'],
+            ['key' => 'expert_judges', 'label' => 'Expert judges', 'value' => 13, 'unit' => 'count'],
             ['key' => 'grant_winners', 'label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count'],
             ['key' => 'seed_grants_disbursed', 'label' => 'Seed grants disbursed (NGN)', 'value' => 4600000, 'unit' => 'ngn'],
+            ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+            ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
+            ['key' => 'female_registration_pct', 'label' => 'Female (registration)', 'value' => 38.9, 'unit' => 'percentage'],
+            ['key' => 'pwds_enrolled', 'label' => 'PWDs enrolled', 'value' => 161, 'unit' => 'count'],
+            ['key' => 'idp_participants', 'label' => 'IDP / refugee participants', 'value' => 52, 'unit' => 'count'],
+            ['key' => 'registration_screened', 'label' => 'Registration cohort (screened table)', 'value' => 4405, 'unit' => 'count'],
+            ['key' => 'overall_screened_pct', 'label' => 'Overall screened', 'value' => 61.1, 'unit' => 'percentage'],
         ];
     }
 
@@ -49,7 +62,7 @@ class ProgrammeImpactDataset
                 'key' => 'glance',
                 'label' => 'At a glance',
                 'title' => '2. Programme at a Glance',
-                'narrative' => 'Nine headline results spanning applications through seed grant disbursement across seven states.',
+                'narrative' => 'Full programme headline results from applications through seed grant disbursement across seven states — matching the Key Results and At a Glance screenshots.',
                 'blocks' => [
                     [
                         'type' => 'stat_grid',
@@ -60,10 +73,29 @@ class ProgrammeImpactDataset
                             ['label' => 'LMS enrolled', 'value' => 2690, 'unit' => 'count', 'hint' => 'Final figure at programme close'],
                             ['label' => 'Active learners', 'value' => 2539, 'unit' => 'count', 'hint' => '94.4% of enrolled – programme-wide'],
                             ['label' => 'Modules delivered', 'value' => 11, 'unit' => 'count', 'hint' => 'February to April 2026; all via Agrisiti LMS'],
+                            ['label' => 'Learning groups', 'value' => 319, 'unit' => 'count', 'hint' => 'Across all 7 states by April 2026'],
                             ['label' => 'Demo hub visits', 'value' => 117, 'unit' => 'count', 'hint' => 'Rice processing, aquaculture, agritech sites'],
+                            ['label' => 'Dignity in Labour sessions', 'value' => 15, 'unit' => 'count', 'hint' => 'Niger (12) + Rivers (3)'],
                             ['label' => 'Pitch entries', 'value' => 155, 'unit' => 'count', 'hint' => 'Business Track teams; all 7 states represented'],
+                            ['label' => 'Semi-final teams', 'value' => 82, 'unit' => 'count'],
+                            ['label' => 'Finalist teams', 'value' => 54, 'unit' => 'count', 'hint' => '36 virtual + 18 live in Kano'],
+                            ['label' => 'Expert judges', 'value' => 13, 'unit' => 'count'],
                             ['label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count', 'hint' => 'All 7 states represented'],
                             ['label' => 'Seed grants disbursed', 'value' => 4600000, 'unit' => 'ngn', 'hint' => 'Across 25 winning agribusiness teams'],
+                            ['label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage', 'hint' => 'Up from 38.9% at registration'],
+                            ['label' => 'PWDs enrolled', 'value' => 161, 'unit' => 'count'],
+                            ['label' => 'IDP / refugee', 'value' => 52, 'unit' => 'count'],
+                            ['label' => 'States covered', 'value' => 7, 'unit' => 'count'],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Programme at a Glance — headline funnel',
+                        'items' => [
+                            ['label' => 'Applications', 'value' => 6664],
+                            ['label' => 'Selected', 'value' => 3591],
+                            ['label' => 'LMS enrolled', 'value' => 2690],
+                            ['label' => 'Active', 'value' => 2539],
                         ],
                     ],
                 ],
@@ -142,6 +174,19 @@ class ProgrammeImpactDataset
                             ['label' => 'Overall screened', 'value' => 61.1, 'unit' => 'percentage', 'hint' => 'Programme screening coverage'],
                         ],
                     ],
+                    [
+                        'type' => 'chart',
+                        'title' => '% Screened by state',
+                        'items' => [
+                            ['label' => 'Ogun', 'value' => 77.9],
+                            ['label' => 'Rivers', 'value' => 73.2],
+                            ['label' => 'Niger', 'value' => 68.4],
+                            ['label' => 'Kano', 'value' => 66.3],
+                            ['label' => 'Bayelsa', 'value' => 35.2],
+                            ['label' => 'Cross River', 'value' => 0],
+                            ['label' => 'Enugu', 'value' => 0],
+                        ],
+                    ],
                 ],
             ],
             [
@@ -185,6 +230,50 @@ class ProgrammeImpactDataset
                                 ['label' => 'Enugu', 'value' => 127],
                                 ['label' => 'Bayelsa', 'value' => 105],
                             ],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Monthly LMS enrolled',
+                        'items' => [
+                            ['label' => 'Feb 2026', 'value' => 1198],
+                            ['label' => 'Mar 2026', 'value' => 1623],
+                            ['label' => 'Apr 2026', 'value' => 2690],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Monthly active learners',
+                        'items' => [
+                            ['label' => 'Feb 2026', 'value' => 1173],
+                            ['label' => 'Mar 2026', 'value' => 1512],
+                            ['label' => 'Apr 2026', 'value' => 2539],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Feb enrolled by state',
+                        'items' => [
+                            ['label' => 'Kano', 'value' => 369],
+                            ['label' => 'Niger', 'value' => 261],
+                            ['label' => 'Ogun', 'value' => 253],
+                            ['label' => 'Cross River', 'value' => 180],
+                            ['label' => 'Rivers', 'value' => 148],
+                            ['label' => 'Bayelsa', 'value' => 119],
+                            ['label' => 'Enugu', 'value' => 61],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Mar enrolled by state',
+                        'items' => [
+                            ['label' => 'Kano', 'value' => 580],
+                            ['label' => 'Niger', 'value' => 261],
+                            ['label' => 'Ogun', 'value' => 253],
+                            ['label' => 'Cross River', 'value' => 164],
+                            ['label' => 'Rivers', 'value' => 148],
+                            ['label' => 'Bayelsa', 'value' => 112],
+                            ['label' => 'Enugu', 'value' => 98],
                         ],
                     ],
                     [
@@ -299,6 +388,14 @@ class ProgrammeImpactDataset
                                 ['label' => 'Finals', 'value' => 54],
                                 ['label' => 'Winners', 'value' => 25],
                             ],
+                        ],
+                    ],
+                    [
+                        'type' => 'chart',
+                        'title' => 'Finals split (54 teams)',
+                        'items' => [
+                            ['label' => 'Virtual final (15 May)', 'value' => 36],
+                            ['label' => 'Live final – Kano (16 May)', 'value' => 18],
                         ],
                     ],
                 ],
@@ -717,6 +814,79 @@ class ProgrammeImpactDataset
                     ['label' => 'Bayelsa', 'value' => 1],
                 ],
             ],
+            [
+                'title' => '% Screened by state',
+                'items' => [
+                    ['label' => 'Ogun', 'value' => 77.9],
+                    ['label' => 'Rivers', 'value' => 73.2],
+                    ['label' => 'Niger', 'value' => 68.4],
+                    ['label' => 'Kano', 'value' => 66.3],
+                    ['label' => 'Bayelsa', 'value' => 35.2],
+                    ['label' => 'Cross River', 'value' => 0],
+                    ['label' => 'Enugu', 'value' => 0],
+                ],
+            ],
+            [
+                'title' => 'Monthly LMS enrolled',
+                'items' => [
+                    ['label' => 'Feb 2026', 'value' => 1198],
+                    ['label' => 'Mar 2026', 'value' => 1623],
+                    ['label' => 'Apr 2026', 'value' => 2690],
+                ],
+            ],
+            [
+                'title' => 'Monthly active learners',
+                'items' => [
+                    ['label' => 'Feb 2026', 'value' => 1173],
+                    ['label' => 'Mar 2026', 'value' => 1512],
+                    ['label' => 'Apr 2026', 'value' => 2539],
+                ],
+            ],
+            [
+                'title' => 'Feb enrolled by state',
+                'items' => [
+                    ['label' => 'Kano', 'value' => 369],
+                    ['label' => 'Niger', 'value' => 261],
+                    ['label' => 'Ogun', 'value' => 253],
+                    ['label' => 'Cross River', 'value' => 180],
+                    ['label' => 'Rivers', 'value' => 148],
+                    ['label' => 'Bayelsa', 'value' => 119],
+                    ['label' => 'Enugu', 'value' => 61],
+                ],
+            ],
+            [
+                'title' => 'Mar enrolled by state',
+                'items' => [
+                    ['label' => 'Kano', 'value' => 580],
+                    ['label' => 'Niger', 'value' => 261],
+                    ['label' => 'Ogun', 'value' => 253],
+                    ['label' => 'Cross River', 'value' => 164],
+                    ['label' => 'Rivers', 'value' => 148],
+                    ['label' => 'Bayelsa', 'value' => 112],
+                    ['label' => 'Enugu', 'value' => 98],
+                ],
+            ],
+            [
+                'title' => 'Dignity in Labour sessions by state',
+                'items' => [
+                    ['label' => 'Niger', 'value' => 12],
+                    ['label' => 'Rivers', 'value' => 3],
+                ],
+            ],
+            [
+                'title' => 'Finals split (54 teams)',
+                'items' => [
+                    ['label' => 'Virtual final', 'value' => 36],
+                    ['label' => 'Live final – Kano', 'value' => 18],
+                ],
+            ],
+            [
+                'title' => 'Gender at registration vs selected',
+                'items' => [
+                    ['label' => 'Female % registration', 'value' => 38.9],
+                    ['label' => 'Female % selected', 'value' => 61.0],
+                ],
+            ],
         ];
     }
 
@@ -858,58 +1028,15 @@ class ProgrammeImpactDataset
      *
      * @return list<array{key:string,label:string,value:float|int,unit:string}>
      */
-    public static function sectionStats(?string $sectionKey): array
+    public static function sectionStats(?string $sectionKey = null): array
     {
-        $core = self::glanceStats();
-
-        $extra = match ($sectionKey) {
-            'platform_overview', 'learners', 'demographics', 'geography' => [
-                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
-                ['key' => 'pwds_enrolled', 'label' => 'PWDs enrolled', 'value' => 161, 'unit' => 'count'],
-                ['key' => 'idp_participants', 'label' => 'IDP / refugee participants', 'value' => 52, 'unit' => 'count'],
-                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
-                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
-            ],
-            'courses', 'course_performance', 'engagement' => [
-                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
-                ['key' => 'active_rate', 'label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
-                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
-            ],
-            'enrollments' => [
-                ['key' => 'active_rate', 'label' => 'Active rate (LMS)', 'value' => 94.4, 'unit' => 'percentage'],
-                ['key' => 'learning_groups', 'label' => 'Learning groups', 'value' => 319, 'unit' => 'count'],
-                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
-            ],
-            'apprenticeships' => [
-                ['key' => 'semi_finals', 'label' => 'Semi-final teams', 'value' => 82, 'unit' => 'count'],
-                ['key' => 'finalist_teams', 'label' => 'Finalist teams', 'value' => 54, 'unit' => 'count'],
-                ['key' => 'dignity_sessions', 'label' => 'Dignity in Labour sessions', 'value' => 15, 'unit' => 'count'],
-                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
-                ['key' => 'avg_grant', 'label' => 'Avg grant / team (NGN)', 'value' => 184000, 'unit' => 'ngn'],
-            ],
-            'certificates' => [
-                ['key' => 'modules_delivered', 'label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
-                ['key' => 'grant_winners', 'label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count'],
-                ['key' => 'active_learners', 'label' => 'Active learners', 'value' => 2539, 'unit' => 'count'],
-            ],
-            default => [
-                ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
-                ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
-            ],
-        };
-
-        // Deduplicate by key (glance first, then section extras).
-        $byKey = [];
-        foreach (array_merge($core, $extra) as $stat) {
-            $byKey[$stat['key']] = $stat;
-        }
-
-        return array_values($byKey);
+        // Every section gets the full screenshot KPI set so nothing is missing.
+        return self::glanceStats();
     }
 
     /**
      * Replace section KPI tiles with programme figures; keep catalogs / name lists.
-     * Injects gender/location filters, state & grant breakdowns, and marks programme_impact.
+     * Injects gender/location filters and ALL screenshot breakdown charts.
      *
      * @param  array<string, mixed>  $section
      * @return array<string, mixed>
@@ -918,80 +1045,11 @@ class ProgrammeImpactDataset
     {
         $section['programme_impact'] = true;
         $section['stats'] = self::sectionStats($sectionKey);
-        $section['highlight_stats'] = array_slice(self::glanceStats(), 0, 6);
+        $section['highlight_stats'] = array_slice(self::glanceStats(), 0, 9);
         $section['gender_filters'] = self::genderFilters();
         $section['location_filters'] = self::locationFilters();
-
-        $breakdowns = self::programmeBreakdowns();
-
-        $preferred = match ($sectionKey) {
-            'demographics' => [
-                'Gender at registration',
-                'Gender among selected (61% female)',
-                'Female registrants by state',
-                'PWD at registration by state',
-                'IDP participants by state',
-                'Registrations by state',
-            ],
-            'geography' => [
-                'Registrations by state',
-                'Active learners by state',
-                'Demo hub visits by state',
-                'Seed grant winners by state',
-                'Seed grants disbursed per state (NGN)',
-                'Female registrants by state',
-            ],
-            'learners' => [
-                'Participant funnel',
-                'Gender among selected (61% female)',
-                'Active learners by state',
-                'Registrations by state',
-                'Female registrants by state',
-            ],
-            'courses', 'course_performance', 'engagement' => [
-                'Participant funnel',
-                'Active learners by state',
-                'Competition funnel',
-                'Winning topics (focus areas)',
-            ],
-            'enrollments' => [
-                'Participant funnel',
-                'Active learners by state',
-                'Gender among selected (61% female)',
-                'Registrations by state',
-            ],
-            'apprenticeships' => [
-                'Competition funnel',
-                'Winning topics (focus areas)',
-                'Seed grant winners by state',
-                'Seed grants disbursed per state (NGN)',
-                'Demo hub visits by state',
-            ],
-            'certificates' => [
-                'Participant funnel',
-                'Winning topics (focus areas)',
-                'Seed grant winners by state',
-            ],
-            default => [
-                'Participant funnel',
-                'Competition funnel',
-                'Gender at registration',
-                'Gender among selected (61% female)',
-                'Registrations by state',
-                'Active learners by state',
-                'Demo hub visits by state',
-                'Winning topics (focus areas)',
-                'Seed grants disbursed per state (NGN)',
-                'Seed grant winners by state',
-            ],
-        };
-
-        $section['breakdowns'] = collect($breakdowns)
-            ->filter(fn ($b) => in_array($b['title'], $preferred, true))
-            ->values()
-            ->all();
-
-        // Programme funnel trend for chart sections.
+        // Full set from screenshots — state, gender, LMS months, grants, topics, competition.
+        $section['breakdowns'] = self::programmeBreakdowns();
         $section['trend'] = [
             'title' => 'Programme funnel',
             'unit' => 'count',
@@ -1001,6 +1059,8 @@ class ProgrammeImpactDataset
                 ['label' => 'LMS enrolled', 'value' => 2690],
                 ['label' => 'Active', 'value' => 2539],
                 ['label' => 'Pitch entries', 'value' => 155],
+                ['label' => 'Semi-finals', 'value' => 82],
+                ['label' => 'Finals', 'value' => 54],
                 ['label' => 'Winners', 'value' => 25],
             ],
         ];
