@@ -974,6 +974,7 @@ class PartnerDashboardController extends Controller
             'breakdowns' => ProgrammeImpactDataset::programmeBreakdowns(),
             'gender_filters' => ProgrammeImpactDataset::genderFilters(),
             'location_filters' => ProgrammeImpactDataset::locationFilters(),
+            'state_profiles' => ProgrammeImpactDataset::stateProfiles(),
             'trend' => [
                 'title' => 'Programme funnel',
                 'unit' => 'count',

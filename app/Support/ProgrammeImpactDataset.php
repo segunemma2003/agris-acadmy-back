@@ -902,20 +902,222 @@ class ProgrammeImpactDataset
     }
 
     /**
-     * Location filters use final active learners by state.
+     * Location chips use Registration & Screening by State (screenshot 4.1) — not live LMS directory.
      *
      * @return list<array{label:string,value:int,key:string}>
      */
     public static function locationFilters(): array
     {
         return [
-            ['key' => 'kano', 'label' => 'Kano', 'value' => 856],
-            ['key' => 'niger', 'label' => 'Niger', 'value' => 568],
-            ['key' => 'ogun', 'label' => 'Ogun', 'value' => 519],
-            ['key' => 'rivers', 'label' => 'Rivers', 'value' => 200],
-            ['key' => 'cross river', 'label' => 'Cross River', 'value' => 164],
-            ['key' => 'enugu', 'label' => 'Enugu', 'value' => 127],
-            ['key' => 'bayelsa', 'label' => 'Bayelsa', 'value' => 105],
+            ['key' => 'kano', 'label' => 'Kano', 'value' => 1930],
+            ['key' => 'niger', 'label' => 'Niger', 'value' => 1028],
+            ['key' => 'ogun', 'label' => 'Ogun', 'value' => 551],
+            ['key' => 'cross river', 'label' => 'Cross River', 'value' => 295],
+            ['key' => 'rivers', 'label' => 'Rivers', 'value' => 284],
+            ['key' => 'bayelsa', 'label' => 'Bayelsa', 'value' => 199],
+            ['key' => 'enugu', 'label' => 'Enugu', 'value' => 118],
+        ];
+    }
+
+    /**
+     * Per-state programme figures from the screenshots (registration, LMS, demo hubs, grants).
+     * Keys are lowercase state names matching location filter keys.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function stateProfiles(): array
+    {
+        return [
+            'kano' => [
+                'label' => 'Kano',
+                'registrations' => 1930,
+                'female' => 794,
+                'idp' => 26,
+                'pwd' => 162,
+                'screened_pct' => 66.3,
+                'feb_enrolled' => 369,
+                'feb_active_pct' => 78.3,
+                'mar_enrolled' => 580,
+                'mar_active_pct' => 90.2,
+                'apr_active' => 856,
+                'final_active' => 856,
+                'demo_hub_visits' => 25,
+                'grant_winners' => 6,
+                'grants_ngn' => 1000000,
+                'dignity_sessions' => 0,
+            ],
+            'niger' => [
+                'label' => 'Niger',
+                'registrations' => 1028,
+                'female' => 327,
+                'idp' => 2,
+                'pwd' => 20,
+                'screened_pct' => 68.4,
+                'feb_enrolled' => 261,
+                'feb_active_pct' => 69.4,
+                'mar_enrolled' => 261,
+                'mar_active_pct' => 100.0,
+                'apr_active' => 568,
+                'final_active' => 568,
+                'demo_hub_visits' => 16,
+                'grant_winners' => 5,
+                'grants_ngn' => 900000,
+                'dignity_sessions' => 12,
+            ],
+            'ogun' => [
+                'label' => 'Ogun',
+                'registrations' => 551,
+                'female' => 237,
+                'idp' => 4,
+                'pwd' => 8,
+                'screened_pct' => 77.9,
+                'feb_enrolled' => 253,
+                'feb_active_pct' => 100.0,
+                'mar_enrolled' => 253,
+                'mar_active_pct' => 90.9,
+                'apr_active' => 519,
+                'final_active' => 519,
+                'demo_hub_visits' => 17,
+                'grant_winners' => 3,
+                'grants_ngn' => 600000,
+                'dignity_sessions' => 0,
+            ],
+            'cross river' => [
+                'label' => 'Cross River',
+                'registrations' => 295,
+                'female' => 98,
+                'idp' => 10,
+                'pwd' => 13,
+                'screened_pct' => 0.0,
+                'feb_enrolled' => 180,
+                'feb_active_pct' => 77.8,
+                'mar_enrolled' => 164,
+                'mar_active_pct' => 85.4,
+                'apr_active' => 164,
+                'final_active' => 164,
+                'demo_hub_visits' => 30,
+                'grant_winners' => 2,
+                'grants_ngn' => 300000,
+                'dignity_sessions' => 0,
+            ],
+            'rivers' => [
+                'label' => 'Rivers',
+                'registrations' => 284,
+                'female' => 111,
+                'idp' => 8,
+                'pwd' => 11,
+                'screened_pct' => 73.2,
+                'feb_enrolled' => 148,
+                'feb_active_pct' => 100.0,
+                'mar_enrolled' => 148,
+                'mar_active_pct' => 100.0,
+                'apr_active' => 200,
+                'final_active' => 200,
+                'demo_hub_visits' => 22,
+                'grant_winners' => 3,
+                'grants_ngn' => 600000,
+                'dignity_sessions' => 3,
+            ],
+            'bayelsa' => [
+                'label' => 'Bayelsa',
+                'registrations' => 199,
+                'female' => 94,
+                'idp' => 1,
+                'pwd' => 10,
+                'screened_pct' => 35.2,
+                'feb_enrolled' => 119,
+                'feb_active_pct' => 86.6,
+                'mar_enrolled' => 112,
+                'mar_active_pct' => 94.1,
+                'apr_active' => 105,
+                'final_active' => 105,
+                'demo_hub_visits' => 3,
+                'grant_winners' => 3,
+                'grants_ngn' => 600000,
+                'dignity_sessions' => 0,
+            ],
+            'enugu' => [
+                'label' => 'Enugu',
+                'registrations' => 118,
+                'female' => 52,
+                'idp' => 1,
+                'pwd' => 1,
+                'screened_pct' => 0.0,
+                'feb_enrolled' => 61,
+                'feb_active_pct' => 100.0,
+                'mar_enrolled' => 98,
+                'mar_active_pct' => 100.0,
+                'apr_active' => 127,
+                'final_active' => 127,
+                'demo_hub_visits' => 4,
+                'grant_winners' => 3,
+                'grants_ngn' => 600000,
+                'dignity_sessions' => 0,
+            ],
+        ];
+    }
+
+    /**
+     * Stats + breakdowns for one state (screenshot row).
+     *
+     * @param  array<string, mixed>  $profile
+     * @return array{stats: list<array<string,mixed>>, breakdowns: list<array<string,mixed>>, gender_filters: list<array<string,mixed>>}
+     */
+    public static function payloadForState(array $profile): array
+    {
+        $label = (string) ($profile['label'] ?? 'State');
+        $registrations = (int) ($profile['registrations'] ?? 0);
+        $female = (int) ($profile['female'] ?? 0);
+        $male = max(0, $registrations - $female);
+
+        return [
+            'stats' => [
+                ['key' => 'registrations', 'label' => "{$label} — registrations", 'value' => $registrations, 'unit' => 'count'],
+                ['key' => 'female', 'label' => "{$label} — female", 'value' => $female, 'unit' => 'count'],
+                ['key' => 'idp', 'label' => "{$label} — IDP", 'value' => (int) ($profile['idp'] ?? 0), 'unit' => 'count'],
+                ['key' => 'pwd', 'label' => "{$label} — PWD", 'value' => (int) ($profile['pwd'] ?? 0), 'unit' => 'count'],
+                ['key' => 'screened_pct', 'label' => "{$label} — % screened", 'value' => (float) ($profile['screened_pct'] ?? 0), 'unit' => 'percentage'],
+                ['key' => 'feb_enrolled', 'label' => "{$label} — Feb enrolled", 'value' => (int) ($profile['feb_enrolled'] ?? 0), 'unit' => 'count'],
+                ['key' => 'mar_enrolled', 'label' => "{$label} — Mar enrolled", 'value' => (int) ($profile['mar_enrolled'] ?? 0), 'unit' => 'count'],
+                ['key' => 'final_active', 'label' => "{$label} — final active", 'value' => (int) ($profile['final_active'] ?? 0), 'unit' => 'count'],
+                ['key' => 'demo_hub_visits', 'label' => "{$label} — demo hub visits", 'value' => (int) ($profile['demo_hub_visits'] ?? 0), 'unit' => 'count'],
+                ['key' => 'dignity_sessions', 'label' => "{$label} — Dignity sessions", 'value' => (int) ($profile['dignity_sessions'] ?? 0), 'unit' => 'count'],
+                ['key' => 'grant_winners', 'label' => "{$label} — grant winners", 'value' => (int) ($profile['grant_winners'] ?? 0), 'unit' => 'count'],
+                ['key' => 'grants_ngn', 'label' => "{$label} — seed grants (NGN)", 'value' => (int) ($profile['grants_ngn'] ?? 0), 'unit' => 'ngn'],
+            ],
+            'breakdowns' => [
+                [
+                    'title' => "{$label} — registration & inclusion",
+                    'items' => [
+                        ['label' => 'Registrations', 'value' => $registrations],
+                        ['label' => 'Female', 'value' => $female],
+                        ['label' => 'Male / other', 'value' => $male],
+                        ['label' => 'IDP', 'value' => (int) ($profile['idp'] ?? 0)],
+                        ['label' => 'PWD', 'value' => (int) ($profile['pwd'] ?? 0)],
+                    ],
+                ],
+                [
+                    'title' => "{$label} — LMS progression",
+                    'items' => [
+                        ['label' => 'Feb enrolled', 'value' => (int) ($profile['feb_enrolled'] ?? 0)],
+                        ['label' => 'Mar enrolled', 'value' => (int) ($profile['mar_enrolled'] ?? 0)],
+                        ['label' => 'Final active', 'value' => (int) ($profile['final_active'] ?? 0)],
+                    ],
+                ],
+                [
+                    'title' => "{$label} — field & grants",
+                    'items' => [
+                        ['label' => 'Demo hub visits', 'value' => (int) ($profile['demo_hub_visits'] ?? 0)],
+                        ['label' => 'Dignity sessions', 'value' => (int) ($profile['dignity_sessions'] ?? 0)],
+                        ['label' => 'Grant winners', 'value' => (int) ($profile['grant_winners'] ?? 0)],
+                        ['label' => 'Seed grants (NGN)', 'value' => (int) ($profile['grants_ngn'] ?? 0)],
+                    ],
+                ],
+            ],
+            'gender_filters' => [
+                ['key' => 'female', 'label' => 'Female', 'value' => $female],
+                ['key' => 'male', 'label' => 'Male / other', 'value' => $male],
+            ],
         ];
     }
 
@@ -955,6 +1157,7 @@ class ProgrammeImpactDataset
             ],
             'gender_filters' => self::genderFilters(),
             'location_filters' => self::locationFilters(),
+            'state_profiles' => self::stateProfiles(),
             'participants_registered' => [],
             'participants_selected' => [],
             'participants_enrolled' => [],
@@ -1048,6 +1251,7 @@ class ProgrammeImpactDataset
         $section['highlight_stats'] = array_slice(self::glanceStats(), 0, 9);
         $section['gender_filters'] = self::genderFilters();
         $section['location_filters'] = self::locationFilters();
+        $section['state_profiles'] = self::stateProfiles();
         // Full set from screenshots — state, gender, LMS months, grants, topics, competition.
         $section['breakdowns'] = self::programmeBreakdowns();
         $section['trend'] = [
