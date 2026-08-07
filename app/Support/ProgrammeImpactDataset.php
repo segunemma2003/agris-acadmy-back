@@ -52,6 +52,10 @@ class ProgrammeImpactDataset
             ['key' => 'idp_participants', 'label' => 'IDP / refugee participants', 'value' => 52, 'unit' => 'count'],
             ['key' => 'registration_screened', 'label' => 'Registration cohort (screened table)', 'value' => 4405, 'unit' => 'count'],
             ['key' => 'overall_screened_pct', 'label' => 'Overall screened', 'value' => 61.1, 'unit' => 'percentage'],
+            // Overview jump-card aliases (Platform Overview cards still query these keys).
+            ['key' => 'total_learners', 'label' => 'Students (registered)', 'value' => 4405, 'unit' => 'count'],
+            ['key' => 'total_enrollments', 'label' => 'LMS enrollments', 'value' => 2690, 'unit' => 'count'],
+            ['key' => 'total_courses', 'label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
         ];
     }
 
