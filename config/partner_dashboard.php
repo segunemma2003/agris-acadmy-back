@@ -37,7 +37,7 @@ return [
         ],
         'apprenticeships' => [
             'label' => 'Jobs Created / Enterprise Hub',
-            'description' => 'Host companies, enterprise hubs, placed roles, attendance and performance.',
+            'description' => 'Jobs enabled and enterprises created from the official TAGDEV workbooks.',
             'icon' => 'briefcase',
         ],
         'demographics' => [

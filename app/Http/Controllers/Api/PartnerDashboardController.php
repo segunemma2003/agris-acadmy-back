@@ -19,6 +19,7 @@ use App\Models\Topic;
 use App\Models\TopicTestAttempt;
 use App\Models\User;
 use App\Support\ProgrammeImpactDataset;
+use App\Support\ProgrammeJobsDataset;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -118,7 +119,8 @@ class PartnerDashboardController extends Controller
 
             // Replace programme-related KPI figures; catalogs / name lists stay from live data.
             // Courses = catalogue only; student directory pages = list only (no programme KPI overlay).
-            $skipProgrammeOverlay = in_array($section, ['reports', 'courses', 'learners', 'demographics', 'geography'], true);
+            // Apprenticeships / Jobs hub uses TAGDEV jobs+enterprises workbooks only (ProgrammeJobsDataset).
+            $skipProgrammeOverlay = in_array($section, ['reports', 'courses', 'learners', 'demographics', 'geography', 'apprenticeships'], true);
             if (is_array($payload) && ! $skipProgrammeOverlay) {
                 $payload = ProgrammeImpactDataset::applyFigures($payload, $section);
             }
@@ -498,63 +500,8 @@ class PartnerDashboardController extends Controller
 
     private function apprenticeshipsSection(): array
     {
-        $companies = $this->companyDirectory();
-        $slots = $this->slotDirectory();
-        $placements = $this->placementDirectory();
-
-        $openSlots = ApprenticeshipSlot::where('is_active', true)->count();
-        $totalApplicants = Apprenticeship::count();
-        $activeInterns = Apprenticeship::where('status', 'accepted')->count();
-        $pending = Apprenticeship::where('status', 'interested')->count();
-        $rejected = Apprenticeship::where('status', 'rejected')->count();
-        $completed = Apprenticeship::where('status', 'completed')->count();
-        $employed = $activeInterns + $completed;
-
-        $logsSubmitted = ApprenticeshipLog::count();
-        $daysAttended = ApprenticeshipLog::where('attended', true)->count();
-        $attendanceRate = $logsSubmitted > 0 ? round(($daysAttended / $logsSubmitted) * 100, 1) : 0;
-
-        return [
-            'stats' => [
-                ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $companies->count(), 'unit' => 'count'],
-                ['key' => 'platform_open_slots', 'label' => 'Open Slots', 'value' => $openSlots, 'unit' => 'count'],
-                ['key' => 'total_slots', 'label' => 'Total Slots', 'value' => ApprenticeshipSlot::count(), 'unit' => 'count'],
-                ['key' => 'total_applicants', 'label' => 'Applicants', 'value' => $totalApplicants, 'unit' => 'count'],
-                ['key' => 'active_interns', 'label' => 'Active Interns', 'value' => $activeInterns, 'unit' => 'count'],
-                ['key' => 'employed', 'label' => 'Placed / Employed', 'value' => $employed, 'unit' => 'count'],
-                ['key' => 'completed_placements', 'label' => 'Completed', 'value' => $completed, 'unit' => 'count'],
-                ['key' => 'pending_review', 'label' => 'Pending Review', 'value' => $pending, 'unit' => 'count'],
-                ['key' => 'logs_submitted', 'label' => 'Daily Logs', 'value' => $logsSubmitted, 'unit' => 'count'],
-                ['key' => 'attendance_rate', 'label' => 'Attendance Rate', 'value' => $attendanceRate, 'unit' => 'percentage'],
-            ],
-            'breakdowns' => [
-                [
-                    'title' => 'Applications by Status',
-                    'items' => collect([
-                        ['label' => 'Pending Review', 'value' => $pending],
-                        ['label' => 'Accepted (Employed)', 'value' => $activeInterns],
-                        ['label' => 'Completed', 'value' => $completed],
-                        ['label' => 'Rejected', 'value' => $rejected],
-                    ])->sortByDesc('value')->values(),
-                ],
-                [
-                    'title' => 'Companies by Open Slots',
-                    'items' => $companies
-                        ->sortByDesc('open_slots_count')
-                        ->take(8)
-                        ->map(fn ($c) => ['label' => $c['name'], 'value' => $c['open_slots_count']])
-                        ->values(),
-                ],
-            ],
-            'companies' => $companies,
-            'slots' => $slots,
-            'placements' => $placements,
-            'trend' => [
-                'title' => 'New Applicants',
-                'unit' => 'count',
-                'points' => $this->monthlyTrend(Apprenticeship::query()),
-            ],
-        ];
+        // Jobs Created / Enterprise Hub — TAGDEV JOBS ENABLED + ENTERPRISES CREATED only.
+        return ProgrammeJobsDataset::payload();
     }
 
     private function certificatesSection(): array
