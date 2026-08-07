@@ -500,7 +500,7 @@ class PartnerDashboardController extends Controller
 
     private function apprenticeshipsSection(): array
     {
-        // Jobs Created / Enterprise Hub — TAGDEV JOBS ENABLED + ENTERPRISES CREATED only.
+        // Jobs Enabled / Enterprise Hub — TAGDEV JOBS ENABLED + ENTERPRISES CREATED only.
         return ProgrammeJobsDataset::payload();
     }
 

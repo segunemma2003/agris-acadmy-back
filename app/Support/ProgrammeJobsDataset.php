@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * Jobs Created / Enterprise Hub figures and lists from TAGDEV workbooks only:
+ * Jobs Enabled / Enterprise Hub figures and lists from TAGDEV workbooks only:
  * - AGRISITI-TAGDEV 2.0-JOBS ENABLED.xlsx
  * - AGRISITI -TAGDEV 2.0- ENTERPRISES CREATED.xlsx
  * Source pack: public/data/drive-download-20260807T151252Z-1-001

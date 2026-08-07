@@ -21,7 +21,7 @@ return [
             'icon' => 'document',
         ],
         'apprenticeships' => [
-            'label' => 'Jobs Created / Enterprise Hub',
+            'label' => 'Jobs Enabled / Enterprise Hub',
             'description' => 'Jobs enabled and enterprises created from the official TAGDEV workbooks.',
             'icon' => 'briefcase',
         ],
