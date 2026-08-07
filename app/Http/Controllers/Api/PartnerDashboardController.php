@@ -117,7 +117,9 @@ class PartnerDashboardController extends Controller
             };
 
             // Replace programme-related KPI figures; catalogs / name lists stay from live data.
-            if (is_array($payload) && $section !== 'reports') {
+            // Courses = catalogue only; student directory pages = list only (no programme KPI overlay).
+            $skipProgrammeOverlay = in_array($section, ['reports', 'courses', 'learners', 'demographics', 'geography'], true);
+            if (is_array($payload) && ! $skipProgrammeOverlay) {
                 $payload = ProgrammeImpactDataset::applyFigures($payload, $section);
             }
 
@@ -135,16 +137,35 @@ class PartnerDashboardController extends Controller
      */
     private function grantedSectionKeys(User $partner): array
     {
+        $catalogKeys = array_keys(config('partner_dashboard.sections', []));
+        $retired = config('partner_dashboard.retired_sections', ['course_performance', 'certificates']);
+
         $granted = array_values(array_filter(
             is_array($partner->dashboard_permissions) ? $partner->dashboard_permissions : [],
-            fn ($key) => is_string($key) && $key !== ''
+            fn ($key) => is_string($key)
+                && $key !== ''
+                && in_array($key, $catalogKeys, true)
+                && ! in_array($key, $retired, true)
         ));
+
+        // Partners who previously only had course_performance should still see Programme Reports.
+        if (
+            is_array($partner->dashboard_permissions)
+            && in_array('course_performance', $partner->dashboard_permissions, true)
+            && ! in_array('reports', $granted, true)
+        ) {
+            $granted[] = 'reports';
+        }
 
         if (! in_array('reports', $granted, true)) {
             $granted[] = 'reports';
         }
 
-        return $granted;
+        // Preserve catalog order for the sidebar.
+        return array_values(array_filter(
+            $catalogKeys,
+            fn ($key) => in_array($key, $granted, true)
+        ));
     }
 
     private function platformOverview(): array
@@ -203,9 +224,8 @@ class PartnerDashboardController extends Controller
                 ['key' => 'total_videos', 'label' => 'Videos', 'value' => $videosCount, 'unit' => 'count'],
                 ['key' => 'total_enrollments', 'label' => 'Enrollments', 'value' => $totalEnrollments, 'unit' => 'count'],
                 ['key' => 'completion_rate', 'label' => 'Completion Rate', 'value' => $totalEnrollments > 0 ? round(($completedEnrollments / $totalEnrollments) * 100, 1) : 0, 'unit' => 'percentage'],
-                ['key' => 'certificates_issued', 'label' => 'Certificates', 'value' => Certificate::count(), 'unit' => 'count'],
                 ['key' => 'host_companies', 'label' => 'Host Companies', 'value' => $hostCompanies, 'unit' => 'count'],
-                ['key' => 'placed_interns', 'label' => 'Placed / Employed', 'value' => $placedInterns, 'unit' => 'count'],
+                ['key' => 'placed_interns', 'label' => 'Jobs / Placed roles', 'value' => $placedInterns, 'unit' => 'count'],
                 ['key' => 'total_tutors', 'label' => 'Tutors', 'value' => User::where('role', 'tutor')->count(), 'unit' => 'count'],
                 ['key' => 'total_facilitators', 'label' => 'Facilitators', 'value' => User::where('role', 'facilitator')->count(), 'unit' => 'count'],
                 ['key' => 'published_courses', 'label' => 'Published Courses', 'value' => $publishedCourses, 'unit' => 'count'],
@@ -220,7 +240,7 @@ class PartnerDashboardController extends Controller
                 ['key' => 'total_enrollments', 'label' => 'Enrollments', 'value' => $totalEnrollments, 'unit' => 'count'],
                 ['key' => 'total_topics', 'label' => 'Topics', 'value' => $topicsCount, 'unit' => 'count'],
                 ['key' => 'total_videos', 'label' => 'Videos', 'value' => $videosCount, 'unit' => 'count'],
-                ['key' => 'placed_interns', 'label' => 'Employed Interns', 'value' => $placedInterns, 'unit' => 'count'],
+                ['key' => 'placed_interns', 'label' => 'Jobs created', 'value' => $placedInterns, 'unit' => 'count'],
             ],
             'breakdowns' => $breakdowns,
             'gender_filters' => $genderFilters,

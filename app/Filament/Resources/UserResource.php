@@ -92,7 +92,7 @@ class UserResource extends Resource
                                 array_keys(config('partner_dashboard.sections')),
                                 fn ($key) => $key !== 'reports'
                             )))
-                            ->helperText('Programme Reports is always available even if nothing else is ticked. Select Platform Overview plus any other analytics sections this funder should see.')
+                            ->helperText('Programme Reports is always available. Course Performance and Certificates are no longer offered on the partner dashboard.')
                             ->columns(2)
                             ->columnSpanFull()
                             ->dehydrated(fn (callable $get) => $get('role') === 'partner'),

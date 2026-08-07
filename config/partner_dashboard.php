@@ -7,23 +7,38 @@ return [
     'sections' => [
         'platform_overview' => [
             'label' => 'Platform Overview',
-            'description' => 'Home view of students, courses (requirements & topics), enrollments, certificates and internships.',
+            'description' => 'Home view of students, courses, enrollments and enterprise hubs.',
             'icon' => 'globe',
         ],
         'courses' => [
             'label' => 'Courses',
-            'description' => 'Full course breakdown — requirements, outcomes, modules, topics and videos.',
+            'description' => 'Browse the full course catalogue — requirements, outcomes, modules, topics and videos.',
             'icon' => 'book',
         ],
-        'course_performance' => [
-            'label' => 'Course Performance',
-            'description' => 'Average rating, total reviews, and the top courses by enrollment.',
-            'icon' => 'star',
+        'reports' => [
+            'label' => 'Programme Reports',
+            'description' => 'Weekly, monthly and custom impact reports sent by Agrisiti — with stats, participant lists, media and PDF download.',
+            'icon' => 'document',
         ],
         'learners' => [
             'label' => 'Students',
             'description' => 'Student directory with gender and location filters.',
             'icon' => 'users',
+        ],
+        'enrollments' => [
+            'label' => 'Enrollments',
+            'description' => 'Who enrolled, which course, and how much they paid.',
+            'icon' => 'clipboard',
+        ],
+        'engagement' => [
+            'label' => 'Engagement',
+            'description' => 'Quiz scores, pass rates, watch time and activity streaks.',
+            'icon' => 'activity',
+        ],
+        'apprenticeships' => [
+            'label' => 'Jobs Created / Enterprise Hub',
+            'description' => 'Host companies, enterprise hubs, placed roles, attendance and performance.',
+            'icon' => 'briefcase',
         ],
         'demographics' => [
             'label' => 'Demographics',
@@ -35,30 +50,11 @@ return [
             'description' => 'Filter students by state or location and browse who lives where.',
             'icon' => 'map',
         ],
-        'engagement' => [
-            'label' => 'Engagement',
-            'description' => 'Quiz scores, pass rates, watch time and activity streaks.',
-            'icon' => 'activity',
-        ],
-        'enrollments' => [
-            'label' => 'Enrollments',
-            'description' => 'Who enrolled, which course, and how much they paid.',
-            'icon' => 'clipboard',
-        ],
-        'apprenticeships' => [
-            'label' => 'Internships',
-            'description' => 'Host companies, internship slots, placed/employed interns, attendance and performance.',
-            'icon' => 'briefcase',
-        ],
-        'certificates' => [
-            'label' => 'Certificates',
-            'description' => 'Certificates issued with recipient and course details.',
-            'icon' => 'certificate',
-        ],
-        'reports' => [
-            'label' => 'Programme Reports',
-            'description' => 'Weekly, monthly and custom impact reports sent by Agrisiti — with stats, participant lists, media and PDF download.',
-            'icon' => 'document',
-        ],
+    ],
+
+    // Removed from the partner dashboard; still stripped if present on older accounts.
+    'retired_sections' => [
+        'course_performance',
+        'certificates',
     ],
 ];
