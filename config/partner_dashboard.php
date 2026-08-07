@@ -20,6 +20,11 @@ return [
             'description' => 'Weekly, monthly and custom impact reports sent by Agrisiti — with stats, participant lists, media and PDF download.',
             'icon' => 'document',
         ],
+        'apprenticeships' => [
+            'label' => 'Jobs Created / Enterprise Hub',
+            'description' => 'Jobs enabled and enterprises created from the official TAGDEV workbooks.',
+            'icon' => 'briefcase',
+        ],
         'learners' => [
             'label' => 'Students',
             'description' => 'Student directory with gender and location filters.',
@@ -34,11 +39,6 @@ return [
             'label' => 'Engagement',
             'description' => 'Quiz scores, pass rates, watch time and activity streaks.',
             'icon' => 'activity',
-        ],
-        'apprenticeships' => [
-            'label' => 'Jobs Created / Enterprise Hub',
-            'description' => 'Jobs enabled and enterprises created from the official TAGDEV workbooks.',
-            'icon' => 'briefcase',
         ],
         'demographics' => [
             'label' => 'Demographics',
