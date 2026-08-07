@@ -10,18 +10,58 @@ namespace App\Support;
  */
 class ProgrammeJobsDataset
 {
+    public static function jobsEnabledCount(): int
+    {
+        return (int) (self::raw()['jobs_enabled'] ?? count(self::raw()['jobs'] ?? []));
+    }
+
+    public static function enterprisesCreatedCount(): int
+    {
+        return (int) (self::raw()['enterprises_created'] ?? count(self::raw()['enterprises'] ?? []));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function raw(): array
+    {
+        static $cached = null;
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $path = public_path('data/programme/programmeJobs.json');
+        if (! is_file($path)) {
+            return $cached = [];
+        }
+
+        $decoded = json_decode((string) file_get_contents($path), true);
+        return $cached = is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @return array{url:string,filename:string}|null
+     */
+    private static function workbookDownload(string $relativePath, string $filename): ?array
+    {
+        $absolute = public_path($relativePath);
+        if (! is_file($absolute)) {
+            return null;
+        }
+
+        return [
+            'url' => url('/'.ltrim($relativePath, '/')),
+            'filename' => $filename,
+        ];
+    }
+
     /**
      * @return array<string, mixed>
      */
     public static function payload(): array
     {
-        $path = public_path('data/programme/programmeJobs.json');
-        if (! is_file($path)) {
-            return self::emptyPayload();
-        }
-
-        $raw = json_decode((string) file_get_contents($path), true);
-        if (! is_array($raw)) {
+        $raw = self::raw();
+        if ($raw === []) {
             return self::emptyPayload();
         }
 
@@ -53,6 +93,17 @@ class ProgrammeJobsDataset
             ['key' => 'host_companies', 'label' => 'Enterprises created', 'value' => $enterprisesCreated, 'unit' => 'count'],
         ];
 
+        $downloads = array_filter([
+            'jobs_enabled' => self::workbookDownload(
+                'data/programme/AGRISITI-TAGDEV-2.0-JOBS-ENABLED.xlsx',
+                'AGRISITI-TAGDEV-2.0-JOBS-ENABLED.xlsx',
+            ),
+            'enterprises_created' => self::workbookDownload(
+                'data/programme/AGRISITI-TAGDEV-2.0-ENTERPRISES-CREATED.xlsx',
+                'AGRISITI-TAGDEV-2.0-ENTERPRISES-CREATED.xlsx',
+            ),
+        ]);
+
         return [
             'programme_impact' => true,
             'stats' => $stats,
@@ -81,6 +132,7 @@ class ProgrammeJobsDataset
                 ->all(),
             'enterprises' => $enterprises,
             'jobs' => $jobs,
+            'downloads' => $downloads,
             'trend' => [
                 'title' => 'Jobs enabled by state',
                 'unit' => 'count',
@@ -112,6 +164,7 @@ class ProgrammeJobsDataset
             'gender_filters' => [],
             'enterprises' => [],
             'jobs' => [],
+            'downloads' => [],
             'trend' => ['title' => 'Jobs enabled by state', 'unit' => 'count', 'points' => []],
         ];
     }
