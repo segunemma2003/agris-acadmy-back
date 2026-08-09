@@ -89,8 +89,6 @@ class ProgrammeJobsDataset
             ['key' => 'jobs_female', 'label' => 'Female (jobs)', 'value' => $female, 'unit' => 'count'],
             ['key' => 'jobs_male', 'label' => 'Male (jobs)', 'value' => $male, 'unit' => 'count'],
             ['key' => 'states_with_jobs', 'label' => 'States covered', 'value' => count($jobsByState) ?: 7, 'unit' => 'count'],
-            ['key' => 'placed_interns', 'label' => 'Jobs enabled', 'value' => $jobsEnabled, 'unit' => 'count'],
-            ['key' => 'host_companies', 'label' => 'Enterprises created', 'value' => $enterprisesCreated, 'unit' => 'count'],
         ];
 
         $downloads = array_filter([

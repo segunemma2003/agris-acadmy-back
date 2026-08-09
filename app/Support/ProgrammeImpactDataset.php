@@ -43,7 +43,6 @@ class ProgrammeImpactDataset
             ['key' => 'grant_winners', 'label' => 'Seed grant winners', 'value' => 25, 'unit' => 'count'],
             ['key' => 'jobs_enabled', 'label' => 'Jobs enabled', 'value' => ProgrammeJobsDataset::jobsEnabledCount(), 'unit' => 'count'],
             ['key' => 'enterprises_created', 'label' => 'Enterprises created', 'value' => ProgrammeJobsDataset::enterprisesCreatedCount(), 'unit' => 'count'],
-            ['key' => 'placed_interns', 'label' => 'Jobs enabled', 'value' => ProgrammeJobsDataset::jobsEnabledCount(), 'unit' => 'count'],
             ['key' => 'seed_grants_disbursed', 'label' => 'Seed grants disbursed (NGN)', 'value' => 4600000, 'unit' => 'ngn'],
             ['key' => 'states_covered', 'label' => 'States covered', 'value' => 7, 'unit' => 'count'],
             ['key' => 'female_selected_pct', 'label' => 'Female (selected)', 'value' => 61, 'unit' => 'percentage'],
@@ -53,7 +52,7 @@ class ProgrammeImpactDataset
             ['key' => 'registration_screened', 'label' => 'Registration cohort (screened table)', 'value' => 4405, 'unit' => 'count'],
             ['key' => 'overall_screened_pct', 'label' => 'Overall screened', 'value' => 61.1, 'unit' => 'percentage'],
             // Overview jump-card aliases (Platform Overview cards still query these keys).
-            ['key' => 'total_learners', 'label' => 'Students (registered)', 'value' => 4405, 'unit' => 'count'],
+            ['key' => 'total_learners', 'label' => 'Participants selected', 'value' => 3591, 'unit' => 'count'],
             ['key' => 'total_enrollments', 'label' => 'LMS enrollments', 'value' => 2690, 'unit' => 'count'],
             ['key' => 'total_courses', 'label' => 'Modules delivered', 'value' => 11, 'unit' => 'count'],
         ];
