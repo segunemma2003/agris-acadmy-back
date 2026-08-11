@@ -54,7 +54,7 @@ class ModuleTestResource extends Resource
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(100)
-                            ->default(70)
+                            ->default(80)
                             ->required(),
                         Forms\Components\TextInput::make('max_attempts')
                             ->label('Max Attempts')

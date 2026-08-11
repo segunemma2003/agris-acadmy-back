@@ -26,7 +26,7 @@ class TestRelationManager extends RelationManager
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100)
-                    ->default(70)
+                    ->default(80)
                     ->required(),
                 Forms\Components\TextInput::make('time_limit_minutes')
                     ->label('Time Limit (minutes)')
