@@ -9,6 +9,7 @@ use App\Models\StudentProgress;
 use App\Models\TestAttempt;
 use App\Models\TopicTestAttempt;
 use App\Models\User;
+use App\Support\SmsNudgeSettings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,11 @@ class LearnerInterventionAlertService
 
     /** Don't re-email the same alert context more often than this. */
     public const REEMAIL_AFTER_DAYS = 7;
+
+    public function inactivityThresholdDays(): int
+    {
+        return max(1, (int) (SmsNudgeSettings::all()['inactivity_threshold_days'] ?? self::INACTIVE_DAYS));
+    }
 
     /**
      * Detect at-risk learners, persist new/updated alert rows, and email admin
@@ -88,7 +94,8 @@ class LearnerInterventionAlertService
      */
     public function detectInactiveLearners(): Collection
     {
-        $cutoff = Carbon::today()->subDays(self::INACTIVE_DAYS);
+        $thresholdDays = $this->inactivityThresholdDays();
+        $cutoff = Carbon::today()->subDays($thresholdDays);
 
         $students = User::query()
             ->where('role', 'student')
@@ -102,7 +109,7 @@ class LearnerInterventionAlertService
                         ->whereNotNull('last_login_at')
                         ->whereDate('last_login_at', '<=', $cutoff);
                 })->orWhere(function ($inner) use ($cutoff) {
-                    // Never logged in / active but created more than 7 days ago
+                    // Never logged in / active but created more than threshold days ago
                     $inner->whereNull('last_active_date')
                         ->whereNull('last_login_at')
                         ->whereDate('created_at', '<=', $cutoff);
@@ -110,13 +117,13 @@ class LearnerInterventionAlertService
             })
             ->get();
 
-        return $students->map(function (User $student) {
+        return $students->map(function (User $student) use ($thresholdDays) {
             $stuck = $this->stuckModuleLabel($student);
 
             return [
                 'user_id' => $student->id,
                 'reason' => 'inactive_7d',
-                'context_key' => 'inactive_7d',
+                'context_key' => 'inactive_'.$thresholdDays.'d',
                 'learner_name' => $student->name,
                 'last_login_at' => $student->last_login_at,
                 'stuck_label' => $stuck,
@@ -126,6 +133,7 @@ class LearnerInterventionAlertService
                     'email' => $student->email,
                     'state' => $student->state,
                     'lga' => $student->lga,
+                    'inactive_days_threshold' => $thresholdDays,
                 ],
             ];
         });

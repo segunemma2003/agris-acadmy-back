@@ -748,26 +748,7 @@ class UssdService
 
     public function sendSms(string $phone, string $message): void
     {
-        try {
-            $username = config('services.africastalking.username');
-            $apiKey   = config('services.africastalking.key');
-
-            if (!$apiKey || !$username) {
-                Log::warning('Africa\'s Talking SMS not configured');
-                return;
-            }
-
-            Http::withHeaders([
-                'apiKey' => $apiKey,
-                'Accept' => 'application/json',
-            ])->asForm()->post('https://api.africastalking.com/version1/messaging', [
-                'username' => $username,
-                'to'       => $phone,
-                'message'  => $message,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('SMS dispatch failed', ['phone' => $phone, 'error' => $e->getMessage()]);
-        }
+        app(SmsService::class)->send($phone, $message);
     }
 
     private function getLanguage(string $sessionId): string

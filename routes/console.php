@@ -33,8 +33,25 @@ Schedule::command('cohort:refresh-heatmap --sync')
     ->withoutOverlapping()
     ->name('cohort-heatmap-refresh');
 
-// Learner intervention alerts → email admin@agrisiti.com (inactive 7d / quiz failed twice).
+// Learner intervention alerts → email admin@agrisiti.com (inactive threshold from settings / quiz failed twice).
 Schedule::command('learners:send-intervention-alerts')
     ->dailyAt('01:45')
     ->withoutOverlapping()
     ->name('learner-intervention-alerts');
+
+// SMS inactivity nudges — runs in morning/afternoon/evening windows; command
+// only sends when the admin-configured send_time matches the current window.
+Schedule::command('sms:send-inactivity-nudges')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->name('sms-inactivity-nudges-morning');
+
+Schedule::command('sms:send-inactivity-nudges')
+    ->dailyAt('13:00')
+    ->withoutOverlapping()
+    ->name('sms-inactivity-nudges-afternoon');
+
+Schedule::command('sms:send-inactivity-nudges')
+    ->dailyAt('18:00')
+    ->withoutOverlapping()
+    ->name('sms-inactivity-nudges-evening');

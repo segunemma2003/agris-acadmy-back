@@ -48,6 +48,8 @@ class User extends Authenticatable
         'current_streak',
         'longest_streak',
         'last_active_date',
+        'sms_opted_out_at',
+        'sms_nudge_sent_at',
     ];
 
     /**
@@ -79,6 +81,8 @@ class User extends Authenticatable
             'dashboard_permissions' => 'array',
             'last_active_date' => 'date',
             'notification_preferences' => 'array',
+            'sms_opted_out_at' => 'datetime',
+            'sms_nudge_sent_at' => 'datetime',
         ];
     }
 

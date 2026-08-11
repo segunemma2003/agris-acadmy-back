@@ -44,6 +44,8 @@ Route::middleware('throttle:20,1')->prefix('chatbot')->group(function () {
 
 // USSD webhook (Africa's Talking; rate not throttled — AT controls session frequency)
 Route::post('/ussd', [UssdController::class, 'handle']);
+Route::post('/sms/inbound', [App\Http\Controllers\Api\SmsInboundController::class, 'handle'])
+    ->middleware('throttle:60,1');
 
 // Nigeria location data (public, cached forever)
 Route::prefix('locations')->group(function () {
