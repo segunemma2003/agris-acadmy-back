@@ -23,7 +23,7 @@ class TestController extends Controller
      *     security={{"sanctumAuth":{}}},
      *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="module", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Module test with questions and past attempts"),
+     *     @OA\Response(response=200, description="Module test with questions, attempts, quiz_passed and required 80% threshold"),
      *     @OA\Response(response=403, description="Not enrolled"),
      *     @OA\Response(response=404, description="No test found for this module")
      * )
@@ -119,7 +119,31 @@ class TestController extends Controller
      *             @OA\Property(property="answers", type="object", description="Map of question_id => selected_answer", example={"1":"A","2":"C"})
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Test submitted with score and pass/fail result"),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Test submitted with score, quiz_passed, and next-module lock messaging (80% threshold)",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="You scored 45%. You need 80% to unlock the next module."),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="score", type="integer", example=2),
+     *                 @OA\Property(property="total_questions", type="integer", example=5),
+     *                 @OA\Property(property="percentage", type="number", example=40),
+     *                 @OA\Property(property="is_passed", type="boolean", example=false),
+     *                 @OA\Property(property="quiz_passed", type="boolean", example=false),
+     *                 @OA\Property(property="quiz_completed", type="boolean", example=true),
+     *                 @OA\Property(property="passing_score", type="number", example=80),
+     *                 @OA\Property(property="required_percentage", type="number", example=80),
+     *                 @OA\Property(property="unlocks_next_module", type="boolean", example=false),
+     *                 @OA\Property(property="next_module_locked", type="boolean", example=true),
+     *                 @OA\Property(property="message", type="string", example="You scored 45%. You need 80% to unlock the next module."),
+     *                 @OA\Property(property="next_module", type="object", nullable=true,
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="title", type="string")
+     *                 )
+     *             )
+     *         )
+     *     ),
      *     @OA\Response(response=403, description="Not enrolled"),
      *     @OA\Response(response=404, description="Test not in this module")
      * )

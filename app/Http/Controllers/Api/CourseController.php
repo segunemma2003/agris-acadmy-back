@@ -260,9 +260,29 @@ class CourseController extends Controller
      *     path="/api/courses/{course}/modules",
      *     tags={"Courses"},
      *     summary="List modules (with topics) for a course",
+     *     description="Includes lock_status, quiz_status, quiz_passed and quiz_completed on each module so the client can disable the next lesson after a failed module quiz (80% threshold).",
      *     security={{"sanctumAuth":{}}},
      *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Modules list"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Modules list with lock and quiz status",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="course_id", type="integer"),
+     *                 @OA\Property(property="course_title", type="string"),
+     *                 @OA\Property(property="modules", type="array", @OA\Items(type="object",
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="title", type="string"),
+     *                     @OA\Property(property="quiz_passed", type="boolean", example=false),
+     *                     @OA\Property(property="quiz_completed", type="boolean", example=true),
+     *                     @OA\Property(property="lock_status", ref="#/components/schemas/ModuleLockStatus"),
+     *                     @OA\Property(property="quiz_status", ref="#/components/schemas/ModuleQuizStatus")
+     *                 ))
+     *             )
+     *         )
+     *     ),
      *     @OA\Response(response=404, description="Course not found")
      * )
      */

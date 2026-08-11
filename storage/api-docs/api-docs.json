@@ -715,6 +715,7 @@
                     "Auth"
                 ],
                 "summary": "Register a new student account",
+                "description": "Creates a student, auto-assigns a facilitator from the learner's LGA/state/location, and returns facilitator_id plus facilitator details.",
                 "operationId": "8e4e3cb7b46126f4696379d3c7eeb4ad",
                 "requestBody": {
                     "required": true,
@@ -2854,6 +2855,7 @@
                     "Courses"
                 ],
                 "summary": "List modules (with topics) for a course",
+                "description": "Includes lock_status, quiz_status, quiz_passed and quiz_completed on each module so the client can disable the next lesson after a failed module quiz (80% threshold).",
                 "operationId": "1d02ea4e69b6008e6da19dbecc13e9c4",
                 "parameters": [
                     {
@@ -2867,7 +2869,62 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Modules list"
+                        "description": "Modules list with lock and quiz status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "course_id": {
+                                                    "type": "integer"
+                                                },
+                                                "course_title": {
+                                                    "type": "string"
+                                                },
+                                                "modules": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "title": {
+                                                                "type": "string"
+                                                            },
+                                                            "quiz_passed": {
+                                                                "type": "boolean",
+                                                                "example": false
+                                                            },
+                                                            "quiz_completed": {
+                                                                "type": "boolean",
+                                                                "example": true
+                                                            },
+                                                            "lock_status": {
+                                                                "$ref": "#/components/schemas/ModuleLockStatus"
+                                                            },
+                                                            "quiz_status": {
+                                                                "$ref": "#/components/schemas/ModuleQuizStatus"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Course not found"
@@ -4394,35 +4451,16 @@
                                             "type": "boolean",
                                             "example": true
                                         },
+                                        "quiz_passed": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "You need 80% to unlock the next module. Your score: 45%."
+                                            "example": "You scored 45%. You need 80% to unlock the next module."
                                         },
                                         "data": {
-                                            "properties": {
-                                                "required_percentage": {
-                                                    "type": "number",
-                                                    "example": 80
-                                                },
-                                                "best_percentage": {
-                                                    "type": "number",
-                                                    "example": 45
-                                                },
-                                                "previous_module": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "integer",
-                                                            "example": 3
-                                                        },
-                                                        "title": {
-                                                            "type": "string",
-                                                            "example": "Module 3: Soil Health"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/ModuleLockStatus"
                                         }
                                     },
                                     "type": "object"
@@ -4944,90 +4982,6 @@
                 ]
             }
         },
-        "/api/organisations/register": {
-            "post": {
-                "tags": [
-                    "Organisations"
-                ],
-                "summary": "Register a new organisation account (pending admin approval before it can post slots)",
-                "operationId": "6d85f9f99811db03ceab8d928b4e7a7b",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "contact_name",
-                                    "email",
-                                    "password",
-                                    "password_confirmation",
-                                    "name"
-                                ],
-                                "properties": {
-                                    "contact_name": {
-                                        "description": "Name of the person registering on behalf of the organisation",
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "minLength": 8
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password"
-                                    },
-                                    "name": {
-                                        "description": "Organisation name",
-                                        "type": "string"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "sector": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "state": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "lga": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "website": {
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Organisation registered; account is pending admin approval"
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/organisations/me": {
             "get": {
                 "tags": [
@@ -5095,6 +5049,50 @@
                     },
                     "404": {
                         "description": "No organisation profile for this account"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/partner/permissions": {
+            "get": {
+                "tags": [
+                    "Partner Dashboard"
+                ],
+                "summary": "Which dashboard sections the authenticated partner (funder) account is allowed to see",
+                "operationId": "52c432d4ae0ef43a7a681edb1d6ba1c7",
+                "responses": {
+                    "200": {
+                        "description": "Granted sections and their labels"
+                    },
+                    "403": {
+                        "description": "Not a partner account"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/partner/dashboard": {
+            "get": {
+                "tags": [
+                    "Partner Dashboard"
+                ],
+                "summary": "Partner dashboard data (stats, breakdowns, 6-month trends), filtered server-side to only the sections the admin has granted this funder",
+                "operationId": "8d5f95ccff3e095a09bfb1e9cf411f17",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard data for granted sections only"
+                    },
+                    "403": {
+                        "description": "Not a partner account or no sections granted"
                     }
                 },
                 "security": [
@@ -5526,7 +5524,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Module test with questions and past attempts"
+                        "description": "Module test with questions, attempts, quiz_passed and required 80% threshold"
                     },
                     "403": {
                         "description": "Not enrolled"
@@ -5600,7 +5598,85 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Test submitted with score and pass/fail result"
+                        "description": "Test submitted with score, quiz_passed, and next-module lock messaging (80% threshold)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You scored 45%. You need 80% to unlock the next module."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "score": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "total_questions": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "percentage": {
+                                                    "type": "number",
+                                                    "example": 40
+                                                },
+                                                "is_passed": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "quiz_passed": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "quiz_completed": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "passing_score": {
+                                                    "type": "number",
+                                                    "example": 80
+                                                },
+                                                "required_percentage": {
+                                                    "type": "number",
+                                                    "example": 80
+                                                },
+                                                "unlocks_next_module": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "next_module_locked": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "You scored 45%. You need 80% to unlock the next module."
+                                                },
+                                                "next_module": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "title": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "description": "Not enrolled"
@@ -5875,6 +5951,48 @@
                 },
                 "type": "object"
             },
+            "FacilitatorSummary": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Amina Facilitator"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "amina@agrisiti.com"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "+2348012345678",
+                        "nullable": true
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Kano",
+                        "nullable": true
+                    },
+                    "state": {
+                        "type": "string",
+                        "example": "Kano",
+                        "nullable": true
+                    },
+                    "lga": {
+                        "type": "string",
+                        "example": "Nassarawa",
+                        "nullable": true
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "User": {
                 "properties": {
                     "id": {
@@ -5891,7 +6009,36 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "avatar": {
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "date_of_birth": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "age": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "location": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "state": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lga": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "occupation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "referral": {
                         "type": "string",
                         "nullable": true
                     },
@@ -5899,15 +6046,129 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "location": {
+                    "avatar": {
                         "type": "string",
                         "nullable": true
                     },
                     "role": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "student"
+                    },
+                    "locale": {
+                        "type": "string",
+                        "example": "en"
+                    },
+                    "facilitator_id": {
+                        "description": "Assigned facilitator based on learner location (LGA → state → location)",
+                        "type": "integer",
+                        "example": 12,
+                        "nullable": true
+                    },
+                    "is_in_facilitator_queue": {
+                        "description": "True when no matching facilitator was found for the learner location",
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "facilitator": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/FacilitatorSummary"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "notification_preferences": {
+                        "type": "object",
+                        "nullable": true
                     },
                     "is_active": {
                         "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "ModuleLockStatus": {
+                "properties": {
+                    "locked": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "quiz_passed": {
+                        "description": "Whether the previous module quiz was completed and passed (unlocks this module)",
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "has_attempted": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "required_percentage": {
+                        "description": "Pass threshold (minimum 80%)",
+                        "type": "number",
+                        "format": "float",
+                        "example": 80
+                    },
+                    "best_percentage": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 45
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "You scored 45%. You need 80% to unlock the next module.",
+                        "nullable": true
+                    },
+                    "previous_module": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 3
+                            },
+                            "title": {
+                                "type": "string",
+                                "example": "Module 3: Soil Health"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ModuleQuizStatus": {
+                "properties": {
+                    "has_quiz": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "quiz_completed": {
+                        "description": "True when the learner has submitted at least one attempt for this module quiz",
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "quiz_passed": {
+                        "description": "True when best attempt meets the 80% threshold — required before the next module unlocks",
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "has_attempted": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "required_percentage": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 80
+                    },
+                    "best_percentage": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 45
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "You scored 45%. You need 80% to unlock the next module.",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -6061,6 +6322,10 @@
         {
             "name": "Organisations",
             "description": "Organisations"
+        },
+        {
+            "name": "Partner Dashboard",
+            "description": "Partner Dashboard"
         },
         {
             "name": "Progress",

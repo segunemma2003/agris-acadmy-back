@@ -22,15 +22,9 @@ class ModuleController extends Controller
      *     @OA\Response(response=403, description="Not enrolled, or module locked until the previous module's quiz is passed", @OA\JsonContent(
      *         @OA\Property(property="success", type="boolean", example=false),
      *         @OA\Property(property="locked", type="boolean", example=true),
-     *         @OA\Property(property="message", type="string", example="You need 80% to unlock the next module. Your score: 45%."),
-     *         @OA\Property(property="data", type="object",
-     *             @OA\Property(property="required_percentage", type="number", example=80),
-     *             @OA\Property(property="best_percentage", type="number", example=45),
-     *             @OA\Property(property="previous_module", type="object",
-     *                 @OA\Property(property="id", type="integer", example=3),
-     *                 @OA\Property(property="title", type="string", example="Module 3: Soil Health")
-     *             )
-     *         )
+     *         @OA\Property(property="quiz_passed", type="boolean", example=false),
+     *         @OA\Property(property="message", type="string", example="You scored 45%. You need 80% to unlock the next module."),
+     *         @OA\Property(property="data", ref="#/components/schemas/ModuleLockStatus")
      *     )),
      *     @OA\Response(response=404, description="Course or module not found")
      * )

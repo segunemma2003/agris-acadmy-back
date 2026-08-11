@@ -50,17 +50,74 @@ use OpenApi\Attributes as OAT;
     ]
 )]
 #[OAT\Schema(
+    schema: 'FacilitatorSummary',
+    properties: [
+        new OAT\Property(property: 'id', type: 'integer', example: 12),
+        new OAT\Property(property: 'name', type: 'string', example: 'Amina Facilitator'),
+        new OAT\Property(property: 'email', type: 'string', format: 'email', example: 'amina@agrisiti.com'),
+        new OAT\Property(property: 'phone', type: 'string', nullable: true, example: '+2348012345678'),
+        new OAT\Property(property: 'location', type: 'string', nullable: true, example: 'Kano'),
+        new OAT\Property(property: 'state', type: 'string', nullable: true, example: 'Kano'),
+        new OAT\Property(property: 'lga', type: 'string', nullable: true, example: 'Nassarawa'),
+        new OAT\Property(property: 'avatar', type: 'string', nullable: true),
+    ]
+)]
+#[OAT\Schema(
     schema: 'User',
     properties: [
         new OAT\Property(property: 'id', type: 'integer'),
         new OAT\Property(property: 'name', type: 'string'),
         new OAT\Property(property: 'email', type: 'string', format: 'email'),
         new OAT\Property(property: 'phone', type: 'string', nullable: true),
-        new OAT\Property(property: 'avatar', type: 'string', nullable: true),
-        new OAT\Property(property: 'bio', type: 'string', nullable: true),
+        new OAT\Property(property: 'gender', type: 'string', nullable: true),
+        new OAT\Property(property: 'date_of_birth', type: 'string', format: 'date', nullable: true),
+        new OAT\Property(property: 'age', type: 'integer', nullable: true),
         new OAT\Property(property: 'location', type: 'string', nullable: true),
-        new OAT\Property(property: 'role', type: 'string'),
+        new OAT\Property(property: 'state', type: 'string', nullable: true),
+        new OAT\Property(property: 'lga', type: 'string', nullable: true),
+        new OAT\Property(property: 'occupation', type: 'string', nullable: true),
+        new OAT\Property(property: 'referral', type: 'string', nullable: true),
+        new OAT\Property(property: 'bio', type: 'string', nullable: true),
+        new OAT\Property(property: 'avatar', type: 'string', nullable: true),
+        new OAT\Property(property: 'role', type: 'string', example: 'student'),
+        new OAT\Property(property: 'locale', type: 'string', example: 'en'),
+        new OAT\Property(property: 'facilitator_id', type: 'integer', nullable: true, example: 12, description: 'Assigned facilitator based on learner location (LGA → state → location)'),
+        new OAT\Property(property: 'is_in_facilitator_queue', type: 'boolean', example: false, description: 'True when no matching facilitator was found for the learner location'),
+        new OAT\Property(property: 'facilitator', ref: '#/components/schemas/FacilitatorSummary', nullable: true),
+        new OAT\Property(property: 'notification_preferences', type: 'object', nullable: true),
         new OAT\Property(property: 'is_active', type: 'boolean'),
+    ]
+)]
+#[OAT\Schema(
+    schema: 'ModuleLockStatus',
+    properties: [
+        new OAT\Property(property: 'locked', type: 'boolean', example: true),
+        new OAT\Property(property: 'quiz_passed', type: 'boolean', example: false, description: 'Whether the previous module quiz was completed and passed (unlocks this module)'),
+        new OAT\Property(property: 'has_attempted', type: 'boolean', example: true),
+        new OAT\Property(property: 'required_percentage', type: 'number', format: 'float', example: 80, description: 'Pass threshold (minimum 80%)'),
+        new OAT\Property(property: 'best_percentage', type: 'number', format: 'float', example: 45),
+        new OAT\Property(property: 'message', type: 'string', nullable: true, example: 'You scored 45%. You need 80% to unlock the next module.'),
+        new OAT\Property(
+            property: 'previous_module',
+            type: 'object',
+            nullable: true,
+            properties: [
+                new OAT\Property(property: 'id', type: 'integer', example: 3),
+                new OAT\Property(property: 'title', type: 'string', example: 'Module 3: Soil Health'),
+            ]
+        ),
+    ]
+)]
+#[OAT\Schema(
+    schema: 'ModuleQuizStatus',
+    properties: [
+        new OAT\Property(property: 'has_quiz', type: 'boolean', example: true),
+        new OAT\Property(property: 'quiz_completed', type: 'boolean', example: true, description: 'True when the learner has submitted at least one attempt for this module quiz'),
+        new OAT\Property(property: 'quiz_passed', type: 'boolean', example: false, description: 'True when best attempt meets the 80% threshold — required before the next module unlocks'),
+        new OAT\Property(property: 'has_attempted', type: 'boolean', example: true),
+        new OAT\Property(property: 'required_percentage', type: 'number', format: 'float', example: 80),
+        new OAT\Property(property: 'best_percentage', type: 'number', format: 'float', example: 45),
+        new OAT\Property(property: 'message', type: 'string', nullable: true, example: 'You scored 45%. You need 80% to unlock the next module.'),
     ]
 )]
 #[OAT\Schema(

@@ -28,6 +28,7 @@ class AuthController extends Controller
      *     path="/api/register",
      *     tags={"Auth"},
      *     summary="Register a new student account",
+     *     description="Creates a student, auto-assigns a facilitator from the learner's LGA/state/location, and returns facilitator_id plus facilitator details.",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
