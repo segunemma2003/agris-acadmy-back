@@ -190,6 +190,19 @@ class Module extends Model
         return $this->test()->where('is_active', true)->first();
     }
 
+    /** Product rule: learners need at least 80% to unlock the next module. */
+    public const DEFAULT_PASSING_PERCENTAGE = 80.0;
+
+    public function effectivePassingScore(?ModuleTest $test = null): float
+    {
+        $test ??= $this->activeTest();
+        if (! $test) {
+            return self::DEFAULT_PASSING_PERCENTAGE;
+        }
+
+        return max((float) $test->passing_score, self::DEFAULT_PASSING_PERCENTAGE);
+    }
+
     /**
      * Whether this module is gated behind passing the previous module's quiz,
      * and if so, the learner's best attempt so far. A module with no previous
@@ -199,15 +212,36 @@ class Module extends Model
     {
         $previousModule = $this->previousModule();
 
-        if (!$previousModule) {
-            return ['locked' => false];
+        if (! $previousModule) {
+            return [
+                'locked' => false,
+                'quiz_passed' => true,
+                'has_attempted' => false,
+                'required_percentage' => self::DEFAULT_PASSING_PERCENTAGE,
+                'best_percentage' => 0.0,
+                'message' => null,
+                'previous_module' => null,
+            ];
         }
 
         $previousTest = $previousModule->activeTest();
 
-        if (!$previousTest) {
-            return ['locked' => false];
+        if (! $previousTest) {
+            return [
+                'locked' => false,
+                'quiz_passed' => true,
+                'has_attempted' => false,
+                'required_percentage' => self::DEFAULT_PASSING_PERCENTAGE,
+                'best_percentage' => 0.0,
+                'message' => null,
+                'previous_module' => [
+                    'id' => $previousModule->id,
+                    'title' => $previousModule->title,
+                ],
+            ];
         }
+
+        $required = $previousModule->effectivePassingScore($previousTest);
 
         $bestAttempt = $user
             ? TestAttempt::where('module_test_id', $previousTest->id)
@@ -216,16 +250,90 @@ class Module extends Model
                 ->first()
             : null;
 
-        $passed = (bool) ($bestAttempt && $bestAttempt->is_passed);
+        $bestPercentage = $bestAttempt ? (float) $bestAttempt->percentage : 0.0;
+        $passed = $bestAttempt ? $bestPercentage >= $required : false;
+        $hasAttempted = (bool) $bestAttempt;
+
+        $message = null;
+        if (! $passed) {
+            if ($hasAttempted) {
+                $message = sprintf(
+                    'You scored %.0f%%. You need %.0f%% to unlock the next module.',
+                    $bestPercentage,
+                    $required
+                );
+            } else {
+                $message = sprintf(
+                    'Complete and pass the quiz for "%s" with at least %.0f%% to unlock this module.',
+                    $previousModule->title,
+                    $required
+                );
+            }
+        }
 
         return [
-            'locked' => !$passed,
-            'required_percentage' => (float) $previousTest->passing_score,
-            'best_percentage' => $bestAttempt ? (float) $bestAttempt->percentage : 0.0,
+            'locked' => ! $passed,
+            'quiz_passed' => $passed,
+            'has_attempted' => $hasAttempted,
+            'required_percentage' => $required,
+            'best_percentage' => $bestPercentage,
+            'message' => $message,
             'previous_module' => [
                 'id' => $previousModule->id,
                 'title' => $previousModule->title,
             ],
+        ];
+    }
+
+    /**
+     * Status of THIS module's own quiz (used to decide if the next module unlocks).
+     */
+    public function quizStatusFor(?User $user): array
+    {
+        $test = $this->activeTest();
+
+        if (! $test) {
+            return [
+                'has_quiz' => false,
+                'quiz_completed' => true,
+                'quiz_passed' => true,
+                'has_attempted' => false,
+                'required_percentage' => self::DEFAULT_PASSING_PERCENTAGE,
+                'best_percentage' => 0.0,
+                'message' => null,
+            ];
+        }
+
+        $required = $this->effectivePassingScore($test);
+
+        $bestAttempt = $user
+            ? TestAttempt::where('module_test_id', $test->id)
+                ->where('user_id', $user->id)
+                ->orderByDesc('percentage')
+                ->first()
+            : null;
+
+        $bestPercentage = $bestAttempt ? (float) $bestAttempt->percentage : 0.0;
+        $passed = $bestAttempt ? $bestPercentage >= $required : false;
+        $hasAttempted = (bool) $bestAttempt;
+
+        $message = null;
+        if ($hasAttempted && ! $passed) {
+            $message = sprintf(
+                'You scored %.0f%%. You need %.0f%% to unlock the next module.',
+                $bestPercentage,
+                $required
+            );
+        }
+
+        return [
+            'has_quiz' => true,
+            'quiz_completed' => $hasAttempted,
+            'quiz_passed' => $passed,
+            'has_attempted' => $hasAttempted,
+            'required_percentage' => $required,
+            'best_percentage' => $bestPercentage,
+            'message' => $message,
         ];
     }
 }

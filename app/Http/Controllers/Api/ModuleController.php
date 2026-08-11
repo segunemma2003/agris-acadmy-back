@@ -71,7 +71,9 @@ class ModuleController extends Controller
             return response()->json([
                 'success' => false,
                 'locked' => true,
-                'message' => "You need {$lockStatus['required_percentage']}% to unlock the next module. Your score: {$lockStatus['best_percentage']}%.",
+                'quiz_passed' => (bool) ($lockStatus['quiz_passed'] ?? false),
+                'message' => $lockStatus['message']
+                    ?? "You need {$lockStatus['required_percentage']}% to unlock the next module. Your score: {$lockStatus['best_percentage']}%.",
                 'data' => $lockStatus,
             ], 403);
         }
@@ -132,10 +134,16 @@ class ModuleController extends Controller
             }
         });
 
+        $quizStatus = $module->quizStatusFor($user);
+
         return response()->json([
             'success' => true,
             'data' => [
                 'module' => $module,
+                'lock_status' => $lockStatus,
+                'quiz_status' => $quizStatus,
+                'quiz_passed' => (bool) ($quizStatus['quiz_passed'] ?? false),
+                'quiz_completed' => (bool) ($quizStatus['quiz_completed'] ?? false),
                 'course' => [
                     'id' => $course->id,
                     'title' => $course->title,

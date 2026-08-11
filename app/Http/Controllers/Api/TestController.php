@@ -71,7 +71,7 @@ class TestController extends Controller
         }
 
         // Get user's attempts
-        $attempts = [];
+        $attempts = collect();
         if ($user) {
             $attempts = TestAttempt::where('module_test_id', $test->id)
                 ->where('user_id', $user->id)
@@ -79,14 +79,25 @@ class TestController extends Controller
                 ->get();
         }
 
+        $quizStatus = $module->quizStatusFor($user);
+        $bestScore = $attempts->isNotEmpty() ? (float) $attempts->max('percentage') : null;
+        $passingScore = $module->effectivePassingScore($test);
+        $isPassed = $bestScore !== null && $bestScore >= $passingScore;
+
         return response()->json([
             'success' => true,
             'data' => [
                 'test' => $test,
                 'attempts' => $attempts,
                 'has_attempted' => $attempts->isNotEmpty(),
-                'best_score' => $attempts->isNotEmpty() ? $attempts->max('percentage') : null,
-                'is_passed' => $attempts->isNotEmpty() ? $attempts->contains('is_passed', true) : false,
+                'best_score' => $bestScore,
+                'is_passed' => $isPassed,
+                'quiz_passed' => $isPassed,
+                'quiz_completed' => $attempts->isNotEmpty(),
+                'passing_score' => $passingScore,
+                'required_percentage' => $passingScore,
+                'message' => $quizStatus['message'] ?? null,
+                'quiz_status' => $quizStatus,
             ],
             'message' => 'Module test retrieved successfully'
         ]);
@@ -167,7 +178,8 @@ class TestController extends Controller
 
         $score = $correctAnswers;
         $percentage = $totalQuestions > 0 ? ($correctAnswers / $totalQuestions) * 100 : 0;
-        $isPassed = $percentage >= $test->passing_score;
+        $passingScore = max((float) $test->passing_score, Module::DEFAULT_PASSING_PERCENTAGE);
+        $isPassed = $percentage >= $passingScore;
 
         // Create test attempt
         $attempt = TestAttempt::create([
@@ -184,6 +196,20 @@ class TestController extends Controller
 
         $user->recordActivity();
 
+        $nextModule = Module::where('course_id', $module->course_id)
+            ->where('is_active', true)
+            ->where('sort_order', '>', $module->sort_order)
+            ->orderBy('sort_order')
+            ->first();
+
+        $lockMessage = $isPassed
+            ? null
+            : sprintf(
+                'You scored %.0f%%. You need %.0f%% to unlock the next module.',
+                round($percentage, 2),
+                $passingScore
+            );
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -192,9 +218,21 @@ class TestController extends Controller
                 'total_questions' => $totalQuestions,
                 'percentage' => round($percentage, 2),
                 'is_passed' => $isPassed,
-                'passing_score' => $test->passing_score,
+                'quiz_passed' => $isPassed,
+                'quiz_completed' => true,
+                'passing_score' => $passingScore,
+                'required_percentage' => $passingScore,
+                'unlocks_next_module' => $isPassed,
+                'next_module_locked' => $nextModule ? ! $isPassed : false,
+                'next_module' => $nextModule ? [
+                    'id' => $nextModule->id,
+                    'title' => $nextModule->title,
+                ] : null,
+                'message' => $lockMessage,
             ],
-            'message' => $isPassed ? 'Test passed successfully' : 'Test completed'
+            'message' => $isPassed
+                ? 'Test passed successfully. The next module is now unlocked.'
+                : ($lockMessage ?? 'Test completed'),
         ], 201);
     }
 

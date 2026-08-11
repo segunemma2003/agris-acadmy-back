@@ -102,9 +102,10 @@ class AuthController extends Controller
             'is_active'     => true,
         ]);
 
-        // Auto-assign facilitator based on LGA / state
+        // Auto-assign facilitator from the learner's location (LGA → state → location).
         try {
             app(FacilitatorAssignmentService::class)->assign($user);
+            $user->refresh();
         } catch (\Throwable $e) {
             \Log::error('Facilitator assignment failed for user ' . $user->id . ': ' . $e->getMessage());
         }
@@ -121,7 +122,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Student registered successfully',
             'data' => [
-                'user' => $this->formatUser($user),
+                'user' => $this->formatUser($user->fresh()),
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -197,16 +198,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'location' => $user->location,
-                    'role' => $user->role,
-                    'avatar' => $user->avatar,
-                    'bio' => $user->bio,
-                ],
+                'user' => $this->formatUser($user->fresh()),
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -362,11 +354,11 @@ class AuthController extends Controller
             $updateData['password'] = Hash::make($request->password);
         }
 
-        $locationChanged = isset($updateData['state']) || isset($updateData['lga']);
+        $locationChanged = isset($updateData['state']) || isset($updateData['lga']) || isset($updateData['location']);
 
         $user->update($updateData);
 
-        // Re-run facilitator assignment if state/LGA changed
+        // Re-run facilitator assignment if location fields changed
         if ($locationChanged) {
             try {
                 app(FacilitatorAssignmentService::class)->reassign($user->fresh());
@@ -386,6 +378,9 @@ class AuthController extends Controller
 
     private function formatUser(User $user): array
     {
+        $user->loadMissing('facilitator');
+        $facilitator = $user->facilitator;
+
         return [
             'id'             => $user->id,
             'name'           => $user->name,
@@ -404,6 +399,17 @@ class AuthController extends Controller
             'role'           => $user->role,
             'locale'         => $user->locale ?? 'en',
             'facilitator_id' => $user->facilitator_id,
+            'is_in_facilitator_queue' => (bool) ($user->is_in_facilitator_queue ?? false),
+            'facilitator' => $facilitator ? [
+                'id' => $facilitator->id,
+                'name' => $facilitator->name,
+                'email' => $facilitator->email,
+                'phone' => $facilitator->phone,
+                'location' => $facilitator->location,
+                'state' => $facilitator->state,
+                'lga' => $facilitator->lga,
+                'avatar' => $facilitator->avatar,
+            ] : null,
             'notification_preferences' => \App\Support\NotificationPreferences::merge(
                 $user->notification_preferences
             ),
