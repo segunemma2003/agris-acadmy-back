@@ -35,6 +35,44 @@ class VrStudioController extends Controller
         ]);
     }
 
+    /**
+     * List VR experiences this author can edit (admin / tutor / facilitator).
+     */
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        if (! $user || ! in_array($user->role, ['admin', 'tutor', 'facilitator'], true)) {
+            return response()->json(['message' => 'Only tutors, facilitators, and admins can author VR.'], 403);
+        }
+
+        $query = CourseVrContent::query()->with(['course:id,title', 'module:id,title'])->orderByDesc('updated_at');
+
+        if ($user->role === 'tutor') {
+            $query->whereHas('course', fn ($q) => $q->accessibleByTutor($user->id));
+        } elseif ($user->role === 'facilitator') {
+            $location = $user->location;
+            if (! $location) {
+                return response()->json(['data' => []]);
+            }
+            $query->whereHas(
+                'course.enrollments.user',
+                fn ($q) => $q->whereRaw('LOWER(location) = LOWER(?)', [$location])
+            );
+        }
+
+        $items = $query->limit(100)->get()->map(fn (CourseVrContent $row) => $this->studio->serializeExperience($row));
+
+        return response()->json([
+            'data' => $items,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        ]);
+    }
+
     public function show(Request $request, CourseVrContent $experience)
     {
         $user = $request->user();

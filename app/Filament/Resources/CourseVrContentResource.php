@@ -44,7 +44,11 @@ class CourseVrContentResource extends Resource
                             ->preload(),
                         Forms\Components\Select::make('tutor_id')
                             ->label('Author tutor')
-                            ->relationship('tutor', 'name', fn ($q) => $q->where('role', 'tutor'))
+                            ->relationship(
+                                'tutor',
+                                'name',
+                                fn (\Illuminate\Database\Eloquent\Builder $query) => $query->where('role', 'tutor')
+                            )
                             ->searchable()
                             ->preload(),
                         Forms\Components\TextInput::make('title')
