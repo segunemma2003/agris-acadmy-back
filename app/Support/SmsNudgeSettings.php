@@ -16,6 +16,7 @@ class SmsNudgeSettings
         '{{first_name}}',
         '{{course_title}}',
         '{{module_name}}',
+        '{{last_module_completed}}',
         '{{resume_link}}',
     ];
 
@@ -39,7 +40,7 @@ class SmsNudgeSettings
         return [
             'enabled' => true,
             'inactivity_threshold_days' => 7,
-            'message_template' => 'Hi {{first_name}}, you still have {{module_name}} waiting in {{course_title}}. Resume here: {{resume_link}}. Reply STOP to opt out.',
+            'message_template' => 'Hi {{first_name}}, you last completed {{last_module_completed}} in {{course_title}}. Continue with {{module_name}}: {{resume_link}}. Reply STOP to opt out.',
             'send_time' => 'morning',
             'opt_out_keyword' => 'STOP',
         ];
@@ -113,7 +114,8 @@ class SmsNudgeSettings
             'first_name' => 'Ada',
             'course_title' => 'Rice Value Chain Essentials',
             'module_name' => 'Module 2: Nursery Management',
-            'resume_link' => $frontend.'/courses/rice-value-chain-essentials',
+            'last_module_completed' => 'Module 1: Land Preparation',
+            'resume_link' => $frontend.'/courses/12/module/34',
         ];
     }
 

@@ -50,6 +50,7 @@ class User extends Authenticatable
         'last_active_date',
         'sms_opted_out_at',
         'sms_nudge_sent_at',
+        'sms_nudge_count',
     ];
 
     /**
@@ -281,6 +282,11 @@ class User extends Authenticatable
         $this->current_streak = $wasYesterday ? $this->current_streak + 1 : 1;
         $this->longest_streak = max($this->longest_streak, $this->current_streak);
         $this->last_active_date = $today;
+        // Re-engage: allow a fresh day-7 / day-14 nudge cycle after the learner returns.
+        if ((int) ($this->sms_nudge_count ?? 0) > 0) {
+            $this->sms_nudge_count = 0;
+            $this->sms_nudge_sent_at = null;
+        }
         $this->saveQuietly();
     }
 

@@ -59,7 +59,7 @@ class NotificationSettings extends Page implements HasForms, HasActions
                             ->minValue(1)
                             ->maxValue(90)
                             ->required()
-                            ->helperText('Learners inactive for this many days become eligible for a nudge.'),
+                            ->helperText('1st SMS after this many inactive days; 2nd SMS after 2× this (e.g. 7 then 14).'),
                         Forms\Components\Select::make('send_time')
                             ->label('Send time')
                             ->options(SmsNudgeSettings::SEND_TIMES)
