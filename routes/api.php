@@ -126,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'show']);
         Route::put('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'update']);
         Route::post('/experiences/{experience}/publish', [\App\Http\Controllers\Api\VrStudioController::class, 'publish']);
+        Route::post('/experiences/{experience}/generate', [\App\Http\Controllers\Api\VrStudioController::class, 'generate']);
         Route::post('/experiences/{experience}/complete', [\App\Http\Controllers\Api\VrStudioController::class, 'complete']);
     });
 

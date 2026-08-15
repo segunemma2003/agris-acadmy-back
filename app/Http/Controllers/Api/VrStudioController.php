@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\CourseVrCompletion;
 use App\Models\CourseVrContent;
 use App\Models\Enrollment;
+use App\Services\VrSceneGeneratorService;
 use App\Services\VrStudioService;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class VrStudioController extends Controller
 {
-    public function __construct(private VrStudioService $studio)
-    {
+    public function __construct(
+        private VrStudioService $studio,
+        private VrSceneGeneratorService $generator,
+    ) {
     }
 
     /**
@@ -155,6 +159,35 @@ class VrStudioController extends Controller
         return response()->json([
             'message' => 'Experience published',
             'data' => $this->studio->serializeExperience($published),
+        ]);
+    }
+
+    /**
+     * Generate scene + copy from an author prompt (Claude). Does not auto-save/publish.
+     */
+    public function generate(Request $request, CourseVrContent $experience)
+    {
+        $user = $request->user();
+        if (! $this->studio->userCanAuthor($user, $experience)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $data = $request->validate([
+            'prompt' => 'required|string|min:8|max:4000',
+        ]);
+
+        try {
+            $generated = $this->generator->generate(
+                $experience->loadMissing(['course:id,title']),
+                $data['prompt']
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Scene generated',
+            'data' => $generated,
         ]);
     }
 
