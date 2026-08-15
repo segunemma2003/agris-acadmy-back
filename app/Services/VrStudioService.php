@@ -164,6 +164,41 @@ class VrStudioService
         return $content->fresh(['course', 'module']);
     }
 
+    /**
+     * Store a VR asset (e.g. 360 panorama). Prefers S3 when AWS_BUCKET is set; else public disk.
+     *
+     * @return array{url: string, path: string, disk: string}
+     */
+    public function storeAsset(CourseVrContent $content, \Illuminate\Http\UploadedFile $file): array
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+        $path = 'vr-studio/'.$content->id.'/'.Str::uuid().'.'.$ext;
+
+        $useS3 = filled(config('filesystems.disks.s3.bucket'))
+            && filled(config('filesystems.disks.s3.key'))
+            && filled(config('filesystems.disks.s3.secret'));
+
+        $disk = $useS3 ? 's3' : 'public';
+        $stored = \Illuminate\Support\Facades\Storage::disk($disk)->putFileAs(
+            dirname($path),
+            $file,
+            basename($path),
+            ['visibility' => 'public']
+        );
+
+        if (! $stored) {
+            throw new \RuntimeException('Could not store VR asset.');
+        }
+
+        $url = \Illuminate\Support\Facades\Storage::disk($disk)->url($stored);
+
+        return [
+            'url' => $url,
+            'path' => $stored,
+            'disk' => $disk,
+        ];
+    }
+
     protected function cacheKey(string $token): string
     {
         return 'vr_studio_handoff:'.$token;

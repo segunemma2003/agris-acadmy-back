@@ -192,6 +192,32 @@ class VrStudioController extends Controller
     }
 
     /**
+     * Upload a panorama / image asset for this experience (S3 when configured, else public disk).
+     */
+    public function uploadAsset(Request $request, CourseVrContent $experience)
+    {
+        $user = $request->user();
+        if (! $this->studio->userCanAuthor($user, $experience)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:jpg,jpeg,png,webp|max:20480',
+        ]);
+
+        try {
+            $stored = $this->studio->storeAsset($experience, $request->file('file'));
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message' => 'Asset uploaded',
+            'data' => $stored,
+        ]);
+    }
+
+    /**
      * Public player payload (learners). Enrollment required when authenticated.
      */
     public function play(Request $request, string $slug)
