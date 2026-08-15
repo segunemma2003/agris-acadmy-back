@@ -39,6 +39,16 @@ return [
         'api_key' => env('ANTHROPIC_API_KEY'),
     ],
 
+    // Amazon Bedrock — VR Studio scene generation (and future AWS AI)
+    'bedrock' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_BEDROCK_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+        // Enable this model under Bedrock → Model access. Inference profiles use a "us." prefix.
+        'model_id' => env('AWS_BEDROCK_MODEL_ID', 'anthropic.claude-3-5-haiku-20241022-v1:0'),
+        'max_tokens' => (int) env('AWS_BEDROCK_MAX_TOKENS', 4096),
+    ],
+
     'africastalking' => [
         'username' => env('AT_USERNAME', 'sandbox'),
         'key'      => env('AT_API_KEY'),

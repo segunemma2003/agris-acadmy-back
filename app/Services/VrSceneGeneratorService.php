@@ -3,7 +3,8 @@
 namespace App\Services;
 
 use App\Models\CourseVrContent;
-use Illuminate\Support\Facades\Http;
+use Aws\BedrockRuntime\BedrockRuntimeClient;
+use Aws\Exception\AwsException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -31,7 +32,7 @@ class VrSceneGeneratorService
     }
 
     /**
-     * Ask Claude for a lesson scene; return sanitized copy + scene (does not persist).
+     * Ask Amazon Bedrock for a lesson scene; return sanitized copy + scene (does not persist).
      *
      * @return array{title: string, description: ?string, instructions: ?string, cta_label: string, scene: array}
      */
@@ -42,41 +43,66 @@ class VrSceneGeneratorService
             throw new RuntimeException('Prompt is required.');
         }
 
-        $apiKey = config('claude.api_key');
-        if (! $apiKey) {
-            throw new RuntimeException('AI generation is not configured (missing ANTHROPIC_API_KEY).');
+        $key = config('services.bedrock.key');
+        $secret = config('services.bedrock.secret');
+        $region = config('services.bedrock.region', 'us-east-1');
+        $modelId = config('services.bedrock.model_id');
+
+        if (! $key || ! $secret) {
+            throw new RuntimeException('AI generation is not configured (missing AWS credentials for Bedrock).');
+        }
+        if (! $modelId) {
+            throw new RuntimeException('AI generation is not configured (missing AWS_BEDROCK_MODEL_ID).');
         }
 
         $contextTitle = $experience->title ?: 'Untitled VR lesson';
         $courseTitle = $experience->course?->title ?? '';
+        $userContent = "Course: {$courseTitle}\nExisting title: {$contextTitle}\n\nLesson brief:\n{$prompt}";
 
-        $response = Http::timeout(90)
-            ->withHeaders([
-                'x-api-key' => $apiKey,
-                'anthropic-version' => config('claude.api_version', '2023-06-01'),
-                'Content-Type' => 'application/json',
-            ])
-            ->post(config('claude.api_url', 'https://api.anthropic.com/v1/messages'), [
-                'model' => config('claude.model', 'claude-haiku-4-5-20251001'),
-                'max_tokens' => (int) env('CLAUDE_VR_MAX_TOKENS', 4096),
-                'system' => $this->systemPrompt(),
-                'messages' => [
-                    [
-                        'role' => 'user',
-                        'content' => "Course: {$courseTitle}\nExisting title: {$contextTitle}\n\nLesson brief:\n{$prompt}",
-                    ],
+        try {
+            $client = new BedrockRuntimeClient([
+                'version' => 'latest',
+                'region' => $region,
+                'credentials' => [
+                    'key' => $key,
+                    'secret' => $secret,
                 ],
             ]);
 
-        if (! $response->successful()) {
-            Log::warning('VR scene generation Claude error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
+            $result = $client->converse([
+                'modelId' => $modelId,
+                'system' => [
+                    ['text' => $this->systemPrompt()],
+                ],
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['text' => $userContent],
+                        ],
+                    ],
+                ],
+                'inferenceConfig' => [
+                    'maxTokens' => (int) config('services.bedrock.max_tokens', 4096),
+                    'temperature' => 0.4,
+                ],
             ]);
+        } catch (AwsException $e) {
+            Log::warning('VR scene generation Bedrock error', [
+                'code' => $e->getAwsErrorCode(),
+                'message' => $e->getAwsErrorMessage(),
+            ]);
+            $msg = (string) $e->getAwsErrorMessage();
+            $hint = ($e->getAwsErrorCode() === 'AccessDeniedException' || str_contains($msg, "don't have access"))
+                ? ' Enable model access for this Bedrock model in the AWS console and grant bedrock:InvokeModel to the IAM user.'
+                : '';
+            throw new RuntimeException('AI could not generate a scene right now.'.$hint);
+        } catch (\Throwable $e) {
+            Log::warning('VR scene generation Bedrock failure', ['message' => $e->getMessage()]);
             throw new RuntimeException('AI could not generate a scene right now. Try again in a moment.');
         }
 
-        $text = $this->extractText($response->json());
+        $text = $this->extractBedrockText($result->toArray());
         $decoded = $this->decodeJsonPayload($text);
         if (! is_array($decoded)) {
             throw new RuntimeException('AI returned an invalid scene. Please try a clearer prompt.');
@@ -122,19 +148,19 @@ Rules:
 PROMPT;
     }
 
-    protected function extractText(mixed $json): string
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    protected function extractBedrockText(array $result): string
     {
-        if (! is_array($json)) {
-            return '';
-        }
-        $parts = $json['content'] ?? [];
+        $parts = $result['output']['message']['content'] ?? [];
         if (! is_array($parts)) {
             return '';
         }
         $chunks = [];
         foreach ($parts as $part) {
-            if (is_array($part) && ($part['type'] ?? '') === 'text') {
-                $chunks[] = (string) ($part['text'] ?? '');
+            if (is_array($part) && isset($part['text'])) {
+                $chunks[] = (string) $part['text'];
             }
         }
 
