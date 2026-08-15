@@ -3,12 +3,14 @@
 namespace App\Filament\Tutor\Resources;
 
 use App\Filament\Tutor\Resources\StudentResource\Pages;
+use App\Models\Course;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class StudentResource extends Resource
@@ -21,6 +23,21 @@ class StudentResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
+    protected static ?string $navigationLabel = 'My Students';
+
+    protected static ?string $modelLabel = 'Student';
+
+    public static function getEloquentQuery(): Builder
+    {
+        $courseIds = Course::query()
+            ->accessibleByTutor(Auth::id())
+            ->pluck('id');
+
+        return parent::getEloquentQuery()
+            ->where('role', 'student')
+            ->whereHas('enrollments', fn ($q) => $q->whereIn('course_id', $courseIds));
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -28,16 +45,18 @@ class StudentResource extends Resource
                 Forms\Components\Section::make('Student Information')
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->required()
+                            ->disabled()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('email')
                             ->email()
-                            ->required()
+                            ->disabled()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('phone')
                             ->tel()
+                            ->disabled()
                             ->maxLength(255),
                         Forms\Components\Textarea::make('bio')
+                            ->disabled()
                             ->rows(3)
                             ->columnSpanFull(),
                     ])->columns(2),
@@ -46,9 +65,7 @@ class StudentResource extends Resource
 
     public static function table(Table $table): Table
     {
-        // Tutors can view all students
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('role', 'student'))
             ->columns([
                 Tables\Columns\ImageColumn::make('avatar')
                     ->circular(),
@@ -86,5 +103,19 @@ class StudentResource extends Resource
             'view' => Pages\ViewStudent::route('/{record}'),
         ];
     }
-}
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+}

@@ -149,17 +149,52 @@ class Course extends Model
         return $this->hasMany(CourseComment::class);
     }
 
-    // Scope for tutors to see accessible courses
+    /**
+     * Courses this tutor owns as primary author or co-tutor.
+     * Does not include other tutors' or admin-owned courses.
+     */
     public function scopeAccessibleByTutor($query, $tutorId)
     {
         return $query->where(function ($q) use ($tutorId) {
-            // Primary tutor
             $q->where('tutor_id', $tutorId)
-              // Additional tutor
-              ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-              // Course created by admin
-              ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
+              ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId));
         });
+    }
+
+    public function isAccessibleByTutor(?int $tutorId): bool
+    {
+        if (!$tutorId) {
+            return false;
+        }
+
+        if ((int) $this->tutor_id === (int) $tutorId) {
+            return true;
+        }
+
+        return $this->tutors()->where('tutor_id', $tutorId)->exists();
+    }
+
+    /**
+     * Transfer primary ownership to another tutor.
+     */
+    public function transferOwnershipTo(int $newTutorId, bool $clearCoTutors = false): void
+    {
+        $previousTutorId = $this->tutor_id;
+        $this->tutor_id = $newTutorId;
+        $this->save();
+
+        if ($clearCoTutors) {
+            $this->tutors()->sync([]);
+            return;
+        }
+
+        // Keep previous primary as co-tutor unless they are the new owner
+        $coTutorIds = $this->tutors()->pluck('users.id')->all();
+        $coTutorIds = array_values(array_unique(array_filter(
+            array_merge($coTutorIds, $previousTutorId ? [(int) $previousTutorId] : []),
+            fn ($id) => (int) $id !== (int) $newTutorId
+        )));
+        $this->tutors()->sync($coTutorIds);
     }
 
     // Auto-generate slug and create notifications

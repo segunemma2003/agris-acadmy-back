@@ -106,6 +106,10 @@ class GenerateCertificateJob implements ShouldQueue
                 Mail::to($user->email)->queue(new CertificateReadyMail($certificate->fresh(['user', 'course'])));
             }
             Mail::to(self::ADMIN_RECIPIENTS)->queue(new CertificateReadyMail($certificate->fresh(['user', 'course']), isAdminCopy: true));
+
+            // Learn → Fund: graduate loan eligibility SMS/email (within 1 hour of graduation)
+            NotifyGraduateFundingEligibilityJob::dispatch($certificate->id)
+                ->delay(now()->addMinutes(2));
         } catch (\Throwable $e) {
             Log::error('Failed to generate certificate', [
                 'enrollment_id' => $this->enrollmentId,

@@ -31,7 +31,11 @@ class MessageResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title')
+                            ->relationship(
+                                'course',
+                                'title',
+                                fn ($query) => $query->accessibleByTutor(Auth::id())
+                            )
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -95,7 +99,11 @@ class MessageResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title')
+                    ->relationship(
+                        'course',
+                        'title',
+                        fn ($query) => $query->accessibleByTutor(Auth::id())
+                    )
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('is_read')

@@ -50,6 +50,21 @@ return [
         'url' => env('FRONTEND_URL', 'https://academy.agrisiti.com'),
     ],
 
+    // Agrisiti Finance (Lend) — graduate funding bridge CTAs + service auth
+    'finance' => [
+        'url' => env('FINANCE_URL', 'https://lend.agrisiti.com'),
+        'api_url' => env('FINANCE_API_URL', 'https://lend-api.agrisiti.com'),
+        'service_key' => env('ACADEMY_INTERNAL_API_KEY', env('FINANCE_SERVICE_KEY')),
+        // Master switch + fallback amount if Finance public settings are unreachable
+        'graduate_funding_enabled' => filter_var(env('FINANCE_GRADUATE_FUNDING_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'graduate_eligible_loan_amount' => (float) env('FINANCE_GRADUATE_ELIGIBLE_LOAN_AMOUNT', 7500000),
+    ],
+
+    // VR Studio sibling workspace (Option B — WebXR authoring + player)
+    'vr_studio' => [
+        'url' => env('VR_STUDIO_URL', 'https://agrisiti-vr-studio.netlify.app'),
+    ],
+
     'pusher' => [
         'driver' => 'pusher',
         'key' => env('PUSHER_APP_KEY'),

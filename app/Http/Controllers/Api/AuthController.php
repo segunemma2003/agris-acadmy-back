@@ -797,14 +797,36 @@ class AuthController extends Controller
         
         $certificates = Cache::remember($cacheKey, 600, function () use ($user) {
             return $user->certificates()
-                ->with('course:id,title,image,slug')
+                ->with([
+                    'course:id,title,image,slug',
+                    'enrollment:id,status,progress_percentage,completed_at',
+                ])
                 ->orderBy('created_at', 'desc') // Use created_at instead of issued_date
                 ->get();
+        });
+
+        $financeApplyUrl = rtrim(config('services.finance.url', 'https://lend.agrisiti.com'), '/') . '/apply';
+
+        // Earn → Fund: CTA only when certificate PDF exists and completion threshold is met
+        // (enrollment completed / 100% progress, or certificate already issued).
+        $data = $certificates->map(function ($certificate) use ($financeApplyUrl) {
+            $enrollment = $certificate->enrollment;
+            $metThreshold = filled($certificate->file_path) && (
+                !$enrollment
+                || $enrollment->status === 'completed'
+                || (float) $enrollment->progress_percentage >= 100
+            );
+
+            $payload = $certificate->toArray();
+            $payload['funding_eligible'] = (bool) $metThreshold;
+            $payload['funding_apply_url'] = $metThreshold ? $financeApplyUrl : null;
+
+            return $payload;
         });
         
         return response()->json([
             'success' => true,
-            'data' => $certificates,
+            'data' => $data,
             'message' => 'Certificates retrieved successfully'
         ]);
     }

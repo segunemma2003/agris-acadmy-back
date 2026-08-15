@@ -4,13 +4,13 @@ namespace App\Filament\Tutor\Resources;
 
 use App\Filament\Tutor\Resources\CourseResource\Pages;
 use App\Filament\Tutor\Resources\CourseResource\RelationManagers;
-use App\Models\Category;
 use App\Models\Course;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -23,6 +23,13 @@ class CourseResource extends Resource
     protected static ?string $navigationGroup = 'Course Management';
 
     protected static ?int $navigationSort = 1;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->accessibleByTutor(Auth::id())
+            ->with(['category', 'tutor', 'tutors']);
+    }
 
     public static function form(Form $form): Form
     {
@@ -52,17 +59,6 @@ class CourseResource extends Resource
                         Forms\Components\RichEditor::make('description')
                             ->required()
                             ->columnSpanFull(),
-                        Forms\Components\Select::make('tutors')
-                            ->label('Additional Tutors')
-                            ->relationship('tutors', 'name', function ($query) {
-                                $tutorId = Auth::id();
-                                return $query->where('users.role', 'tutor')
-                                    ->where('users.id', '!=', $tutorId);
-                            })
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->helperText('Select additional tutors for this course (excluding yourself)'),
                     ])->columns(2),
                 Forms\Components\Section::make('Course Details')
                     ->schema([
@@ -105,15 +101,6 @@ class CourseResource extends Resource
                             ])
                             ->defaultItems(2)
                             ->columnSpanFull(),
-                    ])->columns(2),
-                Forms\Components\Section::make('Pricing & Settings')
-                    ->schema([
-                        Forms\Components\TextInput::make('price')
-                            ->numeric()
-                            ->prefix('$')
-                            ->default(0),
-                        Forms\Components\Toggle::make('is_free')
-                            ->default(false),
                         Forms\Components\TextInput::make('duration_minutes')
                             ->label('Duration (minutes)')
                             ->numeric()
@@ -133,21 +120,20 @@ class CourseResource extends Resource
                             ->numeric()
                             ->default(0),
                     ])->columns(3),
-                Forms\Components\Section::make('Status')
+                Forms\Components\Section::make('Publishing')
+                    ->description('Publish or unpublish this course. Pricing and platform featuring are managed by platform admins.')
                     ->schema([
                         Forms\Components\Toggle::make('is_published')
+                            ->label('Published')
+                            ->helperText('When published, enrolled learners can access the course.')
                             ->default(false),
-                        Forms\Components\Toggle::make('is_featured')
-                            ->default(false),
-                    ])->columns(2),
+                    ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        // Tutors can view all courses
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['category', 'tutor', 'tutors']))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->circular(),
@@ -163,24 +149,31 @@ class CourseResource extends Resource
                     ->numeric(decimalPlaces: 1)
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_published')
-                    ->boolean(),
-                Tables\Columns\IconColumn::make('is_featured')
-                    ->boolean(),
+                    ->boolean()
+                    ->label('Published'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // No filters for tutors
+                Tables\Filters\TernaryFilter::make('is_published')
+                    ->label('Published'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                // Tutors can only view courses, not edit or delete
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('togglePublish')
+                    ->label(fn (Course $record) => $record->is_published ? 'Unpublish' : 'Publish')
+                    ->icon(fn (Course $record) => $record->is_published ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                    ->color(fn (Course $record) => $record->is_published ? 'warning' : 'success')
+                    ->requiresConfirmation()
+                    ->action(function (Course $record) {
+                        $record->is_published = ! $record->is_published;
+                        $record->save();
+                    }),
             ])
-            ->bulkActions([
-                // Tutors cannot perform bulk actions on courses
-            ]);
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array
@@ -197,25 +190,29 @@ class CourseResource extends Resource
     {
         return [
             'index' => Pages\ListCourses::route('/'),
+            'create' => Pages\CreateCourse::route('/create'),
             'view' => Pages\ViewCourse::route('/{record}'),
-            // Tutors cannot create or edit courses - removed 'create' and 'edit' pages
+            'edit' => Pages\EditCourse::route('/{record}/edit'),
         ];
     }
 
     public static function canViewAny(): bool
     {
         $user = Auth::user();
+
         return $user && $user->role === 'tutor';
     }
 
     public static function canCreate(): bool
     {
-        return false;
+        $user = Auth::user();
+
+        return $user && $user->role === 'tutor';
     }
 
     public static function canEdit($record): bool
     {
-        return false;
+        return static::ownsRecord($record);
     }
 
     public static function canDelete($record): bool
@@ -225,9 +222,16 @@ class CourseResource extends Resource
 
     public static function canView($record): bool
     {
+        return static::ownsRecord($record);
+    }
+
+    protected static function ownsRecord($record): bool
+    {
         $user = Auth::user();
-        // Tutors can view all courses
-        return $user && $user->role === 'tutor';
+        if (! $user || $user->role !== 'tutor' || ! $record instanceof Course) {
+            return false;
+        }
+
+        return $record->isAccessibleByTutor($user->id);
     }
 }
-

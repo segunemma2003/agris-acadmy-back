@@ -16,31 +16,43 @@ class TutorStatsWidget extends BaseWidget
     protected function getStats(): array
     {
         $tutorId = Auth::id();
+        $courseIds = Course::query()->accessibleByTutor($tutorId)->pluck('id');
 
-        // Tutors can view all courses
-        $totalCourses = Course::count();
-        $publishedCourses = Course::where('is_published', true)->count();
-        
-        // Count students from all courses
-        $totalStudents = Enrollment::distinct('user_id')->count('user_id');
-        $activeEnrollments = Enrollment::where('status', 'active')->count();
+        $totalCourses = $courseIds->count();
+        $publishedCourses = Course::query()
+            ->accessibleByTutor($tutorId)
+            ->where('is_published', true)
+            ->count();
 
-        // Count assignments from all courses
-        $pendingAssignments = AssignmentSubmission::where('status', 'pending')->count();
-        $totalAssignments = Assignment::count();
+        $totalStudents = Enrollment::query()
+            ->whereIn('course_id', $courseIds)
+            ->distinct('user_id')
+            ->count('user_id');
+        $activeEnrollments = Enrollment::query()
+            ->whereIn('course_id', $courseIds)
+            ->where('status', 'active')
+            ->count();
+
+        $pendingAssignments = AssignmentSubmission::query()
+            ->whereHas('assignment', fn ($q) => $q->whereIn('course_id', $courseIds))
+            ->where('status', 'pending')
+            ->count();
+        $totalAssignments = Assignment::query()
+            ->whereIn('course_id', $courseIds)
+            ->count();
 
         $unreadMessages = Message::where('recipient_id', $tutorId)
             ->where('is_read', false)
             ->count();
 
         return [
-            Stat::make('Total Courses', $totalCourses)
+            Stat::make('My Courses', $totalCourses)
                 ->description("{$publishedCourses} published")
                 ->descriptionIcon('heroicon-m-academic-cap')
                 ->color('primary')
                 ->chart([1, 2, 3, 4, 5, 6, $totalCourses]),
 
-            Stat::make('Total Students', $totalStudents)
+            Stat::make('My Students', $totalStudents)
                 ->description("{$activeEnrollments} active enrollments")
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('success')
@@ -58,4 +70,3 @@ class TutorStatsWidget extends BaseWidget
         ];
     }
 }
-

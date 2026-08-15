@@ -11,10 +11,17 @@ class CourseVrContent extends Model
 
     protected $fillable = [
         'course_id',
+        'module_id',
         'tutor_id',
         'title',
         'description',
+        'instructions',
+        'cta_label',
         'vr_url',
+        'studio_slug',
+        'scene_json',
+        'studio_status',
+        'published_at',
         'thumbnail',
         'duration_minutes',
         'is_active',
@@ -25,6 +32,8 @@ class CourseVrContent extends Model
     {
         return [
             'is_active' => 'boolean',
+            'scene_json' => 'array',
+            'published_at' => 'datetime',
         ];
     }
 
@@ -32,6 +41,11 @@ class CourseVrContent extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
     }
 
     public function tutor(): BelongsTo

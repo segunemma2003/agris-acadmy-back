@@ -17,12 +17,14 @@ class Certificate extends Model
         'recipient_name',
         'issued_date',
         'file_path',
+        'graduate_funding_notified_at',
     ];
 
     protected function casts(): array
     {
         return [
             'issued_date' => 'date',
+            'graduate_funding_notified_at' => 'datetime',
         ];
     }
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Tutor\Resources\CourseVrContentResource\Pages;
+namespace App\Filament\Resources\CourseVrContentResource\Pages;
 
 use App\Filament\Concerns\InteractsWithVrStudio;
-use App\Filament\Tutor\Resources\CourseVrContentResource;
+use App\Filament\Resources\CourseVrContentResource;
 use App\Models\CourseVrContent;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;

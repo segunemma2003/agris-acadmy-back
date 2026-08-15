@@ -35,13 +35,24 @@ class StudentProgressResource extends Resource
                             ->preload(),
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title')
+                            ->relationship(
+                                'course',
+                                'title',
+                                fn ($query) => $query->accessibleByTutor(Auth::id())
+                            )
                             ->required()
                             ->searchable()
                             ->preload(),
                         Forms\Components\Select::make('topic_id')
                             ->label('Topic')
-                            ->relationship('topic', 'title')
+                            ->relationship(
+                                'topic',
+                                'title',
+                                fn ($query) => $query->whereHas(
+                                    'module.course',
+                                    fn ($q) => $q->accessibleByTutor(Auth::id())
+                                )
+                            )
                             ->searchable()
                             ->preload(),
                         Forms\Components\Toggle::make('is_completed')
@@ -60,9 +71,14 @@ class StudentProgressResource extends Resource
             ]);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id()));
+    }
+
     public static function table(Table $table): Table
     {
-        // Tutors can view all student progress
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
@@ -91,7 +107,11 @@ class StudentProgressResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title')
+                    ->relationship(
+                        'course',
+                        'title',
+                        fn ($query) => $query->accessibleByTutor(Auth::id())
+                    )
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('is_completed')
@@ -105,6 +125,21 @@ class StudentProgressResource extends Resource
         return [
             'index' => Pages\ListStudentProgress::route('/'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
     }
 }
 

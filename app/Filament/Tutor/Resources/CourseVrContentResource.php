@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tutor\Resources;
 
+use App\Filament\Concerns\InteractsWithVrStudio;
 use App\Filament\Tutor\Resources\CourseVrContentResource\Pages;
 use App\Models\CourseVrContent;
 use Filament\Forms;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CourseVrContentResource extends Resource
 {
+    use InteractsWithVrStudio;
+
     protected static ?string $model = CourseVrContent::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
@@ -31,7 +34,11 @@ class CourseVrContentResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title')
+                            ->relationship(
+                                'course',
+                                'title',
+                                fn ($query) => $query->accessibleByTutor(Auth::id())
+                            )
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -41,10 +48,22 @@ class CourseVrContentResource extends Resource
                         Forms\Components\RichEditor::make('description')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('vr_url')
-                            ->label('VR URL')
+                            ->label('VR URL (auto-set by Studio on publish)')
                             ->url()
-                            ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->helperText('Prefer “Open VR Studio” to author WebXR. You can still paste an external URL.')
+                            ->dehydrated(fn ($state) => filled($state)),
+                        Forms\Components\Textarea::make('instructions')
+                            ->rows(3)
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('cta_label')
+                            ->label('Launch button label')
+                            ->default('Launch VR')
+                            ->maxLength(100),
+                        Forms\Components\TextInput::make('studio_status')
+                            ->label('Studio status')
+                            ->disabled()
+                            ->dehydrated(false),
                         Forms\Components\FileUpload::make('thumbnail')
                             ->image()
                             ->disk('public')
@@ -100,13 +119,18 @@ class CourseVrContentResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Course')
-                    ->relationship('course', 'title')
+                    ->relationship(
+                        'course',
+                        'title',
+                        fn ($query) => $query->accessibleByTutor(Auth::id())
+                    )
                     ->searchable()
                     ->preload(),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
             ->actions([
+                static::openVrStudioTableAction(),
                 Tables\Actions\EditAction::make()
                     ->visible(fn ($record) => static::canEdit($record)),
                 Tables\Actions\DeleteAction::make()
@@ -136,20 +160,17 @@ class CourseVrContentResource extends Resource
 
     public static function canEdit($record): bool
     {
-        // Tutors can only edit VR content they created
-        if (!$record->tutor_id) {
-            return false; // Old records without tutor_id cannot be edited
+        $course = $record->course;
+        if ($course && $course->isAccessibleByTutor(Auth::id())) {
+            return true;
         }
-        return $record->tutor_id === Auth::id();
+
+        return $record->tutor_id && $record->tutor_id === Auth::id();
     }
 
     public static function canDelete($record): bool
     {
-        // Tutors can only delete VR content they created
-        if (!$record->tutor_id) {
-            return false; // Old records without tutor_id cannot be deleted
-        }
-        return $record->tutor_id === Auth::id();
+        return static::canEdit($record);
     }
 }
 

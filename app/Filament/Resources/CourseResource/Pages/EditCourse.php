@@ -17,6 +17,51 @@ class EditCourse extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('transferOwnership')
+                ->label('Transfer ownership')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->color('warning')
+                ->form([
+                    \Filament\Forms\Components\Select::make('tutor_id')
+                        ->label('New primary tutor')
+                        ->options(
+                            fn () => \App\Models\User::query()
+                                ->where('role', 'tutor')
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                        )
+                        ->required()
+                        ->searchable(),
+                    \Filament\Forms\Components\Toggle::make('clear_co_tutors')
+                        ->label('Remove all co-tutors')
+                        ->default(false),
+                ])
+                ->requiresConfirmation()
+                ->modalHeading('Transfer course ownership')
+                ->action(function (array $data) {
+                    $newTutorId = (int) $data['tutor_id'];
+                    if ($newTutorId === (int) $this->record->tutor_id) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('Already owned by this tutor')
+                            ->warning()
+                            ->send();
+
+                        return;
+                    }
+
+                    $this->record->transferOwnershipTo(
+                        $newTutorId,
+                        (bool) ($data['clear_co_tutors'] ?? false)
+                    );
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Ownership transferred')
+                        ->success()
+                        ->send();
+
+                    $this->refreshFormData(['tutor_id']);
+                }),
             Actions\Action::make('notify_course_finished')
                 ->label('Email all participants – course finished')
                 ->icon('heroicon-o-envelope')

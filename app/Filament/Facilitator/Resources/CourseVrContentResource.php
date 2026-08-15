@@ -2,6 +2,7 @@
 
 namespace App\Filament\Facilitator\Resources;
 
+use App\Filament\Concerns\InteractsWithVrStudio;
 use App\Filament\Facilitator\Resources\CourseVrContentResource\Pages;
 use App\Models\CourseVrContent;
 use Filament\Forms;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CourseVrContentResource extends Resource
 {
+    use InteractsWithVrStudio;
+
     protected static ?string $model = CourseVrContent::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
@@ -48,10 +51,18 @@ class CourseVrContentResource extends Resource
                         Forms\Components\RichEditor::make('description')
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('vr_url')
-                            ->label('VR URL')
+                            ->label('VR URL (auto-set by Studio on publish)')
                             ->url()
-                            ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->helperText('Use Open VR Studio to author, or paste an external URL.')
+                            ->dehydrated(fn ($state) => filled($state)),
+                        Forms\Components\Textarea::make('instructions')
+                            ->rows(3)
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('cta_label')
+                            ->label('Launch button label')
+                            ->default('Launch VR')
+                            ->maxLength(100),
                         Forms\Components\FileUpload::make('thumbnail')
                             ->image()
                             ->disk('public')
@@ -127,6 +138,8 @@ class CourseVrContentResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
+                static::openVrStudioTableAction(),
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([])
@@ -137,7 +150,9 @@ class CourseVrContentResource extends Resource
     {
         return [
             'index' => Pages\ListCourseVrContents::route('/'),
+            'create' => Pages\CreateCourseVrContent::route('/create'),
             'view' => Pages\ViewCourseVrContent::route('/{record}'),
+            'edit' => Pages\EditCourseVrContent::route('/{record}/edit'),
         ];
     }
 
@@ -148,12 +163,12 @@ class CourseVrContentResource extends Resource
 
     public static function canCreate(): bool
     {
-        return false;
+        return Auth::user()?->role === 'facilitator';
     }
 
     public static function canEdit($record): bool
     {
-        return false;
+        return Auth::user()?->role === 'facilitator';
     }
 
     public static function canDelete($record): bool

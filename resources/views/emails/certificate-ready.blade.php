@@ -134,7 +134,7 @@
                         : 'Access microcredit and finance tools built for agripreneurs.' }}
                 </p>
                 <a href="{{ $pathAUrl }}" class="button secondary">
-                    {{ $isHa ? 'Je zuwa Agrisiti Finance' : 'Go to Agrisiti Finance' }}
+                    {{ $isHa ? 'Nemi Tallafi' : 'Apply for Funding' }}
                 </a>
             </div>
 

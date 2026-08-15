@@ -18,6 +18,7 @@ class NotificationPreferences
         'apprenticeship_reviewed',
         'enrollment_confirmed',
         'apprenticeship_interest',
+        'graduate_funding_eligible',
     ];
 
     public static function defaults(): array
@@ -34,6 +35,7 @@ class NotificationPreferences
                 'assignment_graded',
                 'apprenticeship_reviewed',
                 'message_sent',
+                'graduate_funding_eligible',
             ], true);
         }
 

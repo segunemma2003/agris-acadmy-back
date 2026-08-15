@@ -254,6 +254,8 @@ jobs:
             # Set debug to true to see exact errors
             update_env "APP_DEBUG" "true"
             update_env "APP_URL" "https://academy-backends.agrisiti.com"
+            update_env "FRONTEND_URL" "https://academy.agrisiti.com"
+            update_env "VR_STUDIO_URL" "https://agrisiti-vr-studio.netlify.app"
 
             # Set session secure cookie for HTTPS
             update_env "SESSION_SECURE_COOKIE" "true"

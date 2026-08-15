@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tutor\Widgets;
 
+use App\Models\Course;
 use App\Models\Enrollment;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\Auth;
@@ -9,26 +10,27 @@ use Illuminate\Support\Facades\DB;
 
 class TutorChartStatsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Course Enrollments (Last 7 Days)';
+    protected static ?string $heading = 'My Course Enrollments (Last 7 Days)';
 
     protected static ?int $sort = 2;
 
     protected function getData(): array
     {
-        // Get enrollments from all courses for the last 7 days
+        $courseIds = Course::query()->accessibleByTutor(Auth::id())->pluck('id');
+
         $enrollments = Enrollment::select(
             DB::raw('DATE(enrollments.created_at) as date'),
             DB::raw('COUNT(*) as count')
         )
-        ->where('enrollments.created_at', '>=', now()->subDays(7))
-        ->groupBy('date')
-        ->orderBy('date')
-        ->get();
+            ->whereIn('course_id', $courseIds)
+            ->where('enrollments.created_at', '>=', now()->subDays(7))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
 
         $data = $enrollments->pluck('count')->toArray();
         $dates = $enrollments->pluck('date')->toArray();
 
-        // Fill missing days with 0
         $fullLabels = [];
         $fullData = [];
         for ($i = 6; $i >= 0; $i--) {

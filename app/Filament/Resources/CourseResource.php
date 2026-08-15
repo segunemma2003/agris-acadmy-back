@@ -229,6 +229,53 @@ class CourseResource extends Resource
                     ->color('info')
                     ->url(fn (\App\Models\Course $record): string => static::getUrl('edit', ['record' => $record]) . '?activeRelationManager=3')
                     ->tooltip('View enrolled participants and generate certificates'),
+                Tables\Actions\Action::make('transferOwnership')
+                    ->label('Transfer ownership')
+                    ->icon('heroicon-o-arrow-right-circle')
+                    ->color('warning')
+                    ->form([
+                        Forms\Components\Select::make('tutor_id')
+                            ->label('New primary tutor')
+                            ->options(
+                                fn () => User::query()
+                                    ->where('role', 'tutor')
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                            )
+                            ->required()
+                            ->searchable()
+                            ->helperText('Platform admins can move this course to another tutor.'),
+                        Forms\Components\Toggle::make('clear_co_tutors')
+                            ->label('Remove all co-tutors')
+                            ->default(false)
+                            ->helperText('If off, the previous primary tutor becomes a co-tutor.'),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Transfer course ownership')
+                    ->modalDescription('The selected tutor will become the primary owner. They will see this course in their tutor panel; others will lose access unless they remain co-tutors.')
+                    ->action(function (Course $record, array $data) {
+                        $newTutorId = (int) $data['tutor_id'];
+                        if ($newTutorId === (int) $record->tutor_id) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Already owned by this tutor')
+                                ->warning()
+                                ->send();
+
+                            return;
+                        }
+
+                        $record->transferOwnershipTo(
+                            $newTutorId,
+                            (bool) ($data['clear_co_tutors'] ?? false)
+                        );
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Ownership transferred')
+                            ->body('Primary tutor updated successfully.')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

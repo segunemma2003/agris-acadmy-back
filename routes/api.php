@@ -78,6 +78,25 @@ Route::middleware('throttle:20,1')->prefix('certificates')->group(function () {
     Route::get('/verify/{code}', [CertificateVerificationController::class, 'verifyCode']);
 });
 
+// Learn → Fund: Finance service calls (shared key, not Sanctum)
+Route::middleware([
+    'throttle:60,1',
+    \App\Http\Middleware\EnsureAcademyServiceKey::class,
+])->prefix('internal/learners')->group(function () {
+    Route::post('/completion-status', [\App\Http\Controllers\Api\InternalLearnerController::class, 'completionStatus']);
+    Route::post('/lookup', [\App\Http\Controllers\Api\InternalLearnerController::class, 'lookup']);
+    Route::post('/certificate', [\App\Http\Controllers\Api\InternalLearnerController::class, 'lookupCertificate']);
+});
+
+// VR Studio (sibling workspace) — public player + handoff exchange
+Route::prefix('vr-studio')->group(function () {
+    Route::post('/handoff/exchange', [\App\Http\Controllers\Api\VrStudioController::class, 'exchange'])
+        ->middleware('throttle:30,1');
+    // Published player payload — auth optional (learner token via Bearer / query)
+    Route::get('/play/{slug}', [\App\Http\Controllers\Api\VrStudioController::class, 'play'])
+        ->middleware('throttle:60,1');
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
@@ -100,6 +119,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/saved-courses-list', [EnrollmentController::class, 'savedCourses']);
     Route::get('/certified-courses', [EnrollmentController::class, 'certifiedCourses']);
     Route::get('/enrollments/{enrollment}', [EnrollmentController::class, 'show']);
+
+    // VR Studio authoring (tutor / admin / facilitator via handoff Sanctum token)
+    Route::prefix('vr-studio')->group(function () {
+        Route::get('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'show']);
+        Route::put('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'update']);
+        Route::post('/experiences/{experience}/publish', [\App\Http\Controllers\Api\VrStudioController::class, 'publish']);
+        Route::post('/experiences/{experience}/complete', [\App\Http\Controllers\Api\VrStudioController::class, 'complete']);
+    });
 
     // Courses
     Route::get('/recommended-courses', [CourseController::class, 'recommendedCourses']);

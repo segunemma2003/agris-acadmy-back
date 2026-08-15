@@ -18,8 +18,6 @@ class CertificateReadyMail extends Mailable implements ShouldQueue
     public $timeout = 60;
     public $maxExceptions = 2;
 
-    public const FINANCE_URL = 'https://lend.agrisiti.com';
-
     public function __construct(
         public Certificate $certificate,
         public bool $isAdminCopy = false,
@@ -43,7 +41,7 @@ class CertificateReadyMail extends Mailable implements ShouldQueue
 
         $frontend = rtrim(config('services.frontend.url', config('app.url')), '/');
         $pathBUrl = $frontend . '/career/apprenticeships';
-        $pathAUrl = self::FINANCE_URL;
+        $pathAUrl = rtrim(config('services.finance.url', 'https://lend.agrisiti.com'), '/') . '/apply';
 
         $mailable = $this->subject($subject)
             ->view('emails.certificate-ready', [

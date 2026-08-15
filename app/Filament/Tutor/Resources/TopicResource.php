@@ -29,7 +29,11 @@ class TopicResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('module_id')
                             ->label('Module')
-                            ->relationship('module', 'title')
+                            ->relationship(
+                                'module',
+                                'title',
+                                fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id()))
+                            )
                             ->required()
                             ->searchable()
                             ->preload()
@@ -119,19 +123,16 @@ class TopicResource extends Resource
             ]);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()
+            ->with(['module.course'])
+            ->whereHas('module.course', fn ($q) => $q->accessibleByTutor(Auth::id()));
+    }
+
     public static function table(Table $table): Table
     {
-        // Tutors can view all topics for modules in courses they have access to
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['module.course'])
-                ->whereHas('module.course', function ($q) {
-                    $tutorId = Auth::id();
-                    $q->where(function ($subQ) use ($tutorId) {
-                        $subQ->where('tutor_id', $tutorId)
-                             ->orWhereHas('tutors', fn ($query) => $query->where('tutor_id', $tutorId))
-                             ->orWhereHas('tutor', fn ($query) => $query->where('role', 'admin'));
-                    });
-                }))
             ->columns([
                 Tables\Columns\TextColumn::make('module.course.title')
                     ->label('Course')
@@ -208,28 +209,16 @@ class TopicResource extends Resource
 
     public static function canEdit($record): bool
     {
-        // All tutors can edit topics for modules they have access to
-        if (!$record->module || !$record->module->course) {
+        if (! $record->module || ! $record->module->course) {
             return false;
         }
-        $tutorId = Auth::id();
-        $course = $record->module->course;
-        return $course->tutor_id === $tutorId
-            || $course->tutors()->where('tutor_id', $tutorId)->exists()
-            || ($course->tutor && $course->tutor->role === 'admin');
+
+        return $record->module->course->isAccessibleByTutor(Auth::id());
     }
 
     public static function canDelete($record): bool
     {
-        // All tutors can delete topics for modules they have access to
-        if (!$record->module || !$record->module->course) {
-            return false;
-        }
-        $tutorId = Auth::id();
-        $course = $record->module->course;
-        return $course->tutor_id === $tutorId
-            || $course->tutors()->where('tutor_id', $tutorId)->exists()
-            || ($course->tutor && $course->tutor->role === 'admin');
+        return static::canEdit($record);
     }
 }
 

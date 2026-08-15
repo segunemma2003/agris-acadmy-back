@@ -10,6 +10,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class ModuleResource extends Resource
@@ -22,6 +23,13 @@ class ModuleResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id()))
+            ->with('course');
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -30,7 +38,11 @@ class ModuleResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
-                            ->relationship('course', 'title')
+                            ->relationship(
+                                'course',
+                                'title',
+                                fn ($query) => $query->accessibleByTutor(Auth::id())
+                            )
                             ->required()
                             ->searchable()
                             ->preload()
@@ -53,9 +65,7 @@ class ModuleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        // Tutors can view all modules
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('course'))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()
@@ -79,11 +89,10 @@ class ModuleResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                // No filters for tutors
-            ])
+            ->filters([])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([])
             ->defaultSort('sort_order');
@@ -100,36 +109,50 @@ class ModuleResource extends Resource
     {
         return [
             'index' => Pages\ListModules::route('/'),
+            'create' => Pages\CreateModule::route('/create'),
             'view' => Pages\ViewModule::route('/{record}'),
+            'edit' => Pages\EditModule::route('/{record}/edit'),
         ];
     }
 
     public static function canViewAny(): bool
     {
         $user = Auth::user();
+
         return $user && $user->role === 'tutor';
     }
 
     public static function canCreate(): bool
     {
-        return false; // Tutors cannot create modules
+        $user = Auth::user();
+
+        return $user && $user->role === 'tutor';
     }
 
     public static function canEdit($record): bool
     {
-        return false; // Tutors cannot edit modules
+        return static::ownsModule($record);
     }
 
     public static function canDelete($record): bool
     {
-        return false; // Tutors cannot delete modules
+        return false;
     }
 
     public static function canView($record): bool
     {
+        return static::ownsModule($record);
+    }
+
+    protected static function ownsModule($record): bool
+    {
         $user = Auth::user();
-        // Tutors can view all modules
-        return $user && $user->role === 'tutor';
+        if (! $user || $user->role !== 'tutor' || ! $record instanceof Module) {
+            return false;
+        }
+
+        $course = $record->course;
+
+        return $course && $course->isAccessibleByTutor($user->id);
     }
 }
-
