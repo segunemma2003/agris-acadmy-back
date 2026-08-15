@@ -20,7 +20,7 @@ class GraduateFundingEligibleMail extends Mailable implements ShouldQueue
         public Certificate $certificate,
         public float $eligibleLoanAmount,
         public string $registerUrl,
-        public string $locale = 'en',
+        public string $language = 'en',
     ) {}
 
     public function build()
@@ -28,8 +28,7 @@ class GraduateFundingEligibleMail extends Mailable implements ShouldQueue
         $this->certificate->loadMissing(['user', 'course']);
 
         $courseTitle = $this->certificate->course?->title ?? '';
-        $isHa = $this->locale === 'ha';
-
+        $isHa = $this->language === 'ha';
         $subject = $isHa
             ? "Ka cancanci rancen digiri bayan kammala '{$courseTitle}'"
             : "You're eligible for a graduate loan after completing '{$courseTitle}'";
@@ -39,7 +38,7 @@ class GraduateFundingEligibleMail extends Mailable implements ShouldQueue
                 'certificate' => $this->certificate,
                 'user' => $this->certificate->user,
                 'course' => $this->certificate->course,
-                'locale' => $this->locale,
+                'locale' => $this->language,
                 'eligibleLoanAmount' => $this->eligibleLoanAmount,
                 'eligibleLoanAmountFormatted' => number_format($this->eligibleLoanAmount, 0, '.', ','),
                 'registerUrl' => $this->registerUrl,

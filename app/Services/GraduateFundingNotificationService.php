@@ -64,7 +64,7 @@ class GraduateFundingNotificationService
                 certificate: $certificate,
                 eligibleLoanAmount: $amount,
                 registerUrl: $registerUrl,
-                locale: $locale,
+                language: $locale,
             ));
             $channels[] = 'email';
         }

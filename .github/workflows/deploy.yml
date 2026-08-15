@@ -141,13 +141,16 @@ jobs:
 
             # 2. PULL LATEST CODE - do this FIRST while ubuntu owns everything
             echo "Step 2: Pulling latest code..."
-            # Reset any local changes to avoid merge conflicts
-            git reset --hard HEAD || true
-            git clean -fd || true
-            # Configure git to use rebase for divergent branches
-            git config pull.rebase true
-            # Now pull with rebase
-            git pull origin main || true
+            # Clear any stuck rebase/merge state from a previous failed deploy
+            git rebase --abort 2>/dev/null || true
+            git merge --abort 2>/dev/null || true
+            rm -rf .git/rebase-merge .git/rebase-apply .git/MERGE_HEAD
+            git clean -fd
+            git fetch origin main
+            # Fail the job if we cannot sync to origin/main (do not continue on stale code)
+            git checkout -B main origin/main
+            git reset --hard origin/main
+            echo "Deploying commit: $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
 
             # 3. CREATE ALL REQUIRED DIRECTORIES
             echo "Step 3: Creating required directories..."
