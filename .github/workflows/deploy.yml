@@ -323,7 +323,7 @@ jobs:
             fi
             # Bedrock (VR Studio scene generation) — same IAM keys; enable model access in AWS console
             update_env "AWS_BEDROCK_REGION" "${SECRET_AWS_DEFAULT_REGION:-us-east-1}"
-            update_env "AWS_BEDROCK_MODEL_ID" "anthropic.claude-3-5-haiku-20241022-v1:0"
+            update_env "AWS_BEDROCK_MODEL_ID" "us.anthropic.claude-haiku-4-5-20251001-v1:0"
             update_env "AWS_BEDROCK_MAX_TOKENS" "4096"
             echo "✓ S3 credentials configured (optional, not active)"
             # Clear config cache

@@ -91,12 +91,13 @@ class VrSceneGeneratorService
             Log::warning('VR scene generation Bedrock error', [
                 'code' => $e->getAwsErrorCode(),
                 'message' => $e->getAwsErrorMessage(),
+                'model' => $modelId,
             ]);
-            $msg = (string) $e->getAwsErrorMessage();
-            $hint = ($e->getAwsErrorCode() === 'AccessDeniedException' || str_contains($msg, "don't have access"))
-                ? ' Enable model access for this Bedrock model in the AWS console and grant bedrock:InvokeModel to the IAM user.'
-                : '';
-            throw new RuntimeException('AI could not generate a scene right now.'.$hint);
+            $awsMsg = trim((string) $e->getAwsErrorMessage());
+            if ($awsMsg !== '') {
+                throw new RuntimeException('Bedrock: '.$awsMsg);
+            }
+            throw new RuntimeException('AI could not generate a scene right now. Check AWS_BEDROCK_MODEL_ID uses a US inference profile (us.anthropic.…).');
         } catch (\Throwable $e) {
             Log::warning('VR scene generation Bedrock failure', ['message' => $e->getMessage()]);
             throw new RuntimeException('AI could not generate a scene right now. Try again in a moment.');
