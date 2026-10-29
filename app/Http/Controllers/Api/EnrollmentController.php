@@ -35,7 +35,10 @@ class EnrollmentController extends Controller
     {
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'enrollment_code' => 'required|string',
+            // FREE ENROLLMENT (temporary, 2026-10-29): code no longer required.
+            // Uncomment to restore the enrollment-code requirement.
+            // 'enrollment_code' => 'required|string',
+            'enrollment_code' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -72,9 +75,14 @@ class EnrollmentController extends Controller
             ], 400);
         }
 
-        // TEST CODE: Allow "20252025" for backend testing (bypasses all validation)
+        // FREE ENROLLMENT (temporary, 2026-10-29): the enrollment-code gate
+        // below is disabled — every enrollment is treated as the test-code
+        // bypass case. To restore code-gated enrollment, delete the
+        // "$isTestCode = true;" override line and uncomment the block.
+        $isTestCode = true;
+        /*
         $isTestCode = $request->enrollment_code === '20252025';
-        
+
         if (!$isTestCode) {
             // Validate enrollment code - REQUIRED
             $enrollmentCode = EnrollmentCode::where('code', $request->enrollment_code)
@@ -115,6 +123,7 @@ class EnrollmentController extends Controller
                 ], 403);
             }
         }
+        */
 
         // For test code, generate a unique enrollment_code to avoid unique constraint violation
         $finalEnrollmentCode = $isTestCode 
