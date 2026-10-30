@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CourseResource\RelationManagers;
 
 use App\Filament\Support\CourseContentForms;
+use App\Filament\Support\PanelAwareContent;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -14,6 +15,8 @@ use Filament\Tables\Table;
  */
 class ModulesRelationManager extends RelationManager
 {
+    use PanelAwareContent;
+
     protected static string $relationship = 'modules';
 
     /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
@@ -69,7 +72,7 @@ class ModulesRelationManager extends RelationManager
                     // Keep the course's tutor as the module's owner so it stays
                     // visible/editable in the tutor panel.
                     ->mutateFormDataUsing(function (array $data): array {
-                        $data['tutor_id'] = $this->getOwnerRecord()->tutor_id;
+                        $data['tutor_id'] = $this->contentTutorId($this->getOwnerRecord()->tutor_id);
                         return $data;
                     }),
             ])
@@ -77,7 +80,7 @@ class ModulesRelationManager extends RelationManager
                 Tables\Actions\Action::make('open')
                     ->label('Topics, tests & assignments')
                     ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn ($record) => \App\Filament\Resources\ModuleResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn ($record) => $this->contentUrl('ModuleResource', $record)),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

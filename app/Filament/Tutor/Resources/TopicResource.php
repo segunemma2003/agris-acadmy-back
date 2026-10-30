@@ -77,49 +77,6 @@ class TopicResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->default(true),
                     ])->columns(2),
-                Forms\Components\Section::make('Classwork / Assignments')
-                    ->description('Add assignments or classwork for this topic')
-                    ->schema([
-                        Forms\Components\Repeater::make('classwork')
-                            ->label('Classwork Items')
-                            ->relationship('assignments')
-                            ->schema([
-                                Forms\Components\Hidden::make('id'),
-                                Forms\Components\TextInput::make('title')
-                                    ->required()
-                                    ->maxLength(255)
-                                    ->columnSpan(2),
-                                Forms\Components\RichEditor::make('description')
-                                    ->required()
-                                    ->columnSpanFull(),
-                                Forms\Components\RichEditor::make('instructions')
-                                    ->label('Instructions')
-                                    ->columnSpanFull(),
-                                Forms\Components\TextInput::make('max_score')
-                                    ->label('Maximum Score')
-                                    ->numeric()
-                                    ->default(100)
-                                    ->required(),
-                                Forms\Components\DateTimePicker::make('due_date')
-                                    ->label('Due Date')
-                                    ->timezone('UTC'),
-                                Forms\Components\TextInput::make('sort_order')
-                                    ->label('Sort Order')
-                                    ->numeric()
-                                    ->default(0),
-                                Forms\Components\Toggle::make('is_active')
-                                    ->label('Active')
-                                    ->default(true),
-                            ])
-                            ->columns(2)
-                            ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
-                            ->defaultItems(0)
-                            ->addActionLabel('Add Classwork')
-                            ->collapsible()
-                            ->collapsed()
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsed(),
             ]);
     }
 
@@ -198,7 +155,8 @@ class TopicResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // Assignments can be managed through the form or separately
+            \App\Filament\Resources\TopicResource\RelationManagers\TestsRelationManager::class,
+            \App\Filament\Resources\TopicResource\RelationManagers\AssignmentsRelationManager::class,
         ];
     }
 

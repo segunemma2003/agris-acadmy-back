@@ -30,6 +30,16 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\TestCase;
+use App\Filament\Tutor\Resources\CourseResource as TutorCourseResource;
+use App\Filament\Tutor\Resources\CourseResource\Pages\ViewCourse as TutorViewCourse;
+use App\Filament\Tutor\Resources\CourseResource\RelationManagers as TutorCourseRM;
+use App\Filament\Tutor\Resources\ModuleResource as TutorModuleResource;
+use App\Filament\Tutor\Resources\ModuleResource\Pages\EditModule as TutorEditModule;
+use App\Filament\Tutor\Resources\TopicResource as TutorTopicResource;
+use App\Filament\Tutor\Resources\TopicResource\Pages\EditTopic as TutorEditTopic;
+use App\Filament\Tutor\Resources\TopicTestResource as TutorTopicTestResource;
+use App\Filament\Tutor\Resources\TopicTestResource\Pages\EditTopicTest as TutorEditTopicTest;
+use App\Filament\Tutor\Resources\TopicTestResource\RelationManagers\QuestionsRelationManager as TutorTopicQuestionsRM;
 
 /**
  * Admin can build a course's content from the course page, drilling down
@@ -156,5 +166,50 @@ class AdminCourseContentTest extends TestCase
         // The 3 untouched default rows are skipped, not saved or rejected.
         $this->assertSame(2, $topicTest->questions()->count());
         $this->assertSame(['A' => 'X', 'B' => 'Y'], $topicTest->questions()->where('question', 'Pick one')->first()->options);
+    }
+
+    public function test_tutor_builds_own_course_content_from_course_page(): void
+    {
+        $this->actingAs($this->tutor);
+        Filament::setCurrentPanel(Filament::getPanel('tutor'));
+
+        $this->get(TutorCourseResource::getUrl('view', ['record' => $this->course]))->assertOk();
+
+        // Course page: add a module and a course assignment (both were empty stubs before).
+        Livewire::test(TutorCourseRM\ModulesRelationManager::class, ['ownerRecord' => $this->course, 'pageClass' => TutorViewCourse::class])
+            ->assertTableActionVisible(CreateAction::class)
+            ->callTableAction(CreateAction::class, data: ['title' => 'Feeding', 'sort_order' => 1])
+            ->assertHasNoTableActionErrors();
+        $module = $this->course->modules()->firstOrFail();
+        $this->assertSame($this->tutor->id, $module->tutor_id);
+
+        Livewire::test(TutorCourseRM\AssignmentsRelationManager::class, ['ownerRecord' => $this->course, 'pageClass' => TutorViewCourse::class])
+            ->callTableAction(CreateAction::class, data: ['title' => 'Feed log', 'description' => 'Track feed', 'max_score' => 20])
+            ->assertHasNoTableActionErrors();
+        $this->assertDatabaseHas('assignments', ['title' => 'Feed log', 'course_id' => $this->course->id, 'tutor_id' => $this->tutor->id]);
+
+        // Module page (tutor panel) → topic; topic page → topic test → questions.
+        $this->get(TutorModuleResource::getUrl('edit', ['record' => $module]))->assertOk();
+        Livewire::test(\App\Filament\Resources\ModuleResource\RelationManagers\TopicsRelationManager::class, ['ownerRecord' => $module, 'pageClass' => TutorEditModule::class])
+            ->callTableAction(CreateAction::class, data: ['title' => 'Starter feed', 'content_type' => 'text', 'sort_order' => 1])
+            ->assertHasNoTableActionErrors();
+        $topic = $module->topics()->firstOrFail();
+
+        $this->get(TutorTopicResource::getUrl('edit', ['record' => $topic]))->assertOk();
+        Livewire::test(\App\Filament\Resources\TopicResource\RelationManagers\TestsRelationManager::class, ['ownerRecord' => $topic, 'pageClass' => TutorEditTopic::class])
+            ->callTableAction(CreateAction::class, data: ['title' => 'Feed check', 'passing_score' => 70, 'time_limit_minutes' => 5])
+            ->assertHasNoTableActionErrors();
+        $topicTest = $topic->test()->firstOrFail();
+        $this->assertSame($this->tutor->id, $topicTest->tutor_id, 'tutor owns it, so their test page lets them edit it');
+
+        $this->get(TutorTopicTestResource::getUrl('edit', ['record' => $topicTest]))->assertOk();
+        Livewire::test(TutorTopicQuestionsRM::class, ['ownerRecord' => $topicTest, 'pageClass' => TutorEditTopicTest::class])
+            ->callTableAction(CreateAction::class, data: ['question_type' => 'true_false', 'question' => 'Chicks need water', 'correct_answer' => 'true', 'points' => 1])
+            ->assertHasNoTableActionErrors();
+        $this->assertSame(1, $topicTest->questions()->count());
+
+        // Another tutor can't open this tutor's module (it's outside their scoped list, so 404).
+        $other = User::factory()->create(['role' => 'tutor', 'is_active' => true]);
+        $this->actingAs($other)->get(TutorModuleResource::getUrl('edit', ['record' => $module]))->assertNotFound();
     }
 }

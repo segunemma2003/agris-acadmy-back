@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ModuleResource\RelationManagers;
 
 use App\Filament\Support\CourseContentForms;
+use App\Filament\Support\PanelAwareContent;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -12,6 +13,8 @@ use Filament\Tables\Table;
 /** Module test tab on a module; each test opens to manage its questions. */
 class TestsRelationManager extends RelationManager
 {
+    use PanelAwareContent;
+
     protected static string $relationship = 'test';
 
     /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
@@ -44,7 +47,7 @@ class TestsRelationManager extends RelationManager
                     ->mutateFormDataUsing(function (array $data): array {
                         $owner = $this->getOwnerRecord();
                         $data['course_id'] = $owner->course_id;
-                        $data['tutor_id'] = $owner->course?->tutor_id;
+                        $data['tutor_id'] = $this->contentTutorId($owner->course?->tutor_id);
                         return $data;
                     }),
             ])
@@ -52,7 +55,7 @@ class TestsRelationManager extends RelationManager
                 Tables\Actions\Action::make('questions')
                     ->label('Questions')
                     ->icon('heroicon-o-question-mark-circle')
-                    ->url(fn ($record) => \App\Filament\Resources\ModuleTestResource::getUrl('edit', ['record' => $record])),
+                    ->url(fn ($record) => $this->contentUrl('ModuleTestResource', $record)),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

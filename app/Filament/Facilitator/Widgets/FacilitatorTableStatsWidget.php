@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Auth;
 
 class FacilitatorTableStatsWidget extends BaseWidget
 {
+    // Not shown yet: under its old filename (Supervisor*Widget.php) Filament's
+    // discovery never registered this widget. Set to true to add it to the
+    // facilitator dashboard.
+    protected static bool $isDiscovered = false;
+
     protected static ?string $heading = 'My Courses Performance';
 
     protected static ?int $sort = 3;

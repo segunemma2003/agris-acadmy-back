@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class FacilitatorChartStatsWidget extends ChartWidget
 {
+    // Not shown yet: under its old filename (Supervisor*Widget.php) Filament's
+    // discovery never registered this widget. Set to true to add it to the
+    // facilitator dashboard.
+    protected static bool $isDiscovered = false;
+
     protected static ?string $heading = 'My Course Enrollments (Last 7 Days)';
 
     protected static ?int $sort = 2;

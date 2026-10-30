@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ModuleResource\RelationManagers;
 
 use App\Filament\Support\CourseContentForms;
+use App\Filament\Support\PanelAwareContent;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -12,6 +13,8 @@ use Filament\Tables\Table;
 /** Assignments tab on a module. */
 class AssignmentsRelationManager extends RelationManager
 {
+    use PanelAwareContent;
+
     protected static string $relationship = 'assignments';
 
     /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
@@ -52,7 +55,7 @@ class AssignmentsRelationManager extends RelationManager
                     ->mutateFormDataUsing(function (array $data): array {
                         $owner = $this->getOwnerRecord();
                         $data['course_id'] = $owner->course_id;
-                        $data['tutor_id'] = $owner->course?->tutor_id;
+                        $data['tutor_id'] = $this->contentTutorId($owner->course?->tutor_id);
                         return $data;
                     }),
             ])

@@ -2,10 +2,9 @@
 
 namespace App\Filament\Tutor\Resources\CourseResource\RelationManagers;
 
-use Filament\Resources\RelationManagers\RelationManager;
+use App\Filament\Resources\CourseResource\RelationManagers\AssignmentsRelationManager as Base;
 
-class AssignmentsRelationManager extends RelationManager
+/** Assignments section on the tutor course page — shared with admin. */
+class AssignmentsRelationManager extends Base
 {
-    protected static string $relationship = 'assignments';
 }
-

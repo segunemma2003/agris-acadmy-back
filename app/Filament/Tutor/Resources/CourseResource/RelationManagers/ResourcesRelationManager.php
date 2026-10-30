@@ -15,6 +15,12 @@ class ResourcesRelationManager extends RelationManager
 {
     protected static string $relationship = 'resources';
 
+    /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     protected static ?string $recordTitleAttribute = 'title';
 
     public function form(Form $form): Form

@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Auth;
 
 class FacilitatorStatsWidget extends BaseWidget
 {
+    // Not shown yet: under its old filename (Supervisor*Widget.php) Filament's
+    // discovery never registered this widget. Set to true to add it to the
+    // facilitator dashboard.
+    protected static bool $isDiscovered = false;
+
     protected function getStats(): array
     {
         $facilitatorId = Auth::id();

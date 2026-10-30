@@ -2,10 +2,9 @@
 
 namespace App\Filament\Tutor\Resources\CourseResource\RelationManagers;
 
-use Filament\Resources\RelationManagers\RelationManager;
+use App\Filament\Resources\CourseResource\RelationManagers\ModulesRelationManager as Base;
 
-class ModulesRelationManager extends RelationManager
+/** Modules section on the tutor course page — shared with admin; panel-aware links/ownership. */
+class ModulesRelationManager extends Base
 {
-    protected static string $relationship = 'modules';
 }
-
