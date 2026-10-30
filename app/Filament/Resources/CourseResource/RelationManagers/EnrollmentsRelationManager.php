@@ -21,6 +21,12 @@ class EnrollmentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'enrollments';
 
+    /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public function form(Form $form): Form
     {
         return $form

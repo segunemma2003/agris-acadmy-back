@@ -223,6 +223,8 @@ class CourseResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->label('View & manage content'),
                 Tables\Actions\Action::make('enrollments')
                     ->label('Enrollments')
                     ->icon('heroicon-o-user-group')
@@ -293,6 +295,8 @@ class CourseResource extends Resource
             RelationManagers\ResourcesRelationManager::class,
             RelationManagers\ReviewsRelationManager::class,
             RelationManagers\EnrollmentsRelationManager::class,
+            // Keep last: the "Enrollments" table action links to tab index 3.
+            RelationManagers\AssignmentsRelationManager::class,
         ];
     }
 
@@ -301,6 +305,7 @@ class CourseResource extends Resource
         return [
             'index' => Pages\ListCourses::route('/'),
             'create' => Pages\CreateCourse::route('/create'),
+            'view' => Pages\ViewCourse::route('/{record}'),
             'edit' => Pages\EditCourse::route('/{record}/edit'),
         ];
     }

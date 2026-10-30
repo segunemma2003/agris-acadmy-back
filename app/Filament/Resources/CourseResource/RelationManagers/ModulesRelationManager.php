@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\CourseResource\RelationManagers;
 
-use Filament\Forms;
+use App\Filament\Support\CourseContentForms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -16,26 +16,23 @@ class ModulesRelationManager extends RelationManager
 {
     protected static string $relationship = 'modules';
 
+    /** Editable on the View page too, not just Edit (Filament defaults View tabs to read-only). */
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     protected static ?string $recordTitleAttribute = 'title';
 
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title')
-                    ->required()
-                    ->maxLength(255)
-                    ->columnSpanFull(),
-                Forms\Components\RichEditor::make('description')
-                    ->columnSpanFull(),
-                Forms\Components\TextInput::make('sort_order')
-                    ->label('Sort Order')
-                    ->numeric()
-                    ->default(fn () => ($this->getOwnerRecord()->modules()->max('sort_order') ?? 0) + 1)
-                    ->required(),
-                Forms\Components\Toggle::make('is_active')
-                    ->label('Active (visible to learners)')
-                    ->default(true),
+                ...collect(CourseContentForms::module())->map(
+                    fn ($field) => $field->getName() === 'sort_order'
+                        ? $field->default(fn () => ($this->getOwnerRecord()->modules()->max('sort_order') ?? 0) + 1)
+                        : $field
+                )->all(),
             ])
             ->columns(2);
     }
@@ -54,6 +51,9 @@ class ModulesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('topics_count')
                     ->label('Topics')
                     ->counts('topics'),
+                Tables\Columns\TextColumn::make('test_count')
+                    ->label('Tests')
+                    ->counts('test'),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
@@ -74,6 +74,10 @@ class ModulesRelationManager extends RelationManager
                     }),
             ])
             ->actions([
+                Tables\Actions\Action::make('open')
+                    ->label('Topics, tests & assignments')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->url(fn ($record) => \App\Filament\Resources\ModuleResource::getUrl('edit', ['record' => $record])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
