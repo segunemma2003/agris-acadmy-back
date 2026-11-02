@@ -39,6 +39,8 @@ class EnrollmentController extends Controller
             // Uncomment to restore the enrollment-code requirement.
             // 'enrollment_code' => 'required|string',
             'enrollment_code' => 'nullable|string',
+            // Part 4 of the participant form, answered when enrolling
+            ...\App\Support\ParticipantProfile::enrollmentRules(),
         ]);
 
         $user = $request->user();
@@ -137,6 +139,7 @@ class EnrollmentController extends Controller
             'enrollment_code' => $finalEnrollmentCode,
             'status' => 'active',
             'enrolled_at' => now(),
+            ...$request->only(array_keys(\App\Support\ParticipantProfile::enrollmentRules())),
         ]);
 
         // Mark code as used (skip for test code)

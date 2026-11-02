@@ -58,6 +58,13 @@ class EnrollmentResource extends Resource
                             ->default(now()),
                         Forms\Components\DateTimePicker::make('completed_at'),
                     ])->columns(2),
+                Forms\Components\Section::make('Course sign-up answers (participant form Part 4)')
+                    ->schema([
+                        Forms\Components\Select::make('learning_type')->label('4.2 Type of learning')->options(\App\Support\ParticipantProfile::LEARNING_TYPE),
+                        Forms\Components\Select::make('learning_mode')->label('4.3 How they will learn')->options(\App\Support\ParticipantProfile::LEARNING_MODE),
+                        Forms\Components\Select::make('heard_from')->label('4.4 How they heard about it')->options(\App\Support\ParticipantProfile::HEARD_FROM),
+                        Forms\Components\TextInput::make('partner_hub')->label('4.5 Partner organisation or hub'),
+                    ])->columns(2),
             ]);
     }
 

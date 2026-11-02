@@ -112,6 +112,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Enrollments
     Route::post('/enroll', [EnrollmentController::class, 'enroll']);
     Route::get('/my-enrollments', [EnrollmentController::class, 'myEnrollments']);
+    // End-of-course check (participant form Part 5)
+    Route::get('/course-surveys/pending', [\App\Http\Controllers\Api\CourseOutcomeSurveyController::class, 'pending']);
+    Route::post('/course-surveys', [\App\Http\Controllers\Api\CourseOutcomeSurveyController::class, 'store']);
     Route::get('/my-courses', [EnrollmentController::class, 'myCourses']);
     Route::get('/my-ongoing-courses', [EnrollmentController::class, 'myOngoingCourses']);
     Route::get('/ongoing-courses', [EnrollmentController::class, 'ongoingCourses']);

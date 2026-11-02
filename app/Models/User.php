@@ -51,6 +51,12 @@ class User extends Authenticatable
         'sms_opted_out_at',
         'sms_nudge_sent_at',
         'sms_nudge_count',
+        // Participant registration form (App\Support\ParticipantProfile)
+        'consent_given_at', 'consent_version',
+        'first_name', 'surname', 'nationality', 'has_disability', 'disability_types', 'displacement_status',
+        'women_category', 'education_level', 'locality_type', 'learner_category', 'main_work', 'job_title',
+        'employment_type', 'work_started_month', 'work_started_year', 'work_organisation', 'work_sector',
+        'main_commodity', 'income_band', 'value_chain',
     ];
 
     /**
@@ -71,6 +77,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'disability_types' => 'array',
+            'consent_given_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
@@ -299,5 +307,10 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new \App\Notifications\ResetPasswordNotification($token));
+    }
+
+    public function courseOutcomeSurveys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CourseOutcomeSurvey::class);
     }
 }

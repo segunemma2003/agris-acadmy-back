@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Exports\UserExporter;
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -154,6 +155,39 @@ class UserResource extends Resource
                     ])
                     ->columns(2)
                     ->visible(fn (callable $get) => $get('role') === 'student'),
+                Forms\Components\Section::make('Participant profile')
+                    ->description('Answers from the participant registration form (Parts 1–3). Consent is to the "Your Information, Your Choice" notice.')
+                    ->schema([
+                        Forms\Components\Placeholder::make('consent_status')
+                            ->label('Data consent')
+                            ->content(fn ($record) => $record?->consent_given_at
+                                ? 'Yes — given ' . $record->consent_given_at->format('j M Y, H:i') . ' (notice version: ' . ($record->consent_version ?? '—') . ')'
+                                : 'Not recorded (registered before the consent step, or via another channel)')
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('first_name')->label('1.1 First name'),
+                        Forms\Components\TextInput::make('surname')->label('1.2 Surname'),
+                        Forms\Components\Select::make('nationality')->label('1.7 Nationality')->options(\App\Support\ParticipantProfile::NATIONALITY),
+                        Forms\Components\Select::make('has_disability')->label('1.8 Disability or long-term difficulty')->options(\App\Support\ParticipantProfile::YES_NO_PREFER)->reactive(),
+                        Forms\Components\CheckboxList::make('disability_types')->label('1.9 Kind of difficulty')->options(\App\Support\ParticipantProfile::DISABILITY_TYPES)->columns(2)->visible(fn (callable $get) => $get('has_disability') === 'yes'),
+                        Forms\Components\Select::make('displacement_status')->label('1.10 Displacement')->options(\App\Support\ParticipantProfile::DISPLACEMENT),
+                        Forms\Components\Select::make('women_category')->label('1.11 Which best describes you (women)')->options(\App\Support\ParticipantProfile::WOMEN_CATEGORY),
+                        Forms\Components\Select::make('education_level')->label('1.12 Highest education')->options(\App\Support\ParticipantProfile::EDUCATION),
+                        Forms\Components\Select::make('locality_type')->label('2.5 Rural, peri-urban or urban')->options(\App\Support\ParticipantProfile::LOCALITY),
+                        Forms\Components\Select::make('learner_category')->label('3.1 Which best describes you')->options(\App\Support\ParticipantProfile::LEARNER_CATEGORY),
+                        Forms\Components\Select::make('main_work')->label('3.2 Main work now')->options(\App\Support\ParticipantProfile::MAIN_WORK),
+                        Forms\Components\TextInput::make('job_title')->label('3.3 Job title / what they do'),
+                        Forms\Components\Select::make('employment_type')->label('3.4 Full time, part time or seasonal')->options(\App\Support\ParticipantProfile::EMPLOYMENT_TYPE),
+                        Forms\Components\TextInput::make('work_started_month')->label('3.5 Month started (1–12)')->numeric()->minValue(1)->maxValue(12),
+                        Forms\Components\TextInput::make('work_started_year')->label('3.5 Year started')->numeric(),
+                        Forms\Components\TextInput::make('work_organisation')->label('Organisation (where they work)')->datalist(\App\Support\ParticipantProfile::ORGANISATIONS),
+                        Forms\Components\Select::make('work_sector')->label('3.6 Sector')->options(\App\Support\ParticipantProfile::SECTOR),
+                        Forms\Components\Select::make('main_commodity')->label('3.7 Main commodity')->options(\App\Support\ParticipantProfile::COMMODITY),
+                        Forms\Components\Select::make('income_band')->label('Monthly earnings')->options(\App\Support\ParticipantProfile::INCOME),
+                        Forms\Components\Select::make('value_chain')->label('3.8 Part of the value chain')->options(\App\Support\ParticipantProfile::VALUE_CHAIN),
+                    ])
+                    ->columns(2)
+                    ->collapsible()
+                    ->visible(fn (callable $get) => $get('role') === 'student'),
                 Forms\Components\Section::make('Password')
                     ->schema([
                         Forms\Components\TextInput::make('password')
@@ -247,6 +281,8 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\EnrollmentsRelationManager::class,
+            RelationManagers\OutcomeSurveysRelationManager::class,
         ];
     }
 

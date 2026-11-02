@@ -19,6 +19,8 @@ class Enrollment extends Model
         'amount_paid',
         'payment_method',
         'transaction_id',
+        // Part 4 of the participant form, answered when enrolling
+        'learning_type', 'learning_mode', 'heard_from', 'partner_hub',
     ];
 
     protected function casts(): array
@@ -118,5 +120,10 @@ class Enrollment extends Model
                 }
             }
         });
+    }
+
+    public function outcomeSurveys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CourseOutcomeSurvey::class);
     }
 }

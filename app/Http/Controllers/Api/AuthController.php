@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\ParticipantProfile;
+
 use App\Http\Controllers\Controller;
 use OpenApi\Annotations as OA;
 use App\Mail\WelcomeStudentMail;
@@ -66,8 +68,11 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'name'                  => 'required|string|max:255',
+            'name'                  => 'required_without:first_name|nullable|string|max:255',
             'email'                 => 'required|string|email|max:255|unique:users',
+            // "Yes, I agree" to the participant data notice (enforced by the web form)
+            'consent'               => 'nullable|accepted',
+            ...ParticipantProfile::profileRules(),
             'password'              => 'required|string|min:8|confirmed',
             'phone'                 => 'nullable|string|max:20',
             'gender'                => 'nullable|string|in:male,female,other',
@@ -86,8 +91,10 @@ class AuthController extends Controller
             $age = Carbon::parse($request->date_of_birth)->age;
         }
 
+        $profile = $this->profileData($request);
         $user = User::create([
-            'name'          => $request->name,
+            ...$profile,
+            'name'          => $request->name ?: trim($request->first_name . ' ' . $request->surname),
             'email'         => $request->email,
             'password'      => Hash::make($request->password),
             'role'          => 'student',
@@ -100,6 +107,8 @@ class AuthController extends Controller
             'lga'           => $request->lga,
             'occupation'    => $request->occupation,
             'referral'      => $request->referral,
+            'consent_given_at' => $request->boolean('consent') ? now() : null,
+            'consent_version'  => $request->boolean('consent') ? ParticipantProfile::CONSENT_VERSION : null,
             'is_active'     => true,
         ]);
 
@@ -333,13 +342,20 @@ class AuthController extends Controller
             'notification_preferences' => 'nullable|array',
             'notification_preferences.in_app' => 'nullable|array',
             'notification_preferences.email' => 'nullable|array',
+            ...ParticipantProfile::profileRules(),
         ]);
 
-        $updateData = $request->only([
-            'name', 'email', 'phone', 'gender', 'date_of_birth', 'age',
-            'location', 'state', 'lga', 'occupation', 'referral',
-            'bio', 'avatar', 'locale', 'notification_preferences',
-        ]);
+        $updateData = [
+            ...$request->only([
+                'name', 'email', 'phone', 'gender', 'date_of_birth', 'age',
+                'location', 'state', 'lga', 'occupation', 'referral',
+                'bio', 'avatar', 'locale', 'notification_preferences',
+            ]),
+            ...$this->profileData($request),
+        ];
+        if (! $request->filled('name') && ($request->filled('first_name') || $request->filled('surname'))) {
+            $updateData['name'] = trim(($request->first_name ?? $user->first_name) . ' ' . ($request->surname ?? $user->surname));
+        }
 
         if (isset($updateData['notification_preferences'])) {
             $updateData['notification_preferences'] = \App\Support\NotificationPreferences::merge(
@@ -414,7 +430,19 @@ class AuthController extends Controller
             'notification_preferences' => \App\Support\NotificationPreferences::merge(
                 $user->notification_preferences
             ),
+            'consent_given_at' => $user->consent_given_at?->toIso8601String(),
+            ...collect(ParticipantProfile::profileFields())->mapWithKeys(fn ($f) => [$f => $user->{$f}])->all(),
         ];
+    }
+
+    /** Participant-form fields present in the request (Parts 1–3). */
+    private function profileData(Request $request): array
+    {
+        return array_filter(
+            $request->only(ParticipantProfile::profileFields()),
+            fn ($key) => $request->has($key),
+            ARRAY_FILTER_USE_KEY
+        );
     }
 
     /**
