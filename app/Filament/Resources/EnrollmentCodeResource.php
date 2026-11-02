@@ -22,6 +22,10 @@ class EnrollmentCodeResource extends Resource
 
     protected static ?string $navigationGroup = 'Course Management';
 
+    // Hidden (2026-11-01): enrollment is free and one-click, codes aren't used.
+    // Set to true to bring the Enrollment Codes page back to the sidebar.
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Form $form): Form
     {
         return $form

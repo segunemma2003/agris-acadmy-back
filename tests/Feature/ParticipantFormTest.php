@@ -63,10 +63,21 @@ class ParticipantFormTest extends TestCase
         $this->assertSame('rice', $res['user']['main_commodity']);
         $this->assertNotNull($res['user']['consent_given_at']);
 
+        // Other clients that don't send consent can still register
+        $this->postJson('/api/register', ['name' => 'No Consent', 'email' => 'nc@example.com',
+            'password' => 'password123', 'password_confirmation' => 'password123'])->assertCreated();
+        $this->assertNull(User::where('email', 'nc@example.com')->value('consent_given_at'));
+
         // Invalid option is rejected
         $this->postJson('/api/register', ['first_name' => 'X', 'surname' => 'Y', 'email' => 'x@example.com',
             'password' => 'password123', 'password_confirmation' => 'password123', 'income_band' => 'lots'])
             ->assertStatus(422)->assertJsonValidationErrors('income_band');
+
+        // Existing learner (registered before the consent step) agrees from their profile
+        $existing = User::factory()->create(['role' => 'student', 'is_active' => true]);
+        $this->actingAs($existing, 'sanctum')->putJson('/api/user/profile', ['consent' => true, 'education_level' => 'degree'])->assertOk();
+        $this->assertNotNull($existing->fresh()->consent_given_at);
+        $this->app['auth']->forgetGuards();
 
         // Edit profile (Parts 1–3)
         $token = $res['token'];
@@ -76,11 +87,13 @@ class ParticipantFormTest extends TestCase
         $this->assertSame(['employed', '30000_70000', 'Aisha Musa'], [$user->main_work, $user->income_band, $user->name]);
 
         // Enroll with Part 4 answers
-        $this->withToken($token)->postJson('/api/enroll', [
-            'course_id' => $course->id, 'learning_type' => 'course', 'learning_mode' => 'blended',
-            'heard_from' => 'whatsapp', 'partner_hub' => 'Kano Hub',
-        ])->assertSuccessful();
+        // One-click enroll — no code, no form
+        $this->withToken($token)->postJson('/api/enroll', ['course_id' => $course->id])->assertSuccessful();
         $enrollment = Enrollment::where('user_id', $user->id)->firstOrFail();
+        $this->withToken($token)->putJson("/api/enrollments/{$enrollment->id}/signup-answers", [
+            'learning_type' => 'course', 'learning_mode' => 'blended', 'heard_from' => 'whatsapp', 'partner_hub' => 'Kano Hub',
+        ])->assertOk();
+        $enrollment->refresh();
         $this->assertSame(['course', 'blended', 'whatsapp', 'Kano Hub'], [$enrollment->learning_type, $enrollment->learning_mode, $enrollment->heard_from, $enrollment->partner_hub]);
 
         // Nothing pending until the course is completed
@@ -106,6 +119,14 @@ class ParticipantFormTest extends TestCase
         $this->withToken($token)->postJson('/api/course-surveys', [...$answers, 'stage' => 'six_month', 'work_change' => 'same', 'feels_respected' => 'yes'])->assertOk();
         $this->assertSame(2, $user->courseOutcomeSurveys()->count());
         $this->assertNull($user->courseOutcomeSurveys()->where('stage', 'six_month')->value('feels_respected'), '5.5 only applies when work changed');
+
+        // A learner holding a certificate is asked too, even if the enrollment wasn't marked complete
+        $course2 = Course::create(['category_id' => $category->id, 'title' => 'Fish Farming', 'slug' => 'fish-farming', 'description' => 'Intro', 'is_published' => true]);
+        $e2 = Enrollment::create(['user_id' => $user->id, 'course_id' => $course2->id, 'status' => 'active', 'enrolled_at' => now(), 'progress_percentage' => 40]);
+        \App\Models\Certificate::forceCreate(['user_id' => $user->id, 'course_id' => $course2->id, 'enrollment_id' => $e2->id,
+            'certificate_number' => 'CERT-TEST-1', 'issued_date' => now()->toDateString()]);
+        $this->withToken($token)->getJson('/api/course-surveys/pending')
+            ->assertJsonFragment(['enrollment_id' => $e2->id, 'stage' => 'completion', 'completed_course' => true]);
 
         // Another learner can't answer for this enrollment
         $other = User::factory()->create(['role' => 'student', 'is_active' => true]);

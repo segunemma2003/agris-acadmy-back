@@ -31,6 +31,22 @@ class EnrollmentController extends Controller
      *     @OA\Response(response=403, description="Code not valid for this account, or the account is an organisation (organisations cannot enroll)", @OA\JsonContent(ref="#/components/schemas/ApiError"))
      * )
      */
+    /**
+     * Save the participant form's Part 4 answers (how they'll take the course)
+     * on the learner's own enrollment — asked on the course page after the
+     * one-click enroll, so enrolling itself never needs a form.
+     */
+    public function updateSignupAnswers(Request $request, Enrollment $enrollment)
+    {
+        if ($enrollment->user_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'Enrollment not found'], 404);
+        }
+        $data = $request->validate(\App\Support\ParticipantProfile::enrollmentRules());
+        $enrollment->update($data);
+
+        return response()->json(['success' => true, 'message' => 'Thank you — saved.', 'data' => $enrollment->only(array_keys($data))]);
+    }
+
     public function enroll(Request $request)
     {
         $request->validate([

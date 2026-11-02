@@ -71,7 +71,7 @@ class AuthController extends Controller
             'name'                  => 'required_without:first_name|nullable|string|max:255',
             'email'                 => 'required|string|email|max:255|unique:users',
             // "Yes, I agree" to the participant data notice (enforced by the web form)
-            'consent'               => 'nullable|accepted',
+            'consent'               => 'sometimes|accepted',
             ...ParticipantProfile::profileRules(),
             'password'              => 'required|string|min:8|confirmed',
             'phone'                 => 'nullable|string|max:20',
@@ -343,6 +343,8 @@ class AuthController extends Controller
             'notification_preferences.in_app' => 'nullable|array',
             'notification_preferences.email' => 'nullable|array',
             ...ParticipantProfile::profileRules(),
+            // Existing learners can agree to the participant data notice from their profile
+            'consent' => 'sometimes|accepted',
         ]);
 
         $updateData = [
@@ -353,6 +355,10 @@ class AuthController extends Controller
             ]),
             ...$this->profileData($request),
         ];
+        if ($request->boolean('consent') && ! $user->consent_given_at) {
+            $updateData['consent_given_at'] = now();
+            $updateData['consent_version'] = ParticipantProfile::CONSENT_VERSION;
+        }
         if (! $request->filled('name') && ($request->filled('first_name') || $request->filled('surname'))) {
             $updateData['name'] = trim(($request->first_name ?? $user->first_name) . ' ' . ($request->surname ?? $user->surname));
         }

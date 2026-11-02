@@ -122,6 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/saved-courses-list', [EnrollmentController::class, 'savedCourses']);
     Route::get('/certified-courses', [EnrollmentController::class, 'certifiedCourses']);
     Route::get('/enrollments/{enrollment}', [EnrollmentController::class, 'show']);
+    Route::put('/enrollments/{enrollment}/signup-answers', [EnrollmentController::class, 'updateSignupAnswers']);
 
     // VR Studio authoring (tutor / admin / facilitator via handoff Sanctum token)
     Route::prefix('vr-studio')->group(function () {

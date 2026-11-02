@@ -18,9 +18,13 @@ class CourseOutcomeSurveyController extends Controller
     public function pending(Request $request)
     {
         $user = $request->user();
+        // Finished = marked completed, 100% progress, or already holding a certificate for the course.
+        $certifiedCourseIds = \App\Models\Certificate::where('user_id', $user->id)->whereNotNull('course_id')->pluck('course_id');
         $enrollments = Enrollment::with(['course:id,title,slug', 'outcomeSurveys:id,enrollment_id,stage'])
             ->where('user_id', $user->id)
-            ->where(fn ($q) => $q->where('status', 'completed')->orWhere('progress_percentage', '>=', 100))
+            ->where(fn ($q) => $q->where('status', 'completed')
+                ->orWhere('progress_percentage', '>=', 100)
+                ->orWhereIn('course_id', $certifiedCourseIds))
             ->orderBy('completed_at')
             ->get();
 
@@ -39,7 +43,8 @@ class CourseOutcomeSurveyController extends Controller
                     'enrollment_id' => $enrollment->id,
                     'stage' => $stage,
                     'course' => $enrollment->course ? ['id' => $enrollment->course->id, 'title' => $enrollment->course->title] : null,
-                    'completed_course' => $enrollment->status === 'completed' || (float) $enrollment->progress_percentage >= 100,
+                    'completed_course' => $enrollment->status === 'completed' || (float) $enrollment->progress_percentage >= 100
+                        || $certifiedCourseIds->contains($enrollment->course_id),
                 ];
             }
         }
