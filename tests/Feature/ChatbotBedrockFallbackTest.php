@@ -77,6 +77,7 @@ class ChatbotBedrockFallbackTest extends TestCase
         $system = $last['system'][0]['text'];
         $this->assertStringContainsString("I'm only an agritech assistant", $system);
         $this->assertStringContainsString('NEVER give external links', $system);
+        $this->assertStringContainsString('never name a specific antibiotic', $system);
         foreach (array_slice($last['messages'], 1) as $i => $m) {
             $this->assertNotSame($last['messages'][$i]['role'], $m['role']);
         }

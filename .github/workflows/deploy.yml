@@ -651,6 +651,16 @@ jobs:
               echo "✓ Processed pending jobs"
             fi
 
+            # Laravel scheduler: hourly lesson-caption sync, SMS nudges, admin alerts,
+            # heat-map refresh. Installed once for www-data; skipped if any crontab
+            # (www-data or root) already runs schedule:run, so it never runs twice.
+            if (sudo crontab -u www-data -l 2>/dev/null; sudo crontab -l 2>/dev/null) | grep -q 'artisan schedule:run'; then
+              echo "✓ Laravel scheduler cron already installed"
+            else
+              ( sudo crontab -u www-data -l 2>/dev/null; echo '* * * * * cd /var/www/laravel && php artisan schedule:run >> /dev/null 2>&1' ) | sudo crontab -u www-data -
+              echo "✓ Laravel scheduler cron installed (runs every minute)"
+            fi
+
             # Check for failed jobs and log count
             echo "Checking failed jobs..."
             FAILED_COUNT=$(cd /var/www/laravel && sudo -u www-data php artisan tinker --execute="echo DB::table('failed_jobs')->count();" 2>/dev/null | tail -1 || echo "0")
