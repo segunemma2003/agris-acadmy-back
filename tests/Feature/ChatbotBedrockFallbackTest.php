@@ -69,6 +69,11 @@ class ChatbotBedrockFallbackTest extends TestCase
         $last = end($this->sent);
         $this->assertSame('us.anthropic.claude-haiku-4-5-20251001-v1:0', $last['modelId']);
         $this->assertSame('user', $last['messages'][0]['role']);
+        // Chronological: the newest user message is last (it was once sent reversed,
+        // so Claude kept answering the first message).
+        $this->assertSame('user', end($last['messages'])['role']);
+        $this->assertStringEndsWith('And feed?', end($last['messages'])['content'][0]['text']);
+        $this->assertStringStartsWith('I keep chickens in Kano', $last['messages'][0]['content'][0]['text']);
         $system = $last['system'][0]['text'];
         $this->assertStringContainsString("I'm only an agritech assistant", $system);
         $this->assertStringContainsString('NEVER give external links', $system);

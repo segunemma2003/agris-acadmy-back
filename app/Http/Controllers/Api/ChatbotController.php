@@ -96,7 +96,6 @@ class ChatbotController extends Controller
         $isReturning = $this->chatbotService->isReturningVisitor($session);
 
         $messages = $session->messages()
-            ->orderBy('created_at')
             ->get()
             ->map(fn ($m) => [
                 'role'       => $m->role,

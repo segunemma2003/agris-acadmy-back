@@ -28,7 +28,7 @@ class ChatbotSession extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(ChatbotMessage::class)->orderBy('created_at');
+        return $this->hasMany(ChatbotMessage::class)->orderBy('id');
     }
 
     public function intakeAnswer(): HasOne
