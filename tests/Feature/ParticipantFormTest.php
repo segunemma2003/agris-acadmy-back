@@ -139,6 +139,12 @@ class ParticipantFormTest extends TestCase
         $this->get(UserResource::getUrl('edit', ['record' => $user]))->assertOk()->assertSee('Participant profile')->assertSee('Data consent');
         $this->get(EnrollmentResource::getUrl('edit', ['record' => $enrollment]))->assertOk()->assertSee('Part 4');
         $this->get(CourseOutcomeSurveyResource::getUrl('index'))->assertOk()->assertSee('Rice Farming');
+        // ...and on the admin dashboard
+        $this->get(Filament::getPanel('admin')->getUrl())->assertOk();
+        \Livewire\Livewire::test(\App\Filament\Widgets\CourseCheckStatsWidget::class)
+            ->assertSee('Would recommend')->assertSee('100%');
+        \Livewire\Livewire::test(\App\Filament\Widgets\LatestCourseChecksWidget::class)
+            ->assertSee('Latest end-of-course checks')->assertSee('Rice Farming')->assertSee('Excellent');
         $survey = $user->courseOutcomeSurveys()->first();
         $this->get(CourseOutcomeSurveyResource::getUrl('view', ['record' => $survey]))->assertOk()->assertSee('More videos');
     }
