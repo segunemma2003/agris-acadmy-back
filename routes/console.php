@@ -9,8 +9,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule video transcription to run every hour
-Schedule::command('videos:transcribe')
+// Lesson captions: download new ones from the connected YouTube channel and translate them.
+Schedule::command('captions:sync')
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground();

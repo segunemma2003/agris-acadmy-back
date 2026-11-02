@@ -50,6 +50,11 @@ class Topic extends Model
         return $this->belongsTo(User::class, 'tutor_id');
     }
 
+    public function captions(): HasMany
+    {
+        return $this->hasMany(TopicCaption::class);
+    }
+
     public function progress(): HasMany
     {
         return $this->hasMany(StudentProgress::class);

@@ -40,6 +40,12 @@ return [
     ],
 
     // Amazon Bedrock — VR Studio scene generation (and future AWS AI)
+    // Agrisiti's YouTube channel — lesson captions are downloaded from it (Admin → YouTube captions).
+    'youtube' => [
+        'client_id' => env('YOUTUBE_CLIENT_ID'),
+        'client_secret' => env('YOUTUBE_CLIENT_SECRET'),
+    ],
+
     'bedrock' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -158,6 +158,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Progress
     Route::get('/courses/{course}/progress', [ProgressController::class, 'show']);
     Route::post('/topics/{topic}/complete', [ProgressController::class, 'complete']);
+    Route::get('/topics/{topic}/captions', [\App\Http\Controllers\Api\TopicCaptionController::class, 'show']);
     Route::put('/progress/{studentProgress}', [ProgressController::class, 'update']);
     Route::post('/progress/sync', [ProgressController::class, 'sync']);
     Route::post('/courses/{course}/modules/{module}/tests/{test}/complete-quiz', [ProgressController::class, 'completeQuiz']);

@@ -58,6 +58,7 @@ class TopicResource extends Resource
         return [
             RelationManagers\TestsRelationManager::class,
             RelationManagers\AssignmentsRelationManager::class,
+            'captions' => RelationManagers\CaptionsRelationManager::class,
         ];
     }
 
