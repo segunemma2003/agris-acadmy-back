@@ -80,6 +80,19 @@ class ChatbotService
         $fullReply  = '';
         $errorReply = "I'm having a little trouble right now. Please try again in a moment!";
 
+        if ($this->useBedrock()) {
+            $reply = $this->completeViaBedrock($history)['text'] ?? null;
+            $fullReply = $reply ?: $errorReply;
+            // Bedrock reply arrives whole — send it in small pieces so the chat still "types".
+            foreach (preg_split('/(?<=\s)/u', $fullReply) as $piece) {
+                if ($piece !== '') {
+                    yield $piece;
+                }
+            }
+            $session->messages()->create(['role' => 'assistant', 'content' => $fullReply]);
+            return;
+        }
+
         try {
             $response = Http::timeout(30)
                 ->withHeaders([
@@ -163,6 +176,15 @@ class ChatbotService
         // Build history including the new user message
         $history = $this->getHistory($session->fresh());
 
+        if ($this->useBedrock()) {
+            $result = $this->completeViaBedrock($history);
+            return $session->messages()->create([
+                'role'        => 'assistant',
+                'content'     => $result['text'] ?? "I'm having a little trouble right now. Please try again in a moment!",
+                'token_count' => $result['tokens'] ?? null,
+            ]);
+        }
+
         try {
             $response = Http::timeout(10)
                 ->withHeaders([
@@ -217,5 +239,77 @@ Your role:
 
 Do NOT discuss pricing, competitor platforms, or anything unrelated to Agrisiti Academy.
 PROMPT;
+    }
+
+    /**
+     * No Anthropic API key on the server but AWS credentials are present →
+     * call Claude through Amazon Bedrock (same model family as VR Studio).
+     */
+    private function useBedrock(): bool
+    {
+        return blank(config('claude.api_key'))
+            && filled(config('services.bedrock.key'))
+            && filled(config('services.bedrock.secret'));
+    }
+
+    /** Separate so tests can swap in a fake client. */
+    protected function bedrockClient(): object
+    {
+        return new \Aws\BedrockRuntime\BedrockRuntimeClient([
+            'version' => 'latest',
+            'region' => config('services.bedrock.region', 'us-east-1'),
+            'credentials' => [
+                'key' => config('services.bedrock.key'),
+                'secret' => config('services.bedrock.secret'),
+            ],
+            'http' => ['timeout' => 30],
+        ]);
+    }
+
+    /**
+     * One Claude reply via Bedrock's Converse API.
+     *
+     * @param  array<int, array{role: string, content: string}>  $history
+     * @return array{text: string, tokens: ?int}|null  null on failure (logged)
+     */
+    private function completeViaBedrock(array $history): ?array
+    {
+        // Converse needs the conversation to start with the user and alternate roles.
+        $messages = [];
+        foreach ($history as $m) {
+            $role = $m['role'] === 'assistant' ? 'assistant' : 'user';
+            $text = trim((string) $m['content']);
+            if ($text === '' || ($messages === [] && $role !== 'user')) {
+                continue;
+            }
+            $last = count($messages) - 1;
+            if ($last >= 0 && $messages[$last]['role'] === $role) {
+                $messages[$last]['content'][0]['text'] .= "\n\n".$text;
+            } else {
+                $messages[] = ['role' => $role, 'content' => [['text' => $text]]];
+            }
+        }
+        if ($messages === []) {
+            return null;
+        }
+
+        try {
+            $result = $this->bedrockClient()->converse([
+                'modelId' => config('services.bedrock.model_id'),
+                'system' => [['text' => $this->buildSystemPrompt()]],
+                'messages' => $messages,
+                'inferenceConfig' => ['maxTokens' => (int) config('claude.max_tokens', 1024)],
+            ])->toArray();
+        } catch (\Throwable $e) {
+            Log::error('Chatbot Bedrock request failed', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+        $text = trim(implode("\n", array_map(
+            fn ($part) => is_array($part) ? (string) ($part['text'] ?? '') : '',
+            $result['output']['message']['content'] ?? []
+        )));
+
+        return $text === '' ? null : ['text' => $text, 'tokens' => $result['usage']['outputTokens'] ?? null];
     }
 }
