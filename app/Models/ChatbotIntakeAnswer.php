@@ -14,6 +14,7 @@ class ChatbotIntakeAnswer extends Model
         'name',
         'phone',
         'occupation',
+        'interest',
         'state_lga',
         'learning_goal',
         'experience_level',

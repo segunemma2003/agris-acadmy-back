@@ -9,6 +9,16 @@ use Illuminate\Support\Collection;
 
 class RecommendationService
 {
+    /** Chatbot "what do you want to learn about?" answers → words to look for in a course. */
+    private const INTEREST_KEYWORDS = [
+        'Crops & vegetables' => ['crop', 'vegetable', 'maize', 'rice', 'tomato', 'pepper', 'soil', 'horticulture', 'agronomy', 'seed', 'farming'],
+        'Poultry & livestock' => ['poultry', 'livestock', 'chicken', 'broiler', 'layer', 'goat', 'sheep', 'cattle', 'pig', 'animal', 'dairy'],
+        'Fish farming' => ['fish', 'aquaculture', 'catfish', 'tilapia', 'pond'],
+        'Hydroponics & urban farming' => ['hydroponic', 'urban', 'greenhouse', 'vertical', 'aquaponic', 'soilless'],
+        'Agribusiness & marketing' => ['business', 'market', 'finance', 'entrepreneur', 'value chain', 'export', 'processing', 'record'],
+        'Agri-tech & smart farming' => ['tech', 'smart', 'digital', 'drone', 'iot', 'sensor', 'data', 'precision', 'irrigation'],
+    ];
+
     public function topThree(ChatbotSession $session): array
     {
         $answers = $session->intakeAnswer;
@@ -66,6 +76,19 @@ class RecommendationService
 
         $categorySlug = $course->category?->slug ?? '';
 
+        // Topic of interest — matched on the course's own words, so it works
+        // whatever the categories are called. Strongest signal.
+        if ($answers->interest) {
+            $haystack = strtolower($course->title.' '.$course->short_description.' '.($course->category?->name ?? '').' '.$categorySlug);
+            $keywords = self::INTEREST_KEYWORDS[$answers->interest] ?? [strtolower($answers->interest)];
+            foreach ($keywords as $word) {
+                if (str_contains($haystack, $word)) {
+                    $score += 5;
+                    break;
+                }
+            }
+        }
+
         // Occupation weight
         if ($answers->occupation) {
             $occupationWeights = $weights['occupation'][$answers->occupation] ?? [];
@@ -95,15 +118,20 @@ class RecommendationService
 
     public function buildRationale(Course $course, ?ChatbotIntakeAnswer $answers): string
     {
-        $experience = $answers?->experience_level ?? 'all';
-        $goal = $answers?->learning_goal ?? 'learn farming';
         $category = $course->category?->name ?? 'agriculture';
+        $level = $course->level ? strtolower($course->level).' ' : '';
+        $parts = [];
 
-        // Normalize to lowercase for sentence flow
-        $exp = strtolower($experience);
-        $goal = strtolower($goal);
+        if ($answers?->interest) {
+            $parts[] = 'matches your interest in '.strtolower($answers->interest);
+        }
+        if ($answers?->learning_goal && $answers->learning_goal !== 'Other') {
+            $parts[] = 'helps you '.lcfirst($answers->learning_goal);
+        }
 
-        return "Great for {$exp} learners looking to {$goal} with Agrisiti's {$category} programme.";
+        return $parts
+            ? ucfirst(implode(' and ', $parts)).". A {$level}{$category} course."
+            : "A {$level}{$category} course popular with learners like you.";
     }
 
     private function fallback(Collection $courses): array
@@ -132,6 +160,7 @@ class RecommendationService
     private function allSkipped(ChatbotIntakeAnswer $answers): bool
     {
         return !$answers->occupation
+            && !$answers->interest
             && !$answers->learning_goal
             && !$answers->experience_level
             && !$answers->preferred_language;

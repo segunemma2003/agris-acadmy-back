@@ -499,12 +499,13 @@ class ChatbotController extends Controller
         $validated = $request->validate([
             'session_token'      => 'required|uuid',
             'occupation'         => 'nullable|string|max:255',
+            'interest'           => 'nullable|string|max:255',
             'state_lga'          => 'nullable|string|max:255',
             'learning_goal'      => 'nullable|string|max:255',
             'experience_level'   => 'nullable|string|max:255',
             'preferred_language' => 'nullable|in:en,ha',
             'skipped_questions'  => 'nullable|array',
-            'skipped_questions.*'=> 'integer|min:1|max:5',
+            'skipped_questions.*'=> 'integer|min:1|max:10',
         ]);
 
         $session = ChatbotSession::where('session_token', $validated['session_token'])->first();
