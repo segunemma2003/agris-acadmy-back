@@ -28,7 +28,7 @@ use OpenApi\Annotations as OA;
  *
  * STEP 2 — Show greeting locally. NO API CALL.
  * Render this as an assistant chat bubble (no server call needed):
- * Hi! I am Agri, your Agrisiti Academy guide.
+ * Hi! I am Coco, your Agrisiti Academy guide.
  * I will help you find the perfect course. First — what is your name?
  *
  * STEP 3 — User types their name and taps Send.

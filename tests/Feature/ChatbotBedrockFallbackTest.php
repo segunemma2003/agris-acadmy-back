@@ -76,6 +76,7 @@ class ChatbotBedrockFallbackTest extends TestCase
         $this->assertStringStartsWith('I keep chickens in Kano', $last['messages'][0]['content'][0]['text']);
         $system = $last['system'][0]['text'];
         $this->assertStringContainsString("I'm only an agritech assistant", $system);
+        $this->assertStringContainsString('You are Coco', $system);
         $this->assertStringContainsString('NEVER give external links', $system);
         $this->assertStringContainsString('never name a specific antibiotic', $system);
         foreach (array_slice($last['messages'], 1) as $i => $m) {

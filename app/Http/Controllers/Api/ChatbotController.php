@@ -43,7 +43,7 @@ class ChatbotController extends Controller
      * 5. Client saves the returned `session_token` to localStorage.
      * 6. Client connects pusher-js to Reverb → subscribes to channel `chatbot.{session_token}`.
      * 7. If `is_returning: false` → show greeting locally (NO extra API call):
-     *    *'Hi! I am Agri, your Agrisiti Academy guide. I will help you find the perfect course. First — what is your name?'*
+     *    *'Hi! I am Coco, your Agrisiti Academy guide. I will help you find the perfect course. First — what is your name?'*
      * 8. If `is_returning: true` → display previous messages immediately and open to free-chat mode.
      *
      * ### Auth scenarios
