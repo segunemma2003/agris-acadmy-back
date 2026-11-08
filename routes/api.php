@@ -167,6 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/course-breakdown', [DashboardController::class, 'courseBreakdown']);
     Route::get('/dashboard/quiz-history', [DashboardController::class, 'quizHistory']);
+    Route::get('/dashboard/topic-tests', [DashboardController::class, 'topicTests']);
 
     // Notes
     Route::get('/my-notes', [NoteController::class, 'myNotes']);

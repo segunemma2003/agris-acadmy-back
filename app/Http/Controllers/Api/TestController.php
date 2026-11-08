@@ -326,6 +326,9 @@ class TestController extends Controller
 
         \App\Services\ContentLocalizer::applyToCollection($test->questions, $user, ['question', 'options', 'explanation']);
 
+        // The answer key is only revealed in the result of a submitted attempt.
+        $test->questions->each->makeHidden(['correct_answer', 'explanation', 'explanation_ha']);
+
         // Get user's attempts
         $attempts = [];
         if ($user) {
@@ -384,7 +387,7 @@ class TestController extends Controller
         }
 
         // Check if topic belongs to module
-        if ($topic->module_id !== $module->id) {
+        if (!$course->is_published || $module->course_id !== $course->id || $topic->module_id !== $module->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Topic not found in this module'
@@ -417,17 +420,28 @@ class TestController extends Controller
             'answers.*' => 'required',
         ]);
 
-        // Calculate score
+        // Calculate score (case- and space-insensitive, so "A"/"a" and "True"/"true" match)
         $questions = $test->questions;
+        \App\Services\ContentLocalizer::applyToCollection($questions, $user, ['question', 'options', 'explanation']);
         $correctAnswers = 0;
         $totalQuestions = $questions->count();
         $userAnswers = $request->answers;
+        $normalise = fn ($v) => mb_strtolower(trim(preg_replace('/\s+/', ' ', (string) $v)));
+        $review = [];
 
         foreach ($questions as $question) {
             $userAnswer = $userAnswers[$question->id] ?? null;
-            if ($userAnswer == $question->correct_answer) {
+            $isCorrect = $userAnswer !== null && $normalise($userAnswer) === $normalise($question->correct_answer);
+            if ($isCorrect) {
                 $correctAnswers++;
             }
+            $review[] = [
+                'question_id' => $question->id,
+                'your_answer' => $userAnswer,
+                'correct_answer' => $question->correct_answer,
+                'is_correct' => $isCorrect,
+                'explanation' => $question->explanation,
+            ];
         }
 
         $score = $correctAnswers;
@@ -458,6 +472,7 @@ class TestController extends Controller
                 'percentage' => round($percentage, 2),
                 'is_passed' => $isPassed,
                 'passing_score' => $test->passing_score,
+                'review' => $review,
             ],
             'message' => $isPassed ? 'Test passed successfully' : 'Test completed'
         ], 201);

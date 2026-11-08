@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\StudentProgress;
 use App\Models\TestAttempt;
+use App\Models\TopicTest;
 use App\Models\TopicTestAttempt;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
@@ -277,5 +278,65 @@ class DashboardController extends Controller
             ->values();
 
         return response()->json(['success' => true, 'data' => $history]);
+    }
+
+    /**
+     * Every active topic test in the learner's enrolled courses, with their
+     * attempts so far, so tests can be taken straight from the dashboard.
+     */
+    public function topicTests(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'organisation' || $user->role === 'partner') {
+            return response()->json(['success' => false, 'message' => 'Not available for organisation accounts'], 403);
+        }
+
+        $courseIds = $user->enrollments()->pluck('course_id');
+
+        $tests = TopicTest::query()
+            ->where('is_active', true)
+            ->whereIn('course_id', $courseIds)
+            ->whereHas('course', fn ($q) => $q->where('is_published', true))
+            ->whereHas('questions')
+            ->with(['course:id,title', 'module:id,title,sort_order', 'topic:id,title,sort_order'])
+            ->withCount('questions')
+            ->get();
+
+        $attempts = TopicTestAttempt::where('user_id', $user->id)
+            ->whereIn('topic_test_id', $tests->pluck('id'))
+            ->get()
+            ->groupBy('topic_test_id');
+
+        $data = $tests
+            ->sortBy(fn ($t) => [$t->course?->title, $t->module?->sort_order ?? 0, $t->topic?->sort_order ?? 0, $t->id])
+            ->map(function (TopicTest $test) use ($attempts) {
+                $mine = $attempts->get($test->id, collect());
+                $used = $mine->count();
+
+                return [
+                    'test_id' => $test->id,
+                    'title' => $test->title,
+                    'description' => $test->description,
+                    'course_id' => $test->course_id,
+                    'course_title' => $test->course?->title,
+                    'module_id' => $test->module_id,
+                    'module_title' => $test->module?->title,
+                    'topic_id' => $test->topic_id,
+                    'topic_title' => $test->topic?->title,
+                    'questions_count' => $test->questions_count,
+                    'passing_score' => (int) $test->passing_score,
+                    'time_limit_minutes' => $test->time_limit_minutes,
+                    'max_attempts' => $test->max_attempts,
+                    'attempts_used' => $used,
+                    'attempts_left' => $test->max_attempts ? max(0, $test->max_attempts - $used) : null,
+                    'best_percentage' => $used ? (float) $mine->max('percentage') : null,
+                    'is_passed' => $mine->contains('is_passed', true),
+                    'last_attempt_at' => $mine->max('completed_at'),
+                ];
+            })
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $data]);
     }
 }
