@@ -86,6 +86,24 @@ class ParticipantFormTest extends TestCase
         $user->refresh();
         $this->assertSame(['employed', '30000_70000', 'Aisha Musa'], [$user->main_work, $user->income_band, $user->name]);
 
+        // Baseline update: wider disability options, self-description, accommodations,
+        // 8 work categories and the split upper income bands.
+        $this->withToken($token)->putJson('/api/user/profile', [
+            'has_disability' => 'yes', 'disability_types' => ['neurodivergent', 'chronic_health'],
+            'disability_description' => 'ADHD; I lose focus in long videos',
+            'accommodation_needs' => ['captions', 'flexible_pace'], 'accommodation_notes' => 'Short lessons help',
+            'main_work' => 'seasonal_wage', 'income_band' => '300001_500000',
+        ])->assertOk()
+            ->assertJsonPath('data.user.accommodation_needs', ['captions', 'flexible_pace'])
+            ->assertJsonPath('data.user.disability_description', 'ADHD; I lose focus in long videos');
+        $user->refresh();
+        $this->assertSame(['seasonal_wage', '300001_500000', ['neurodivergent', 'chronic_health']], [$user->main_work, $user->income_band, $user->disability_types]);
+        $this->withToken($token)->putJson('/api/user/profile', ['income_band' => 'above_500000', 'main_work' => 'underemployed'])->assertOk();
+        // Answers from the earlier form stay valid; unknown ones don't.
+        $this->withToken($token)->putJson('/api/user/profile', ['income_band' => 'above_300000', 'main_work' => 'student'])->assertOk();
+        $this->withToken($token)->putJson('/api/user/profile', ['accommodation_needs' => ['jetpack']])
+            ->assertStatus(422)->assertJsonValidationErrors('accommodation_needs.0');
+
         // Enroll with Part 4 answers
         // One-click enroll — no code, no form
         $this->withToken($token)->postJson('/api/enroll', ['course_id' => $course->id])->assertSuccessful();
