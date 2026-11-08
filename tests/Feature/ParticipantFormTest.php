@@ -104,6 +104,16 @@ class ParticipantFormTest extends TestCase
         $this->withToken($token)->putJson('/api/user/profile', ['accommodation_needs' => ['jetpack']])
             ->assertStatus(422)->assertJsonValidationErrors('accommodation_needs.0');
 
+        // MEL tool (WEO learners): exact categories, adjustments yes/no, value chain track, objective.
+        $this->withToken($token)->putJson('/api/user/profile', [
+            'has_disability' => 'yes', 'disability_types' => ['psychosocial', 'cognitive_learning', 'seeing'],
+            'needs_accommodation' => 'yes', 'accommodation_notes' => 'Flexible pacing',
+            'main_work' => 'wage_casual', 'income_band' => '30000_70000',
+            'value_chain_track' => 'other', 'value_chain_track_other' => 'Beekeeping', 'training_objective' => 'access_finance',
+        ])->assertOk()->assertJsonPath('data.user.training_objective', 'access_finance');
+        $this->withToken($token)->putJson('/api/user/profile', ['training_objective' => 'retire'])
+            ->assertStatus(422)->assertJsonValidationErrors('training_objective');
+
         // Enroll with Part 4 answers
         // One-click enroll — no code, no form
         $this->withToken($token)->postJson('/api/enroll', ['course_id' => $course->id])->assertSuccessful();
@@ -163,6 +173,13 @@ class ParticipantFormTest extends TestCase
             ->assertSee('Would recommend')->assertSee('100%');
         \Livewire\Livewire::test(\App\Filament\Widgets\LatestCourseChecksWidget::class)
             ->assertSee('Latest end-of-course checks')->assertSee('Rice Farming')->assertSee('Excellent');
+        \Illuminate\Support\Facades\Cache::forget('baseline-stats');
+        \Livewire\Livewire::test(\App\Filament\Widgets\BaselineStatsWidget::class)
+            ->assertSee('Learner baseline (WEO)')->assertSee('Living with disability')->assertSee('Earn below minimum wage');
+        \Livewire\Livewire::test(\App\Filament\Widgets\BaselineBreakdownWidget::class)
+            ->assertSee('Psychosocial &amp; mental health', false)->assertSee('Vision / seeing') // "seeing" (earlier form) counted as vision
+            ->assertSee('Wage employee – casual, daily or seasonal labour')->assertSee('Below minimum wage')
+            ->assertSee('Other')->assertSee('Access revolving finance / capital support');
         $survey = $user->courseOutcomeSurveys()->first();
         $this->get(CourseOutcomeSurveyResource::getUrl('view', ['record' => $survey]))->assertOk()->assertSee('More videos');
     }

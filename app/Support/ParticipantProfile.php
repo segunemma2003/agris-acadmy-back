@@ -15,21 +15,34 @@ class ParticipantProfile
 
     public const YES_NO_PREFER = ['yes' => 'Yes', 'no' => 'No', 'prefer_not_to_say' => 'Prefer not to say'];
 
+    /** 1.9 Type of difficulty, disability or neurodivergence (MEL tool 5.9b). */
     public const DISABILITY_TYPES = [
-        'seeing' => 'Seeing',
-        'self_care' => 'Self-care (washing, dressing)',
-        'hearing' => 'Hearing',
-        'communicating' => 'Communicating',
-        'walking' => 'Walking or climbing',
-        'remembering' => 'Remembering or concentrating',
-        'neurodivergent' => 'Neurodivergence (for example ADHD, autism)',
-        'learning' => 'Learning or cognitive difference (for example dyslexia)',
-        'chronic_health' => 'Chronic health condition (for example sickle cell, epilepsy, diabetes)',
-        'other' => 'Other',
-        'prefer_not_to_say' => 'Prefer not to say which',
+        'mobility' => 'Mobility & physical (walking, climbing steps, lifting, manual dexterity)',
+        'vision' => 'Vision / seeing (difficulty seeing clearly, even with glasses)',
+        'hearing_speech' => 'Hearing / speech (hearing conversations or communicating clearly)',
+        'cognitive_learning' => 'Cognitive & learning differences (remembering, concentrating, reading, calculating, e.g. dyslexia, dyscalculia)',
+        'neurodivergent' => 'Neurodivergence & developmental (sensory, social or attention patterns, e.g. autism, ADHD, Tourette\'s)',
+        'psychosocial' => 'Psychosocial & mental health (e.g. chronic anxiety, depression, PTSD)',
+        'chronic_health' => 'Chronic / long-term health condition (e.g. sickle cell, chronic asthma, epilepsy, chronic pain)',
+        'self_care' => 'Self-care (washing, dressing, eating)',
+        'prefer_not_to_say' => 'Prefer not to say / disclose',
     ];
 
-    /** 1.9b Support that would help them learn (accommodation requests). */
+    /** Earlier disability answers: still valid and shown, no longer offered. */
+    public const DISABILITY_TYPES_LEGACY = [
+        'seeing' => 'Seeing (earlier form)', 'hearing' => 'Hearing (earlier form)',
+        'communicating' => 'Communicating (earlier form)', 'walking' => 'Walking or climbing (earlier form)',
+        'remembering' => 'Remembering or concentrating (earlier form)', 'learning' => 'Learning difference (earlier form)',
+        'other' => 'Other (earlier form)',
+    ];
+
+    /** Earlier type → current category, so reports count old and new answers together. */
+    public const DISABILITY_TYPE_MAP = [
+        'seeing' => 'vision', 'hearing' => 'hearing_speech', 'communicating' => 'hearing_speech',
+        'walking' => 'mobility', 'remembering' => 'cognitive_learning', 'learning' => 'cognitive_learning',
+    ];
+
+    /** Earlier accommodation checklist (kept for old answers; now 1.9c is yes/no + specify). */
     public const ACCOMMODATIONS = [
         'captions' => 'Captions or written transcripts',
         'audio' => 'Audio or read-aloud content',
@@ -88,22 +101,33 @@ class ParticipantProfile
     ];
 
     /** 3.2 What is your main work now? (8 youth employment categories) */
+    /** 3.2 Current employment status (8 expanded youth categories). */
     public const MAIN_WORK = [
-        'employed' => 'Full-time paid job (wage or salary)',
-        'underemployed' => 'Paid work, but not enough hours or pay (underemployed)',
-        'seasonal_wage' => 'Seasonal or casual wage work (for example harvest, daily labour)',
-        'self_employed' => 'Running my own farm or business',
-        'unpaid_family' => 'Helping on a family farm or business, unpaid',
-        'apprentice' => 'Apprenticeship, internship or NYSC',
-        'looking' => 'Unemployed and looking for work',
-        'not_working' => 'Not working and not looking (studying, caregiving or other)',
+        'unemployed_seeking' => 'Unemployed & actively seeking work',
+        'self_employed_agri' => 'Self-employed – agribusiness / farming (own farm, livestock or processing business)',
+        'self_employed_non_agri' => 'Self-employed – non-agricultural enterprise (petty trade, artisan, retail, tech or transport)',
+        'wage_formal' => 'Wage employee – full-time formal employment (regular salaried role with benefits)',
+        'wage_casual' => 'Wage employee – casual, daily or seasonal labour (paid daily, weekly or piece-rate)',
+        'unpaid_family' => 'Contributing / unpaid family worker (family farm or business, no fixed wage)',
+        'apprentice' => 'Apprentice / intern / trainee',
+        'student' => 'Student (secondary school, polytechnic, university or college)',
     ];
 
     /** Earlier answers that are no longer offered but stay valid on old profiles. */
-    public const MAIN_WORK_LEGACY = ['student' => 'Student (earlier form)'];
+    public const MAIN_WORK_LEGACY = [
+        'employed' => 'Paid job (earlier form)',
+        'underemployed' => 'Underemployed (earlier form)',
+        'seasonal_wage' => 'Seasonal or casual wage work (earlier form)',
+        'self_employed' => 'Own farm or business (earlier form)',
+        'looking' => 'Looking for work (earlier form)',
+        'not_working' => 'Not working, not looking (earlier form)',
+    ];
 
-    /** MAIN_WORK values that count as "working" (questions 3.3–3.6 apply). */
-    public const WORKING = ['employed', 'underemployed', 'seasonal_wage', 'self_employed', 'unpaid_family', 'apprentice'];
+    /** MAIN_WORK values that count as "working" (questions 3.3–3.6 apply), earlier answers included. */
+    public const WORKING = [
+        'self_employed_agri', 'self_employed_non_agri', 'wage_formal', 'wage_casual', 'unpaid_family', 'apprentice',
+        'employed', 'underemployed', 'seasonal_wage', 'self_employed',
+    ];
 
     public const EMPLOYMENT_TYPE = ['full_time' => 'Full time', 'part_time' => 'Part time', 'seasonal' => 'Seasonal or casual'];
 
@@ -133,27 +157,30 @@ class ParticipantProfile
     ];
 
     /** Monthly earnings, each band with its socio-economic class. */
+    /** Baseline monthly personal income (past 3 months average), with MEL tier labels. */
     public const INCOME = [
-        'none' => 'No income (no earnings)',
-        'under_30000' => 'Under ₦30,000 (very low income)',
-        '30000_70000' => '₦30,000 to ₦70,000 (low income)',
-        '70001_150000' => '₦70,001 to ₦150,000 (lower-middle income)',
-        '150001_300000' => '₦150,001 to ₦300,000 (middle income)',
-        '300001_500000' => '₦300,001 to ₦500,000 (upper-middle income)',
-        'above_500000' => 'Above ₦500,000 (high income, commercially viable)',
+        'none' => 'Nothing / no regular income (subsistence / unpaid)',
+        'under_30000' => 'Under ₦30,000 (extreme vulnerability / micro-earner)',
+        '30000_70000' => '₦30,000 to ₦70,000 (low income / below national minimum wage)',
+        '70001_150000' => '₦70,001 to ₦150,000 (minimum wage to emerging middle)',
+        '150001_300000' => '₦150,001 to ₦300,000 (stable / established youth earner)',
+        '300001_500000' => '₦300,001 to ₦500,000 (commercial / upper-tier youth agribusiness earner)',
+        'above_500000' => 'Above ₦500,000 (high-capacity / established commercial agribusiness earner)',
         'prefer_not_to_say' => 'Prefer not to say',
     ];
 
     /** Socio-economic class per income band, for reports. */
+    /** Short tier name per income band, for reports. */
     public const INCOME_CLASS = [
-        'none' => 'No earnings',
-        'under_30000' => 'Very low income',
-        '30000_70000' => 'Low income',
-        '70001_150000' => 'Lower-middle income',
-        '150001_300000' => 'Middle income',
-        '300001_500000' => 'Upper-middle income',
-        'above_500000' => 'High income',
-        'above_300000' => 'Upper-middle or high income (earlier form)',
+        'none' => 'Subsistence / unpaid',
+        'under_30000' => 'Micro-earner',
+        '30000_70000' => 'Below minimum wage',
+        '70001_150000' => 'Emerging middle',
+        '150001_300000' => 'Stable earner',
+        '300001_500000' => 'Commercial earner',
+        'above_500000' => 'Established commercial',
+        'above_300000' => 'Commercial or above (earlier form)',
+        'prefer_not_to_say' => 'Prefer not to say',
     ];
 
     public const INCOME_LEGACY = ['above_300000' => 'Above ₦300,000 (earlier form)'];
@@ -166,6 +193,27 @@ class ParticipantProfile
         'trading' => 'Trading or marketing',
         'farm_services' => 'Farm services (machines, spraying, advice)',
     ];
+
+    /** WEO 3. Chosen value chain track / course enrolled. */
+    public const VALUE_CHAIN_TRACK = [
+        'poultry' => 'Poultry',
+        'aquaculture' => 'Aquaculture (fish farming)',
+        'horticulture' => 'Horticulture / vegetables',
+        'cassava_maize' => 'Cassava / maize production',
+        'agro_processing' => 'Agro-processing & packaging',
+        'agri_logistics' => 'Agri-logistics & equipment / drone services',
+        'other' => 'Other',
+    ];
+
+    /** WEO 4. Post-training primary objective. */
+    public const TRAINING_OBJECTIVE = [
+        'start_agribusiness' => 'Start my own agribusiness',
+        'secure_employment' => 'Secure employment in an existing agro-enterprise',
+        'expand_enterprise' => 'Expand my current farm / enterprise',
+        'access_finance' => 'Access revolving finance / capital support',
+    ];
+
+    public const YES_NO = ['yes' => 'Yes', 'no' => 'No'];
 
     // ── Part 4: per course (stored on the enrollment) ──
     public const LEARNING_TYPE = [
@@ -220,10 +268,11 @@ class ParticipantProfile
             'nationality' => 'nullable|' . self::in(self::NATIONALITY),
             'has_disability' => 'nullable|' . self::in(self::YES_NO_PREFER),
             'disability_types' => 'nullable|array',
-            'disability_types.*' => self::in(self::DISABILITY_TYPES),
+            'disability_types.*' => self::in(self::DISABILITY_TYPES + self::DISABILITY_TYPES_LEGACY),
             'disability_description' => 'nullable|string|max:1000',
             'accommodation_needs' => 'nullable|array',
             'accommodation_needs.*' => self::in(self::ACCOMMODATIONS),
+            'needs_accommodation' => 'nullable|' . self::in(self::YES_NO),
             'accommodation_notes' => 'nullable|string|max:1000',
             'displacement_status' => 'nullable|' . self::in(self::DISPLACEMENT),
             'women_category' => 'nullable|' . self::in(self::WOMEN_CATEGORY),
@@ -240,6 +289,9 @@ class ParticipantProfile
             'main_commodity' => 'nullable|' . self::in(self::COMMODITY),
             'income_band' => 'nullable|' . self::in(self::INCOME + self::INCOME_LEGACY),
             'value_chain' => 'nullable|' . self::in(self::VALUE_CHAIN),
+            'value_chain_track' => 'nullable|' . self::in(self::VALUE_CHAIN_TRACK),
+            'value_chain_track_other' => 'nullable|string|max:255',
+            'training_objective' => 'nullable|' . self::in(self::TRAINING_OBJECTIVE),
         ];
     }
 

@@ -58,6 +58,8 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\AdminTableStatsWidget::class,
                 \App\Filament\Widgets\CourseCheckStatsWidget::class,
                 \App\Filament\Widgets\LatestCourseChecksWidget::class,
+                \App\Filament\Widgets\BaselineStatsWidget::class,
+                \App\Filament\Widgets\BaselineBreakdownWidget::class,
                 Widgets\AccountWidget::class,
             ])
             ->brandName('Agrisiti')
