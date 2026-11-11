@@ -73,10 +73,11 @@ class AuthController extends Controller
             // "Yes, I agree" to the participant data notice (enforced by the web form)
             'consent'               => 'sometimes|accepted',
             ...ParticipantProfile::profileRules(),
+            ...ParticipantProfile::requiredOnRegister(),
             'password'              => 'required|string|min:8|confirmed',
             'phone'                 => 'nullable|string|max:20',
-            'gender'                => 'nullable|string|in:male,female,other',
-            'date_of_birth'         => 'nullable|date|before:today',
+            'gender'                => 'required|string|in:male,female,other',
+            'date_of_birth'         => 'required|date|before:today',
             'age'                   => 'nullable|integer|min:1|max:120',
             'location'              => 'nullable|string|max:255',
             'state'                 => 'nullable|string|max:255',
@@ -327,8 +328,9 @@ class AuthController extends Controller
             'name'          => 'sometimes|required|string|max:255',
             'email'         => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
             'phone'         => 'nullable|string|max:20',
-            'gender'        => 'nullable|string|in:male,female,other',
-            'date_of_birth' => 'nullable|date|before:today',
+            // Required answers can't be blanked once given; omitted keys are left as they are
+            'gender'        => 'sometimes|required|string|in:male,female,other',
+            'date_of_birth' => 'sometimes|required|date|before:today',
             'age'           => 'nullable|integer|min:1|max:120',
             'location'      => 'nullable|string|max:255',
             'state'         => 'nullable|string|max:255',
@@ -343,6 +345,7 @@ class AuthController extends Controller
             'notification_preferences.in_app' => 'nullable|array',
             'notification_preferences.email' => 'nullable|array',
             ...ParticipantProfile::profileRules(),
+            ...ParticipantProfile::requiredOnUpdate(),
             // Existing learners can agree to the participant data notice from their profile
             'consent' => 'sometimes|accepted',
         ]);

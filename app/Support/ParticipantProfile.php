@@ -295,6 +295,28 @@ class ParticipantProfile
         ];
     }
 
+    /**
+     * Profile answers every new learner must give at sign-up (disability, IDP
+     * status) — spread after profileRules(). Gender and date of birth are
+     * required by the register rules themselves.
+     */
+    public static function requiredOnRegister(): array
+    {
+        return [
+            'has_disability' => 'required|' . self::in(self::YES_NO_PREFER),
+            'displacement_status' => 'required|' . self::in(self::DISPLACEMENT),
+        ];
+    }
+
+    /** Same answers on profile update: may be omitted, but not cleared. */
+    public static function requiredOnUpdate(): array
+    {
+        return [
+            'has_disability' => 'sometimes|required|' . self::in(self::YES_NO_PREFER),
+            'displacement_status' => 'sometimes|required|' . self::in(self::DISPLACEMENT),
+        ];
+    }
+
     public static function profileFields(): array
     {
         return array_values(array_filter(array_keys(self::profileRules()), fn ($k) => ! str_contains($k, '.')));

@@ -65,7 +65,13 @@ class ParticipantFormTest extends TestCase
 
         // Other clients that don't send consent can still register
         $this->postJson('/api/register', ['name' => 'No Consent', 'email' => 'nc@example.com',
-            'password' => 'password123', 'password_confirmation' => 'password123'])->assertCreated();
+            'password' => 'password123', 'password_confirmation' => 'password123',
+            'gender' => 'male', 'date_of_birth' => '1999-01-01', 'has_disability' => 'no', 'displacement_status' => 'none'])->assertCreated();
+
+        // Gender, date of birth, disability and IDP status are required
+        $this->postJson('/api/register', ['name' => 'Missing', 'email' => 'missing@example.com',
+            'password' => 'password123', 'password_confirmation' => 'password123'])
+            ->assertStatus(422)->assertJsonValidationErrors(['gender', 'date_of_birth', 'has_disability', 'displacement_status']);
         $this->assertNull(User::where('email', 'nc@example.com')->value('consent_given_at'));
 
         // Invalid option is rejected
