@@ -10,6 +10,7 @@ use App\Mail\AdminNotificationMail;
 use App\Mail\TutorNotificationMail;
 use App\Models\Course;
 use App\Models\Message;
+use App\Support\Messaging;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -36,7 +37,7 @@ class MessageController extends Controller
         // Handle location-based messaging (course_id = 0)
         if ($courseId == 0) {
             // Get location-based messages where user is sender or recipient
-            $messages = Message::where('course_id', 0)
+            $messages = Message::where(fn ($q) => $q->whereNull('course_id')->orWhere('course_id', 0))
                 ->where(function ($query) use ($user) {
                     $query->where('sender_id', $user->id)
                         ->orWhere('recipient_id', $user->id);
@@ -79,7 +80,8 @@ class MessageController extends Controller
      * @OA\Post(
      *     path="/api/messages",
      *     tags={"Messages"},
-     *     summary="Send a message to a course instructor or location-based facilitator",
+     *     summary="Send a message to a course tutor, a classmate, or a facilitator in my location",
+     *     description="Allowed: learner ↔ tutor of a course the learner is enrolled in; learner ↔ learner both enrolled in the course (classmates); learner ↔ facilitator in the same location (course_id 0, stored with no course). Admins may message anyone. The recipient is emailed (if their preferences allow) and a MessageSent event is broadcast.",
      *     security={{"sanctumAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
@@ -92,7 +94,7 @@ class MessageController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=201, description="Message sent"),
-     *     @OA\Response(response=403, description="Recipient not reachable (not instructor of course / wrong location)")
+     *     @OA\Response(response=403, description="Recipient not reachable (not a tutor/classmate in this course, or not a facilitator in your location)")
      * )
      */
     public function store(Request $request)
@@ -109,14 +111,8 @@ class MessageController extends Controller
         
         // Handle location-based messaging (course_id = 0)
         if ($request->course_id == 0 || $request->course_id == '0') {
-            // Location-based facilitator messaging
-            if ($recipient->role !== 'facilitator') {
-                return response()->json([
-                    'message' => 'You can only message facilitators via location-based messaging'
-                ], 403);
-            }
-            
-            if (!$user->location || !$recipient->location || $user->location !== $recipient->location) {
+            // Location-based messaging: learner ↔ facilitator in the same location
+            if (! Messaging::canMessage($user, $recipient, null)) {
                 return response()->json([
                     'message' => 'You can only message facilitators in your location'
                 ], 403);
@@ -124,7 +120,7 @@ class MessageController extends Controller
             
             // Create message with course_id = 0 for location-based messaging
             $message = Message::create([
-                'course_id' => 0, // Special ID for location-based messaging
+                'course_id' => null, // location-based: no course (clients still send 0)
                 'sender_id' => $user->id,
                 'recipient_id' => $request->recipient_id,
                 'subject' => $request->subject,
@@ -166,25 +162,10 @@ class MessageController extends Controller
         // Course-based messaging
         $course = Course::findOrFail($request->course_id);
         
-        // Check if user is enrolled
-        $enrollment = $user->enrollments()
-            ->where('course_id', $course->id)
-            ->first();
-
-        // Allow messaging if:
-        // 1. User is enrolled in the course AND recipient is tutor/facilitator of the course
-        // 2. OR recipient is a facilitator in user's location (location-based messaging)
-        $isEnrolledAndRecipientIsTutor = $enrollment && 
-            ($course->tutor_id == $request->recipient_id || 
-             $course->tutors()->where('tutor_id', $request->recipient_id)->exists());
-        
-        $isLocationBasedFacilitator = $recipient->role === 'facilitator' && 
-            $user->location && 
-            $recipient->location === $user->location;
-
-        if (!$isEnrolledAndRecipientIsTutor && !$isLocationBasedFacilitator) {
+        // Course tutors, facilitators in the learner's location, and classmates (both enrolled)
+        if (! Messaging::canMessage($user, $recipient, $course)) {
             return response()->json([
-                'message' => 'You can only message facilitators in your location or course instructors'
+                'message' => 'You can only message your course instructors, classmates, or facilitators in your location'
             ], 403);
         }
 
@@ -302,6 +283,100 @@ class MessageController extends Controller
         broadcast(new MessageRead($message))->toOthers();
 
         return response()->json(['success' => true, 'data' => $message->load(['sender:id,name,avatar', 'recipient:id,name,avatar'])]);
+    }
+
+    /**
+     * People the signed-in user can message: per course (tutors + classmates,
+     * or the class list for a tutor) and facilitators in their location.
+     * `?search=` filters by name.
+     */
+    public function contacts(Request $request)
+    {
+        $request->validate(['search' => 'nullable|string|max:100']);
+
+        return response()->json([
+            'success' => true,
+            'data' => Messaging::contacts($request->user(), $request->input('search')),
+        ]);
+    }
+
+    /** Inbox: one row per conversation (person + course), newest first, with unread counts. */
+    public function conversations(Request $request)
+    {
+        $user = $request->user();
+
+        $messages = Message::query()
+            ->where(fn ($q) => $q->where('sender_id', $user->id)->orWhere('recipient_id', $user->id))
+            ->with(['sender:id,name,avatar,role', 'recipient:id,name,avatar,role', 'course:id,title'])
+            ->orderByDesc('created_at')
+            ->limit(2000)
+            ->get();
+
+        $conversations = $messages
+            ->groupBy(fn (Message $m) => ($m->sender_id === $user->id ? $m->recipient_id : $m->sender_id) . ':' . (int) $m->course_id)
+            ->map(function ($thread) use ($user) {
+                /** @var Message $last */
+                $last = $thread->first();
+                $other = $last->sender_id === $user->id ? $last->recipient : $last->sender;
+
+                return [
+                    'with' => $other ? ['id' => $other->id, 'name' => $other->name, 'avatar' => $other->avatar, 'role' => $other->role] : null,
+                    'course_id' => (int) $last->course_id,
+                    'course_title' => $last->course_id ? $last->course?->title : null,
+                    'last_message' => $last->message,
+                    'last_at' => $last->created_at,
+                    'last_from_me' => $last->sender_id === $user->id,
+                    'unread' => $thread->where('recipient_id', $user->id)->where('is_read', false)->count(),
+                ];
+            })
+            ->filter(fn ($c) => $c['with'] !== null)
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $conversations]);
+    }
+
+    /** One conversation (oldest first). Messages sent to the user are marked read. */
+    public function thread(Request $request)
+    {
+        $request->validate([
+            'with' => 'required|integer|exists:users,id',
+            'course_id' => 'nullable|integer',
+        ]);
+        $user = $request->user();
+        $otherId = (int) $request->input('with');
+        $courseId = (int) $request->input('course_id', 0);
+
+        $messages = Message::query()
+            ->when($courseId === 0,
+                fn ($q) => $q->where(fn ($q) => $q->whereNull('course_id')->orWhere('course_id', 0)),
+                fn ($q) => $q->where('course_id', $courseId))
+            ->where(fn ($q) => $q
+                ->where(fn ($q) => $q->where('sender_id', $user->id)->where('recipient_id', $otherId))
+                ->orWhere(fn ($q) => $q->where('sender_id', $otherId)->where('recipient_id', $user->id)))
+            ->with(['sender:id,name,avatar', 'recipient:id,name,avatar'])
+            ->orderBy('created_at')
+            ->limit(500)
+            ->get();
+
+        $unread = $messages->where('recipient_id', $user->id)->where('is_read', false);
+        if ($unread->isNotEmpty()) {
+            Message::whereIn('id', $unread->pluck('id'))->update(['is_read' => true, 'read_at' => now()]);
+            $unread->each(fn ($m) => $m->forceFill(['is_read' => true]));
+        }
+
+        $other = User::find($otherId);
+        $course = $courseId ? Course::find($courseId) : null;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'with' => ['id' => $other->id, 'name' => $other->name, 'avatar' => $other->avatar, 'role' => $other->role],
+                'course_id' => $courseId,
+                'course_title' => $course?->title,
+                'can_reply' => Messaging::canMessage($user, $other, $course),
+                'messages' => $messages,
+            ],
+        ]);
     }
 }
 

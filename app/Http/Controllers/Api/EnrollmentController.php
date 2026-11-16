@@ -13,25 +13,6 @@ use Illuminate\Support\Facades\Mail;
 class EnrollmentController extends Controller
 {
     /**
-     * @OA\Post(
-     *     path="/api/enroll",
-     *     tags={"Enrollments"},
-     *     summary="Enroll in a course using an enrollment code",
-     *     security={{"sanctumAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"course_id","enrollment_code"},
-     *             @OA\Property(property="course_id", type="integer", example=1),
-     *             @OA\Property(property="enrollment_code", type="string", example="ABC123")
-     *         )
-     *     ),
-     *     @OA\Response(response=201, description="Enrolled successfully", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")))),
-     *     @OA\Response(response=400, description="Already enrolled or invalid code", @OA\JsonContent(ref="#/components/schemas/ApiError")),
-     *     @OA\Response(response=403, description="Code not valid for this account, or the account is an organisation (organisations cannot enroll)", @OA\JsonContent(ref="#/components/schemas/ApiError"))
-     * )
-     */
-    /**
      * Save the participant form's Part 4 answers (how they'll take the course)
      * on the learner's own enrollment — asked on the course page after the
      * one-click enroll, so enrolling itself never needs a form.
@@ -47,6 +28,26 @@ class EnrollmentController extends Controller
         return response()->json(['success' => true, 'message' => 'Thank you — saved.', 'data' => $enrollment->only(array_keys($data))]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/enroll",
+     *     tags={"Enrollments"},
+     *     summary="Enroll in a course (one click; enrollment code optional)",
+     *     description="Enrollment is currently free: `enrollment_code` is optional. Staff-only courses can only be enrolled in by staff. Part 4 participant-form answers (learning_type, learning_mode, heard_from, partner_hub) may be sent here or later via PUT /api/enrollments/{enrollment}/signup-answers.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"course_id"},
+     *             @OA\Property(property="course_id", type="integer", example=1),
+     *             @OA\Property(property="enrollment_code", type="string", example="ABC123")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Enrolled successfully", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="enrollment", ref="#/components/schemas/Enrollment")))),
+     *     @OA\Response(response=400, description="Already enrolled, invalid code, or course not available (unpublished / staff-only)", @OA\JsonContent(ref="#/components/schemas/ApiError")),
+     *     @OA\Response(response=403, description="Code not valid for this account, or the account is an organisation (organisations cannot enroll)", @OA\JsonContent(ref="#/components/schemas/ApiError"))
+     * )
+     */
     public function enroll(Request $request)
     {
         $request->validate([

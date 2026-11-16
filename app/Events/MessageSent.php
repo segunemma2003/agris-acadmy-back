@@ -34,8 +34,8 @@ class MessageSent implements ShouldBroadcast
     {
         // Broadcast to both sender and recipient's private channels
         return [
-            new PrivateChannel('private-course.' . $this->message->course_id . '.user.' . $this->message->sender_id),
-            new PrivateChannel('private-course.' . $this->message->course_id . '.user.' . $this->message->recipient_id),
+            new PrivateChannel('private-course.' . (int) $this->message->course_id . '.user.' . $this->message->sender_id),
+            new PrivateChannel('private-course.' . (int) $this->message->course_id . '.user.' . $this->message->recipient_id),
         ];
     }
 
@@ -54,7 +54,7 @@ class MessageSent implements ShouldBroadcast
     {
         return [
             'id' => $this->message->id,
-            'course_id' => $this->message->course_id,
+            'course_id' => (int) $this->message->course_id, // 0 = location-based (no course)
             'sender_id' => $this->message->sender_id,
             'recipient_id' => $this->message->recipient_id,
             'subject' => $this->message->subject,

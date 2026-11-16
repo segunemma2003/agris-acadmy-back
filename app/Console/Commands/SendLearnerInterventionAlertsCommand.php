@@ -15,7 +15,7 @@ class SendLearnerInterventionAlertsCommand extends Command
     {
         $result = $service->runNightly();
 
-        $this->info("Detected {$result['detected']} alert(s); emailed {$result['emailed']} to " . LearnerInterventionAlertService::ADMIN_EMAIL);
+        $this->info("Detected {$result['detected']} alert(s); emailed {$result['emailed']} to " . LearnerInterventionAlertService::ADMIN_EMAIL . "; auto-resolved {$result['resolved']}");
 
         return self::SUCCESS;
     }

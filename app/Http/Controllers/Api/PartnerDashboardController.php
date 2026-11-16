@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\LearnerInterventionAlert;
 use App\Models\Module;
 use App\Models\Organisation;
 use App\Models\PartnerReport;
@@ -77,7 +78,12 @@ class PartnerDashboardController extends Controller
      *     tags={"Partner Dashboard"},
      *     summary="Partner dashboard data (stats, breakdowns, 6-month trends), filtered server-side to only the sections the admin has granted this funder",
      *     security={{"sanctumAuth":{}}},
-     *     @OA\Response(response=200, description="Dashboard data for granted sections only"),
+     *     @OA\Response(response=200, description="Dashboard data for granted sections only. The `engagement` section also carries `early_warning`: live counts of learners currently flagged at risk (total, inactive, stalled in a course, enrolled but never started, struggling with quizzes) and how many re-engaged after follow-up — counts only, no names.",
+     *         @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object",
+     *             @OA\Property(property="engagement", type="object",
+     *                 @OA\Property(property="early_warning", type="array", @OA\Items(type="object",
+     *                     @OA\Property(property="key", type="string", enum={"learners_at_risk","at_risk_inactive","at_risk_stalled","at_risk_never_started","at_risk_quiz","reengaged_after_alert"}),
+     *                     @OA\Property(property="label", type="string"), @OA\Property(property="value", type="integer"), @OA\Property(property="unit", type="string", example="count"))))))),
      *     @OA\Response(response=403, description="Not a partner account or no sections granted")
      * )
      */
@@ -123,6 +129,11 @@ class PartnerDashboardController extends Controller
             $skipProgrammeOverlay = in_array($section, ['reports', 'courses', 'learners', 'demographics', 'geography', 'apprenticeships'], true);
             if (is_array($payload) && ! $skipProgrammeOverlay) {
                 $payload = ProgrammeImpactDataset::applyFigures($payload, $section);
+            }
+
+            // Live early-warning counts sit beside the programme figures (never overlaid)
+            if ($section === 'engagement' && is_array($payload)) {
+                $payload['early_warning'] = $this->earlyWarningStats();
             }
 
             $data[$section] = $payload;
@@ -452,6 +463,29 @@ class PartnerDashboardController extends Controller
                 'unit' => 'count',
                 'points' => $this->monthlyTrend(TestAttempt::query(), 'completed_at'),
             ],
+        ];
+    }
+
+    /**
+     * Early-warning tracker: learners currently flagged at risk, by reason, and
+     * how many re-engaged after follow-up. Counts only — no names leave the platform.
+     *
+     * @return list<array{key: string, label: string, value: int, unit: string}>
+     */
+    private function earlyWarningStats(): array
+    {
+        $byReason = LearnerInterventionAlert::open()
+            ->selectRaw('reason, COUNT(DISTINCT user_id) as n')->groupBy('reason')
+            ->pluck('n', 'reason')->map(fn ($n) => (int) $n);
+        $stat = fn (string $key, string $label, int $value) => ['key' => $key, 'label' => $label, 'value' => $value, 'unit' => 'count'];
+
+        return [
+            $stat('learners_at_risk', 'Learners at Risk', LearnerInterventionAlert::open()->distinct()->count('user_id')),
+            $stat('at_risk_inactive', 'Inactive', $byReason['inactive_7d'] ?? 0),
+            $stat('at_risk_stalled', 'Stalled in a Course', $byReason['stalled_course'] ?? 0),
+            $stat('at_risk_never_started', 'Enrolled, Never Started', $byReason['never_started'] ?? 0),
+            $stat('at_risk_quiz', 'Struggling with Quizzes', $byReason['quiz_failed_twice'] ?? 0),
+            $stat('reengaged_after_alert', 'Re-engaged after Follow-up', LearnerInterventionAlert::whereNotNull('resolved_at')->distinct()->count('user_id')),
         ];
     }
 

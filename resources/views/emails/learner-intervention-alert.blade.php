@@ -25,12 +25,12 @@
         <p style="margin:8px 0 0;opacity:0.9;">Nightly check · {{ $generatedAt->format('d M Y H:i') }}</p>
     </div>
 
-    <p>The following learners need facilitator follow-up (inactivity ≥ 7 days, or the same quiz failed twice without a pass).</p>
+    <p>The following learners need facilitator follow-up: inactive on the platform, failed the same quiz twice, stalled partway through a course, or enrolled but never started. Track and resolve them under <strong>Learner Alerts</strong> in the admin panel.</p>
 
     @foreach($alerts as $alert)
         @php
             $isQuiz = $alert->reason === 'quiz_failed_twice';
-            $reasonLabel = $isQuiz ? 'Failed same quiz twice' : 'Inactive 7+ days';
+            $reasonLabel = $alert->reason_label;
         @endphp
         <div class="alert {{ $isQuiz ? 'quiz' : 'inactive' }}">
             <div class="label">{{ $reasonLabel }}</div>
@@ -44,7 +44,7 @@
                     <td>{{ $alert->last_login_at ? $alert->last_login_at->format('d M Y H:i') : 'Never / unknown' }}</td>
                 </tr>
                 <tr>
-                    <td class="k">{{ $isQuiz ? 'Stuck quiz' : 'Stuck module' }}</td>
+                    <td class="k">{{ $isQuiz ? 'Stuck quiz' : (in_array($alert->reason, ['stalled_course', 'never_started']) ? 'Course' : 'Stuck module') }}</td>
                     <td>{{ $alert->stuck_label ?: '—' }}</td>
                 </tr>
                 @if(!empty($alert->payload['fail_count']))

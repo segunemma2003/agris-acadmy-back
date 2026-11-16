@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\LearnerInterventionAlertMail;
+use App\Models\Enrollment;
 use App\Models\LearnerInterventionAlert;
 use App\Models\Module;
 use App\Models\StudentProgress;
@@ -24,6 +25,12 @@ class LearnerInterventionAlertService
     /** Don't re-email the same alert context more often than this. */
     public const REEMAIL_AFTER_DAYS = 7;
 
+    /** In a course (some progress, not finished) but no lesson activity for this long. */
+    public const STALLED_DAYS = 14;
+
+    /** Enrolled this long ago with no lesson opened yet. */
+    public const NEVER_STARTED_DAYS = 7;
+
     public function inactivityThresholdDays(): int
     {
         return max(1, (int) (SmsNudgeSettings::all()['inactivity_threshold_days'] ?? self::INACTIVE_DAYS));
@@ -33,15 +40,24 @@ class LearnerInterventionAlertService
      * Detect at-risk learners, persist new/updated alert rows, and email admin
      * a digest of alerts that are due to be sent.
      *
-     * @return array{detected: int, emailed: int}
+     * Alerts that no longer apply (the learner re-engaged) are auto-resolved;
+     * alerts that come back are reopened (a staff resolution holds for
+     * REEMAIL_AFTER_DAYS first).
+     *
+     * @return array{detected: int, emailed: int, resolved: int}
      */
     public function runNightly(): array
     {
-        $candidates = $this->detectInactiveLearners()
-            ->merge($this->detectQuizFailures())
+        // Plain collections: an empty Eloquent collection can't merge arrays
+        $candidates = collect()
+            ->merge($this->detectInactiveLearners()->toBase())
+            ->merge($this->detectQuizFailures()->toBase())
+            ->merge($this->detectStalledCourses()->toBase())
+            ->merge($this->detectNeverStarted()->toBase())
             ->values();
 
         $toEmail = collect();
+        $seenIds = [];
 
         foreach ($candidates as $candidate) {
             $alert = LearnerInterventionAlert::updateOrCreate(
@@ -58,6 +74,19 @@ class LearnerInterventionAlertService
                     'payload' => $candidate['payload'],
                 ]
             );
+            $seenIds[] = $alert->id;
+
+            if ($alert->resolved_at) {
+                $reopen = $alert->auto_resolved
+                    || $alert->resolved_at->lte(now()->subDays(self::REEMAIL_AFTER_DAYS));
+                if (! $reopen) {
+                    continue; // handled by staff recently — leave it closed for now
+                }
+                $alert->forceFill([
+                    'resolved_at' => null, 'resolved_by' => null, 'auto_resolved' => false,
+                    'resolution_note' => null, 'emailed_at' => null,
+                ])->save();
+            }
 
             $shouldEmail = $alert->emailed_at === null
                 || $alert->emailed_at->lte(now()->subDays(self::REEMAIL_AFTER_DAYS));
@@ -67,8 +96,17 @@ class LearnerInterventionAlertService
             }
         }
 
+        // Open alerts not detected tonight: the learner is back on track.
+        $resolved = LearnerInterventionAlert::open()
+            ->whereNotIn('id', $seenIds ?: [0])
+            ->update([
+                'resolved_at' => now(),
+                'auto_resolved' => true,
+                'resolution_note' => 'Auto-resolved: learner no longer meets this risk condition.',
+            ]);
+
         if ($toEmail->isEmpty()) {
-            return ['detected' => $candidates->count(), 'emailed' => 0];
+            return ['detected' => $candidates->count(), 'emailed' => 0, 'resolved' => $resolved];
         }
 
         try {
@@ -86,7 +124,7 @@ class LearnerInterventionAlertService
             throw $e;
         }
 
-        return ['detected' => $candidates->count(), 'emailed' => $toEmail->count()];
+        return ['detected' => $candidates->count(), 'emailed' => $toEmail->count(), 'resolved' => $resolved];
     }
 
     /**
@@ -253,6 +291,92 @@ class LearnerInterventionAlertService
         }
 
         return $alerts->values();
+    }
+
+    /**
+     * Learners partway through a course (some progress, not finished) with no
+     * lesson activity in that course for STALLED_DAYS — losing interest.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function detectStalledCourses(): Collection
+    {
+        $cutoff = now()->subDays(self::STALLED_DAYS);
+
+        $lastActivity = StudentProgress::query()
+            ->selectRaw('user_id, course_id, MAX(COALESCE(last_accessed_at, updated_at)) as last_at')
+            ->groupBy('user_id', 'course_id')
+            ->get()
+            ->keyBy(fn ($row) => $row->user_id . ':' . $row->course_id);
+
+        return Enrollment::query()
+            ->where('status', 'active')
+            ->where('progress_percentage', '>', 0)
+            ->where('progress_percentage', '<', 100)
+            ->whereHas('user', fn ($q) => $q->where('role', 'student')->where('is_active', true))
+            ->with(['user', 'course:id,title'])
+            ->get()
+            ->filter(function (Enrollment $e) use ($lastActivity, $cutoff) {
+                $row = $lastActivity->get($e->user_id . ':' . $e->course_id);
+                $last = $row ? Carbon::parse($row->last_at) : ($e->enrolled_at ?? $e->created_at);
+                return $last && $last->lte($cutoff);
+            })
+            ->map(function (Enrollment $e) use ($lastActivity) {
+                $row = $lastActivity->get($e->user_id . ':' . $e->course_id);
+                return $this->candidate($e->user, 'stalled_course', "course:{$e->course_id}",
+                    ($e->course?->title ?? 'Course') . ' — ' . round((float) $e->progress_percentage) . '% done', [
+                        'course_id' => $e->course_id,
+                        'progress_percentage' => (float) $e->progress_percentage,
+                        'last_lesson_activity' => $row ? Carbon::parse($row->last_at)->toDateString() : null,
+                        'stalled_days_threshold' => self::STALLED_DAYS,
+                    ]);
+            })
+            ->values();
+    }
+
+    /**
+     * Learners who enrolled NEVER_STARTED_DAYS+ ago and haven't opened a single
+     * lesson in that course.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function detectNeverStarted(): Collection
+    {
+        $cutoff = now()->subDays(self::NEVER_STARTED_DAYS);
+        $started = StudentProgress::query()->select('user_id', 'course_id')->distinct()->get()
+            ->map(fn ($row) => $row->user_id . ':' . $row->course_id)->flip();
+
+        return Enrollment::query()
+            ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('progress_percentage')->orWhere('progress_percentage', 0))
+            ->where(fn ($q) => $q->where('enrolled_at', '<=', $cutoff)
+                ->orWhere(fn ($q) => $q->whereNull('enrolled_at')->where('created_at', '<=', $cutoff)))
+            ->whereHas('user', fn ($q) => $q->where('role', 'student')->where('is_active', true))
+            ->with(['user', 'course:id,title'])
+            ->get()
+            ->reject(fn (Enrollment $e) => $started->has($e->user_id . ':' . $e->course_id))
+            ->map(fn (Enrollment $e) => $this->candidate($e->user, 'never_started', "course:{$e->course_id}",
+                $e->course?->title ?? 'Course', [
+                    'course_id' => $e->course_id,
+                    'enrolled_at' => optional($e->enrolled_at ?? $e->created_at)->toDateString(),
+                    'never_started_days_threshold' => self::NEVER_STARTED_DAYS,
+                ]))
+            ->values();
+    }
+
+    /** One alert candidate row. */
+    private function candidate(User $user, string $reason, string $contextKey, string $label, array $payload): array
+    {
+        return [
+            'user_id' => $user->id,
+            'reason' => $reason,
+            'context_key' => $contextKey,
+            'learner_name' => $user->name,
+            'last_login_at' => $user->last_login_at,
+            'stuck_label' => $label,
+            'facilitator_id' => $user->facilitator_id,
+            'payload' => $payload + ['email' => $user->email, 'state' => $user->state, 'lga' => $user->lga],
+        ];
     }
 
     private function stuckModuleLabel(User $student): string

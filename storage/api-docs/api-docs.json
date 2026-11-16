@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Agrisiti Academy API",
-        "description": "REST and WebSocket API for the Agrisiti Academy e-learning platform. Covers student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, notifications, and the Agri chatbot (AI-powered onboarding assistant with real-time Reverb WebSocket streaming, SSE fallback, and course recommendations). See the Chatbot tag for the complete user journey, quiz questions, and 3-tier transport documentation.",
+        "description": "REST and WebSocket API for the Agrisiti Academy e-learning platform. Covers student registration, course management, progress tracking, tests, assignments, notes, messaging, community forum, notifications, and the Coco chatbot (AI-powered onboarding assistant with real-time Reverb WebSocket streaming, SSE fallback, and course recommendations). See the Chatbot tag for the complete user journey, quiz questions, and 3-tier transport documentation.",
         "contact": {
             "email": "admin@agrisiti.com"
         },
@@ -1591,7 +1591,7 @@
                     "Chatbot"
                 ],
                 "summary": "Start or resume a chatbot session",
-                "description": "**Always the very first API call.** Fired automatically 3 seconds after the page/screen loads, or immediately when the user taps the chatbot FAB.\n     *\n     * ### Step-by-step process\n     *\n     * 1. Client reads `session_token` from localStorage (null if first visit).\n     * 2. Client reads `user_id` from auth context (null if not logged in).\n     * 3. Both are sent to this endpoint.\n     * 4. Backend looks up the token:\n     *    - **Found** → returns `is_returning: true` + full message history → client renders history, skips intro and quiz.\n     *    - **Not found / null** → creates a new session → returns `is_returning: false`, `messages: []`.\n     * 5. Client saves the returned `session_token` to localStorage.\n     * 6. Client connects pusher-js to Reverb → subscribes to channel `chatbot.{session_token}`.\n     * 7. If `is_returning: false` → show greeting locally (NO extra API call):\n     *    *'Hi! I am Agri, your Agrisiti Academy guide. I will help you find the perfect course. First — what is your name?'*\n     * 8. If `is_returning: true` → display previous messages immediately and open to free-chat mode.\n     *\n     * ### Auth scenarios\n     *\n     * | Scenario | session_token | user_id | Result |\n     * |---|---|---|---|\n     * | Anonymous, first visit | null | null | New session created |\n     * | Anonymous, returning | stored UUID | null | Session resumed with history |\n     * | Logged-in, first visit | null | 101 | New session linked to user |\n     * | Logged-in, returning | stored UUID | 101 | Session resumed and linked |",
+                "description": "**Always the very first API call.** Fired automatically 3 seconds after the page/screen loads, or immediately when the user taps the chatbot FAB.\n     *\n     * ### Step-by-step process\n     *\n     * 1. Client reads `session_token` from localStorage (null if first visit).\n     * 2. Client reads `user_id` from auth context (null if not logged in).\n     * 3. Both are sent to this endpoint.\n     * 4. Backend looks up the token:\n     *    - **Found** → returns `is_returning: true` + full message history → client renders history, skips intro and quiz.\n     *    - **Not found / null** → creates a new session → returns `is_returning: false`, `messages: []`.\n     * 5. Client saves the returned `session_token` to localStorage.\n     * 6. Client connects pusher-js to Reverb → subscribes to channel `chatbot.{session_token}`.\n     * 7. If `is_returning: false` → show greeting locally (NO extra API call):\n     *    *'Hi! I am Coco, your Agrisiti Academy guide. I will help you find the perfect course. First — what is your name?'*\n     * 8. If `is_returning: true` → display previous messages immediately and open to free-chat mode.\n     *\n     * ### Auth scenarios\n     *\n     * | Scenario | session_token | user_id | Result |\n     * |---|---|---|---|\n     * | Anonymous, first visit | null | null | New session created |\n     * | Anonymous, returning | stored UUID | null | Session resumed with history |\n     * | Logged-in, first visit | null | 101 | New session linked to user |\n     * | Logged-in, returning | stored UUID | 101 | Session resumed and linked |",
                 "operationId": "8c6cd97e21d8973b331acc04b6b3933f",
                 "requestBody": {
                     "required": false,
@@ -2695,6 +2695,7 @@
                     "Courses"
                 ],
                 "summary": "List published courses with filters (public)",
+                "description": "Staff-only courses are left out unless the caller is staff (a user marked `is_staff`, or an admin, tutor or facilitator). Send the Bearer token to include them.",
                 "operationId": "d452dd5ed2fa44f48bd98e5677e3cc3f",
                 "parameters": [
                     {
@@ -2794,6 +2795,7 @@
                     "Courses"
                 ],
                 "summary": "Get full course details (public)",
+                "description": "Returns 404 for unpublished courses and for staff-only courses when the caller isn't staff.",
                 "operationId": "0449b337fd98c3b8384aa8816d862c1d",
                 "parameters": [
                     {
@@ -2835,11 +2837,50 @@
                 "tags": [
                     "Courses"
                 ],
-                "summary": "Get courses recommended for the authenticated user based on enrollment history",
+                "summary": "COCO's course picks for me (up to 10), each with a reason",
+                "description": "Ranked on interests (latest COCO chat answers, else the profile's value chain track) and strengths: quiz averages per subject, completed courses (steps up a level), and admin 'after course X take Y' links. Courses already enrolled in are excluded. Each course carries `coco_label` and `coco_reason`.",
                 "operationId": "3e44378ab07d3704dfaa61196644ae1b",
                 "responses": {
                     "200": {
-                        "description": "Recommended courses list"
+                        "description": "Recommended courses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "allOf": [
+                                                    {
+                                                        "$ref": "#/components/schemas/Course"
+                                                    },
+                                                    {
+                                                        "properties": {
+                                                            "coco_label": {
+                                                                "type": "string",
+                                                                "example": "Best match"
+                                                            },
+                                                            "coco_reason": {
+                                                                "type": "string",
+                                                                "example": "Is the recommended next step after Broilers 101. A intermediate livestock course."
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3623,7 +3664,8 @@
                 "tags": [
                     "Enrollments"
                 ],
-                "summary": "Enroll in a course using an enrollment code",
+                "summary": "Enroll in a course (one click; enrollment code optional)",
+                "description": "Enrollment is currently free: `enrollment_code` is optional. Staff-only courses can only be enrolled in by staff. Part 4 participant-form answers (learning_type, learning_mode, heard_from, partner_hub) may be sent here or later via PUT /api/enrollments/{enrollment}/signup-answers.",
                 "operationId": "bc62520cb8b83e1652361e1f9856db1d",
                 "requestBody": {
                     "required": true,
@@ -3631,8 +3673,7 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "course_id",
-                                    "enrollment_code"
+                                    "course_id"
                                 ],
                                 "properties": {
                                     "course_id": {
@@ -3674,7 +3715,7 @@
                         }
                     },
                     "400": {
-                        "description": "Already enrolled or invalid code",
+                        "description": "Already enrolled, invalid code, or course not available (unpublished / staff-only)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4295,7 +4336,8 @@
                 "tags": [
                     "Messages"
                 ],
-                "summary": "Send a message to a course instructor or location-based facilitator",
+                "summary": "Send a message to a course tutor, a classmate, or a facilitator in my location",
+                "description": "Allowed: learner ↔ tutor of a course the learner is enrolled in; learner ↔ learner both enrolled in the course (classmates); learner ↔ facilitator in the same location (course_id 0, stored with no course). Admins may message anyone. The recipient is emailed (if their preferences allow) and a MessageSent event is broadcast.",
                 "operationId": "c85a9171473a13f151a8672235e01559",
                 "requestBody": {
                     "required": true,
@@ -4334,7 +4376,7 @@
                         "description": "Message sent"
                     },
                     "403": {
-                        "description": "Recipient not reachable (not instructor of course / wrong location)"
+                        "description": "Recipient not reachable (not a tutor/classmate in this course, or not a facilitator in your location)"
                     }
                 },
                 "security": [
@@ -5036,6 +5078,35 @@
                                     "website": {
                                         "type": "string",
                                         "nullable": true
+                                    },
+                                    "organisation_type": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "farm",
+                                            "agro_enterprise",
+                                            "recruitment_agency",
+                                            "institution",
+                                            "ngo",
+                                            "government",
+                                            "other"
+                                        ]
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "talent_needs": {
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -5089,7 +5160,58 @@
                 "operationId": "8d5f95ccff3e095a09bfb1e9cf411f17",
                 "responses": {
                     "200": {
-                        "description": "Dashboard data for granted sections only"
+                        "description": "Dashboard data for granted sections only. The `engagement` section also carries `early_warning`: live counts of learners currently flagged at risk (total, inactive, stalled in a course, enrolled but never started, struggling with quizzes) and how many re-engaged after follow-up — counts only, no names.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "engagement": {
+                                                    "properties": {
+                                                        "early_warning": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "properties": {
+                                                                    "key": {
+                                                                        "type": "string",
+                                                                        "enum": [
+                                                                            "learners_at_risk",
+                                                                            "at_risk_inactive",
+                                                                            "at_risk_stalled",
+                                                                            "at_risk_never_started",
+                                                                            "at_risk_quiz",
+                                                                            "reengaged_after_alert"
+                                                                        ]
+                                                                    },
+                                                                    "label": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "value": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "unit": {
+                                                                        "type": "string",
+                                                                        "example": "count"
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "description": "Not a partner account or no sections granted"
@@ -5888,6 +6010,2773 @@
                     }
                 }
             }
+        },
+        "/api/cv": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Get my auto-generated CV (built on first request if it doesn't exist yet)",
+                "operationId": "209bc4936756bae793d83cf02cfbf196",
+                "responses": {
+                    "200": {
+                        "description": "The learner's CV",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LearnerCv"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cv/refresh": {
+            "post": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Rebuild my CV now from my latest profile, courses and certificates (also happens automatically on course completion)",
+                "description": "Rate limited to 10 per minute.",
+                "operationId": "b8a43a66d7316743cea05e6bb6ea0f87",
+                "responses": {
+                    "200": {
+                        "description": "Rebuilt CV",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LearnerCv"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cv/settings": {
+            "put": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Choose whether employers can find me (open to work)",
+                "description": "Turning it off removes the learner from pending (suggested) matches immediately. Offers already sent stay.",
+                "operationId": "d5f0a514018d9efe9bdceb4ee13affe6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "open_to_work"
+                                ],
+                                "properties": {
+                                    "open_to_work": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated CV settings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LearnerCv"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cv/pdf": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Download my CV as a PDF",
+                "operationId": "90f2b66b5cadf7866cbd651f385e94f2",
+                "responses": {
+                    "200": {
+                        "description": "PDF file (Content-Disposition: attachment)",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/career/offers": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Job offers from employers who selected me (pending first)",
+                "operationId": "9dc2670d4289d88fadfd1ac9fecee151",
+                "responses": {
+                    "200": {
+                        "description": "Offers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/JobOffer"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/career/offers/{match}/respond": {
+            "post": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Accept or decline a job offer",
+                "description": "Accept → creates/updates an apprenticeship with status `accepted` (linked to the learner's certificate) and shares the learner's email/phone with the employer. The employer is notified either way.",
+                "operationId": "7ff895438669f5089451ae5d541c8849",
+                "parameters": [
+                    {
+                        "name": "match",
+                        "in": "path",
+                        "description": "Job match id (JobOffer.id)",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "response"
+                                ],
+                                "properties": {
+                                    "response": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accept",
+                                            "decline"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Answer recorded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Offer already answered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not your offer",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/slots/{slot}/matches": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Learners matched to one of my openings, best fit first (organisation)",
+                "description": "Scores are recomputed when older than 60 minutes, when the opening was edited, or with `refresh=1`. Order: accepted, offer sent, suggested, declined, not a fit; then by score. `cv.contact` is included only for candidates who accepted.",
+                "operationId": "74f6ac896fa2866aa8db3d7c9d16a2bf",
+                "parameters": [
+                    {
+                        "name": "slot",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "refresh",
+                        "in": "query",
+                        "description": "Force re-scoring now",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matches",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "slot": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "title": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "matches": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/CandidateMatch"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the owning organisation, or organisation not yet approved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/matches/{match}/select": {
+            "post": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Select a candidate (send them an offer)",
+                "description": "Works on suggested or previously passed candidates. The learner is notified in-app and by email and can accept or decline.",
+                "operationId": "d2c695ace25056be37f4f20962ad6b6e",
+                "parameters": [
+                    {
+                        "name": "match",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Candidate selected",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Already selected",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the owning organisation, or not approved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/matches/{match}/dismiss": {
+            "post": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Mark a suggested candidate as not a fit",
+                "operationId": "531cc6afa94d69c35eddb4dcb05dd5ec",
+                "parameters": [
+                    {
+                        "name": "match",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Candidate passed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Only suggested candidates can be passed on",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the owning organisation, or not approved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/org/matches/{match}/cv": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Download a matched candidate's CV as PDF (contact details only after they accept)",
+                "operationId": "bc71f09f4f1a854a9f31f60346c3eb70",
+                "parameters": [
+                    {
+                        "name": "match",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the owning organisation, or not approved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/contacts": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "People I can start a conversation with",
+                "description": "Grouped by course: tutors and classmates for a learner (or the class list for a tutor), plus facilitators in the learner's location. Up to 50 learners per course; use `search` to find others.",
+                "operationId": "7415c49ed8638ce27427ef691aab5cce",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Filter by name",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contacts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "courses": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "course_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "course_title": {
+                                                                "type": "string"
+                                                            },
+                                                            "tutors": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "$ref": "#/components/schemas/MessagePerson"
+                                                                }
+                                                            },
+                                                            "learners": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "$ref": "#/components/schemas/MessagePerson"
+                                                                }
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "facilitators": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/MessagePerson"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/conversations": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Inbox: one row per conversation (person + course), newest first",
+                "operationId": "3ff9cee957008ea078dd86956fd966ee",
+                "responses": {
+                    "200": {
+                        "description": "Conversations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "with": {
+                                                        "$ref": "#/components/schemas/MessagePerson"
+                                                    },
+                                                    "course_id": {
+                                                        "description": "0 = location-based (learner ↔ facilitator)",
+                                                        "type": "integer"
+                                                    },
+                                                    "course_title": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "last_message": {
+                                                        "type": "string"
+                                                    },
+                                                    "last_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "last_from_me": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "unread": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/thread": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "One conversation, oldest first (marks messages to me as read)",
+                "operationId": "171abf714c999f058045ff8a22072d73",
+                "parameters": [
+                    {
+                        "name": "with",
+                        "in": "query",
+                        "description": "The other person's user id",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "course_id",
+                        "in": "query",
+                        "description": "Course of the conversation; 0 or omitted = location-based",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "with": {
+                                                    "$ref": "#/components/schemas/MessagePerson"
+                                                },
+                                                "course_id": {
+                                                    "type": "integer"
+                                                },
+                                                "course_title": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "can_reply": {
+                                                    "description": "Whether POST /api/messages to this person is allowed",
+                                                    "type": "boolean"
+                                                },
+                                                "messages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "sender_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "recipient_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "message": {
+                                                                "type": "string"
+                                                            },
+                                                            "is_read": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/organisations/register": {
+            "post": {
+                "tags": [
+                    "Organisations"
+                ],
+                "summary": "Self-register an organisation that needs talent (Nigeria or abroad)",
+                "description": "Creates an `organisation` user and a pending organisation profile, and returns a token (the account works immediately). Openings can only be posted, and matched candidates seen, after an admin approves the organisation; the admin is emailed on sign-up and the organisation is emailed on approval. Nigerian organisations must give `state`; others must give `city`. Rate limited to 10 per minute.",
+                "operationId": "be65ce30836b11e269d1df628540759b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "name",
+                                    "organisation_type",
+                                    "country",
+                                    "talent_needs"
+                                ],
+                                "properties": {
+                                    "contact_name": {
+                                        "type": "string",
+                                        "example": "Ngozi Obi"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "hr@greenfarms.ng"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+2348030000000"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Green Farms Ltd"
+                                    },
+                                    "organisation_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "farm",
+                                            "agro_enterprise",
+                                            "recruitment_agency",
+                                            "institution",
+                                            "ngo",
+                                            "government",
+                                            "other"
+                                        ]
+                                    },
+                                    "talent_needs": {
+                                        "type": "string",
+                                        "example": "5 poultry attendants and 1 farm supervisor in Kano"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "sector": {
+                                        "type": "string",
+                                        "example": "Poultry"
+                                    },
+                                    "country": {
+                                        "type": "string",
+                                        "example": "Nigeria"
+                                    },
+                                    "state": {
+                                        "description": "Required when country is Nigeria",
+                                        "type": "string",
+                                        "example": "Kano"
+                                    },
+                                    "lga": {
+                                        "type": "string"
+                                    },
+                                    "city": {
+                                        "description": "Required when country is not Nigeria",
+                                        "type": "string"
+                                    },
+                                    "website": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registered, pending approval",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "$ref": "#/components/schemas/User"
+                                                },
+                                                "organisation": {
+                                                    "type": "object"
+                                                },
+                                                "token": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    }
+                }
+            }
+        },
+        "/api/forgot-password": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Email a 6-digit password reset code (once per minute)",
+                "operationId": "dfdbaaca728df479d433066c43f54bbf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Code sent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with this email",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Requested less than a minute ago",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/reset-password": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Set a new password using the emailed 6-digit code",
+                "operationId": "b974e2b3366f277af3808badbad9f45a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "token",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "token": {
+                                        "type": "string",
+                                        "example": "483920",
+                                        "maxLength": 6,
+                                        "minLength": 6
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No user with this email",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/password": {
+            "put": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Change my password",
+                "operationId": "0fb994f99625cc67caab636006bd2479",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password changed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Current password wrong, or new password same as current",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/profile/avatar": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Upload my profile picture (jpeg/png/jpg/gif, max 2 MB)",
+                "operationId": "4fe5e9955509b53184261d0e467a227d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "avatar"
+                                ],
+                                "properties": {
+                                    "avatar": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Uploaded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": "string"
+                                                        },
+                                                        "avatar": {
+                                                            "type": "string",
+                                                            "format": "uri"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Remove my profile picture",
+                "operationId": "2acd4b67226fd89fb5f52b04e355768b",
+                "responses": {
+                    "200": {
+                        "description": "Removed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/account": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Permanently delete my account (password required)",
+                "operationId": "aae60b30098442deea5411e6e7182888",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Account deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiSuccess"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Password is incorrect",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/locations/states": {
+            "get": {
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "Nigerian states (sorted by name)",
+                "operationId": "a91f2111701e10b5823f060b8fc96df0",
+                "responses": {
+                    "200": {
+                        "description": "States",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string",
+                                                        "example": "kano"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Kano"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/locations/lgas/{state}": {
+            "get": {
+                "tags": [
+                    "Locations"
+                ],
+                "summary": "LGAs in a state",
+                "operationId": "95eaf0a4ce0c3a5e7308f60081b141fe",
+                "parameters": [
+                    {
+                        "name": "state",
+                        "in": "path",
+                        "description": "State key or name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "Kano"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "LGA names",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "example": "Dala"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "State not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/topics/{topic}/captions": {
+            "get": {
+                "tags": [
+                    "Captions"
+                ],
+                "summary": "Captions for a lesson video in a language (translation starts on first request)",
+                "description": "Returns the cues for `language` when ready, plus the status of every caption language: ready | pending | available (will be translated on request) | failed | unavailable | missing. Poll while pending.",
+                "operationId": "3ad15341262481111a762171f1d77e67",
+                "parameters": [
+                    {
+                        "name": "topic",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "language",
+                        "in": "query",
+                        "description": "Caption language code (default: source language)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "ha"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Captions and language statuses",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not enrolled in this course",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/course-surveys/pending": {
+            "get": {
+                "tags": [
+                    "Participant Survey"
+                ],
+                "summary": "Outcome checks due for me (at completion, and six months after)",
+                "operationId": "98948edda2d300ac074eace8eaba3d03",
+                "responses": {
+                    "200": {
+                        "description": "Pending checks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "enrollment_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "stage": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "completion",
+                                                            "six_month"
+                                                        ]
+                                                    },
+                                                    "course": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "title": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "completed_course": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/course-surveys": {
+            "post": {
+                "tags": [
+                    "Participant Survey"
+                ],
+                "summary": "Submit an outcome check for one of my enrollments",
+                "operationId": "be45ee0c7473f92d5ff776a7c25eab5d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "enrollment_id",
+                                    "stage",
+                                    "completed_course",
+                                    "work_change",
+                                    "started_enterprise",
+                                    "income_band",
+                                    "rating",
+                                    "used_learning",
+                                    "would_recommend",
+                                    "declaration_name",
+                                    "declaration"
+                                ],
+                                "properties": {
+                                    "enrollment_id": {
+                                        "type": "integer"
+                                    },
+                                    "stage": {
+                                        "type": "string",
+                                        "enum": [
+                                            "completion",
+                                            "six_month"
+                                        ]
+                                    },
+                                    "completed_course": {
+                                        "type": "boolean"
+                                    },
+                                    "work_change": {
+                                        "type": "string",
+                                        "enum": [
+                                            "same",
+                                            "new_job",
+                                            "better_pay",
+                                            "started_enterprise",
+                                            "grew_business",
+                                            "further_study"
+                                        ]
+                                    },
+                                    "started_enterprise": {
+                                        "type": "boolean"
+                                    },
+                                    "feels_respected": {
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "no",
+                                            "prefer_not_to_say"
+                                        ]
+                                    },
+                                    "income_band": {
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "under_30000",
+                                            "30000_70000",
+                                            "70001_150000",
+                                            "150001_300000",
+                                            "300001_500000",
+                                            "above_500000"
+                                        ]
+                                    },
+                                    "rating": {
+                                        "type": "string",
+                                        "enum": [
+                                            "excellent",
+                                            "good",
+                                            "fair",
+                                            "poor"
+                                        ]
+                                    },
+                                    "used_learning": {
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "planning",
+                                            "no"
+                                        ]
+                                    },
+                                    "would_recommend": {
+                                        "type": "boolean"
+                                    },
+                                    "improvement": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "declaration_name": {
+                                        "type": "string"
+                                    },
+                                    "declaration": {
+                                        "description": "Must be accepted",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Enrollment not found (or not mine)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/dashboard/topic-tests": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Active lesson quizzes in my enrolled (published) courses",
+                "operationId": "bce0e2c1ee4fd1551ccd8df402cbdeb7",
+                "responses": {
+                    "200": {
+                        "description": "Quizzes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "test_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "course_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "course_title": {
+                                                        "type": "string"
+                                                    },
+                                                    "module_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "module_title": {
+                                                        "type": "string"
+                                                    },
+                                                    "topic_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "topic_title": {
+                                                        "type": "string"
+                                                    },
+                                                    "questions_count": {
+                                                        "type": "integer"
+                                                    },
+                                                    "passing_score": {
+                                                        "type": "integer"
+                                                    },
+                                                    "time_limit_minutes": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    },
+                                                    "max_attempts": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not available for organisation accounts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/enrollments/{enrollment}/signup-answers": {
+            "put": {
+                "tags": [
+                    "Enrollments"
+                ],
+                "summary": "Save how I'll take this course (participant form Part 4)",
+                "operationId": "e593c792c48407baa15f6b74af659a7e",
+                "parameters": [
+                    {
+                        "name": "enrollment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "learning_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "course",
+                                            "workshop",
+                                            "mentoring",
+                                            "apprenticeship"
+                                        ]
+                                    },
+                                    "learning_mode": {
+                                        "type": "string",
+                                        "enum": [
+                                            "online",
+                                            "in_person",
+                                            "blended"
+                                        ]
+                                    },
+                                    "heard_from": {
+                                        "type": "string",
+                                        "enum": [
+                                            "whatsapp",
+                                            "social_media",
+                                            "radio_tv",
+                                            "friend_family",
+                                            "other"
+                                        ]
+                                    },
+                                    "partner_hub": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not my enrollment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sms/inbound": {
+            "post": {
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Africa's Talking inbound SMS (handles STOP opt-outs from inactivity nudges)",
+                "description": "Accepts form or JSON fields `from` (or `phoneNumber`) and `text` (or `message`). Rate limited to 60 per minute.",
+                "operationId": "9d9dbe772f23fab6600e56639a4b8f10",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "from": {
+                                        "type": "string",
+                                        "example": "+2348030000000"
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "example": "STOP"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Handled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "opted_out": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing from/text",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/internal/learners/completion-status": {
+            "post": {
+                "tags": [
+                    "Internal (Finance)"
+                ],
+                "summary": "Has this learner completed courses / earned certificates? (by email or phone)",
+                "operationId": "7b9d45003441bbe700f311aa57810a5a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "Give email or phone",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 30
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Completion status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or wrong service key"
+                    },
+                    "422": {
+                        "description": "Neither email nor phone given",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "academyServiceKey": []
+                    }
+                ]
+            }
+        },
+        "/api/internal/learners/lookup": {
+            "post": {
+                "tags": [
+                    "Internal (Finance)"
+                ],
+                "summary": "Look up a learner's profile summary (by email or phone)",
+                "operationId": "0848015da9847fb8c25d7aa2496f2ba0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "description": "Give email or phone",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 30
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Learner summary (`data` is null when no learner matches)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or wrong service key"
+                    },
+                    "422": {
+                        "description": "Neither email nor phone given",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "academyServiceKey": []
+                    }
+                ]
+            }
+        },
+        "/api/internal/learners/certificate": {
+            "post": {
+                "tags": [
+                    "Internal (Finance)"
+                ],
+                "summary": "Verify a certificate number and return its learner and course",
+                "operationId": "96a03bd7ff2937dd2ff7dc18525a065a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "certificate_number"
+                                ],
+                                "properties": {
+                                    "certificate_number": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Certificate details (`data` is null when the number is unknown)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or wrong service key"
+                    }
+                },
+                "security": [
+                    {
+                        "academyServiceKey": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/handoff/exchange": {
+            "post": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Exchange a one-time Studio handoff token (from the admin/tutor panel) for a Sanctum session",
+                "operationId": "7bedab4f1e097202099c3dc440845409",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "minLength": 20
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Studio session (token + experience)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired handoff token"
+                    }
+                }
+            }
+        },
+        "/api/vr-studio/experiences": {
+            "get": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "VR experiences I can edit (admins: all; tutors: their courses; facilitators: courses in their location)",
+                "operationId": "38c7e8ff65752cba9f75fb2dc57a2cc3",
+                "responses": {
+                    "200": {
+                        "description": "Experiences and the current author",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "user": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only tutors, facilitators and admins can author VR"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/experiences/{experience}": {
+            "get": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "One VR experience with its scene (a default scene if empty)",
+                "operationId": "67d1f9844b79f0e0e5eb16e0954e8c69",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Experience",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Save a VR experience (details and scene)",
+                "operationId": "20b29103830e0e326d9c2d512591e337",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "instructions": {
+                                        "type": "string"
+                                    },
+                                    "cta_label": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "module_id": {
+                                        "type": "integer"
+                                    },
+                                    "scene": {
+                                        "description": "Scene JSON",
+                                        "type": "object"
+                                    },
+                                    "duration_minutes": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/experiences/{experience}/publish": {
+            "post": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Publish a VR experience so learners can launch it",
+                "operationId": "9c8ea5ffda1e6acbb65f4d4066fb0ba4",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Published",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/experiences/{experience}/generate": {
+            "post": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Generate a scene from a text prompt (AI)",
+                "operationId": "a6ddcd2fd511e11b5aecfa2bd3f2c158",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "prompt"
+                                ],
+                                "properties": {
+                                    "prompt": {
+                                        "type": "string",
+                                        "maxLength": 4000,
+                                        "minLength": 8
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Generated scene",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/experiences/{experience}/assets": {
+            "post": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Upload an image asset for a scene (jpg/jpeg/png/webp, max 20 MB)",
+                "operationId": "24866dc2d35d9ace924e2a98f23984c9",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Uploaded asset URL",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vr-studio/play/{slug}": {
+            "get": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Player payload for a published VR experience",
+                "description": "Auth optional (Bearer token or query token); experiences tied to a course require the learner to be enrolled. Rate limited to 60 per minute.",
+                "operationId": "4d4099edea61b8fbb643b2478e038d10",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Scene and experience details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                },
+                                                "instructions": {
+                                                    "type": "string"
+                                                },
+                                                "cta_label": {
+                                                    "type": "string"
+                                                },
+                                                "course_id": {
+                                                    "type": "integer"
+                                                },
+                                                "course_title": {
+                                                    "type": "string"
+                                                },
+                                                "scene": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Must be enrolled"
+                    },
+                    "404": {
+                        "description": "Not found or not published"
+                    }
+                }
+            }
+        },
+        "/api/vr-studio/experiences/{experience}/complete": {
+            "post": {
+                "tags": [
+                    "VR Studio"
+                ],
+                "summary": "Record that I completed a VR experience",
+                "operationId": "b06f71e13655c8ea88716a83cf23d0e1",
+                "parameters": [
+                    {
+                        "name": "experience",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Completion recorded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Not enrolled"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/broadcasting/auth": {
+            "post": {
+                "tags": [
+                    "Realtime"
+                ],
+                "summary": "Authorise a private message channel (Reverb/Pusher)",
+                "description": "Channel format `private-course.{courseId}.user.{userId}`; userId must be the caller. courseId 0 = location-based messages; otherwise the caller must be enrolled in or teach the course. Events: MessageSent, MessageRead.",
+                "operationId": "77fb1a9471fde841a7404c1b72d5394f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "channel_name",
+                                    "socket_id"
+                                ],
+                                "properties": {
+                                    "channel_name": {
+                                        "type": "string",
+                                        "example": "private-course.12.user.345"
+                                    },
+                                    "socket_id": {
+                                        "type": "string",
+                                        "example": "123.456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Pusher auth signature",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "auth": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid channel name"
+                    },
+                    "403": {
+                        "description": "Not your channel / not in this course"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -6239,6 +9128,426 @@
                     }
                 },
                 "type": "object"
+            },
+            "CvData": {
+                "description": "Contents of an auto-generated CV. `contact` is omitted for employers until the learner accepts their offer; `gender` is never shown to employers.",
+                "properties": {
+                    "name": {
+                        "description": "Auto-generated learner CVs and employer job matching.",
+                        "type": "string",
+                        "example": "Amina Bello"
+                    },
+                    "headline": {
+                        "type": "string",
+                        "example": "Poultry · Agrisiti Academy graduate · Dala, Kano"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "example": "Completed 2 Agrisiti Academy courses in Livestock with an average assessment score of 82%. Goal: secure employment in an existing agro-enterprise."
+                    },
+                    "location": {
+                        "properties": {
+                            "state": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "lga": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "country": {
+                                "type": "string",
+                                "example": "Nigeria"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "contact": {
+                        "properties": {
+                            "email": {
+                                "type": "string"
+                            },
+                            "phone": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "education": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "work": {
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "job_title": {
+                                "type": "string"
+                            },
+                            "employment_type": {
+                                "type": "string"
+                            },
+                            "since": {
+                                "type": "string",
+                                "example": "Mar 2022"
+                            },
+                            "organisation": {
+                                "type": "string"
+                            },
+                            "sector": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "interests": {
+                        "properties": {
+                            "value_chain": {
+                                "type": "string"
+                            },
+                            "commodity": {
+                                "type": "string"
+                            },
+                            "objective": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Livestock",
+                            "Brooding and day-old chick care",
+                            "Feed and water management"
+                        ]
+                    },
+                    "courses": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "level": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "completed_at": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "quiz_average": {
+                                    "type": "integer",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "certificates": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "course": {
+                                    "type": "string"
+                                },
+                                "number": {
+                                    "type": "string"
+                                },
+                                "issued_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                },
+                                "verify_url": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "placements": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "organisation": {
+                                    "type": "string"
+                                },
+                                "role": {
+                                    "type": "string"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "accepted",
+                                        "completed"
+                                    ]
+                                },
+                                "start": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "end": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "nullable": true
+                                },
+                                "skills": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "performance": {
+                        "properties": {
+                            "courses_completed": {
+                                "type": "integer"
+                            },
+                            "average_quiz_score": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "lessons_completed": {
+                                "type": "integer"
+                            },
+                            "certificates": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "LearnerCv": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/CvData"
+                    },
+                    "open_to_work": {
+                        "description": "When false the CV is not matched to employers",
+                        "type": "boolean"
+                    },
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "JobOffer": {
+                "properties": {
+                    "id": {
+                        "description": "Job match id",
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "selected",
+                            "accepted",
+                            "declined"
+                        ]
+                    },
+                    "score": {
+                        "type": "integer",
+                        "example": 78
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Trained in poultry",
+                            "Lives in Kano",
+                            "Looking for work"
+                        ]
+                    },
+                    "selected_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "responded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "slot": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "title": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "state": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "lga": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "duration": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "organisation": {
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "country": {
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CandidateMatch": {
+                "properties": {
+                    "id": {
+                        "description": "Job match id",
+                        "type": "integer"
+                    },
+                    "score": {
+                        "type": "integer",
+                        "example": 82,
+                        "maximum": 100,
+                        "minimum": 0
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "suggested",
+                            "selected",
+                            "accepted",
+                            "declined",
+                            "dismissed"
+                        ]
+                    },
+                    "selected_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "candidate": {
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "avatar": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "state": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "lga": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "cv": {
+                        "$ref": "#/components/schemas/CvData"
+                    }
+                },
+                "type": "object"
+            },
+            "MessagePerson": {
+                "properties": {
+                    "id": {
+                        "description": "Peer and tutor messaging. Who may message whom (App\\Support\\Messaging):\nlearner ↔ course tutor, learner ↔ facilitator in the same location (course_id 0),\nlearner ↔ learner enrolled in the same course (\"classmates\"); admins may message anyone.",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "avatar": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "tutor",
+                            "classmate",
+                            "learner",
+                            "facilitator"
+                        ]
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -6247,13 +9556,55 @@
                 "scheme": "bearer",
                 "bearerFormat": "JWT",
                 "description": "Enter your Bearer token from /api/login"
+            },
+            "academyServiceKey": {
+                "type": "apiKey",
+                "description": "Shared secret for server-to-server calls from Agrisiti Finance (ACADEMY_SERVICE_KEY). Never use from a browser or app.",
+                "name": "X-Academy-Service-Key",
+                "in": "header"
             }
         }
     },
     "tags": [
         {
+            "name": "CV & Job Matching",
+            "description": "Flow: (1) a learner completes a course → their CV is (re)built automatically and stored privately.\n * (2) An approved organisation posts an opening (POST /api/org/slots) and opens GET /api/org/slots/{slot}/matches — learners with a CV who are open to work are scored 0–100 with reasons.\n * (3) The employer selects a candidate (POST /api/org/matches/{match}/select) → the learner is notified in-app and by email.\n * (4) The learner accepts or declines (POST /api/career/offers/{match}/respond). Accepting creates an accepted placement (apprenticeship) and only then reveals the learner's email/phone to the employer.\n *\n * Score breakdown (max 100): subject fit 35, skills overlap 15, required course 10 (if the opening requires a course, learners without it are excluded), assessment performance 15, courses/placements done 10, same state 7 + same LGA 3, looking for work 5."
+        },
+        {
             "name": "Chatbot",
-            "description": "All chatbot endpoints are PUBLIC — no Authorization header required.\n * Session identity uses session_token (UUID) in the request body, not auth headers.\n * Store this token in localStorage (web) or AsyncStorage (React Native).\n *\n * =====================================================================\n * COMPLETE USER JOURNEY — READ THIS BEFORE IMPLEMENTING\n * =====================================================================\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO A: First-time anonymous user (no token in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Storage has no chatbot_session_token. User is not logged in.\n * After a 3-second delay (or immediately on FAB tap):\n * Call POST /api/chatbot/session  body: session_token=null, user_id=null\n * Response: is_returning=false, fresh UUID session_token, messages=empty array.\n * Save the session_token to storage. Connect pusher-js to Reverb server.\n * Subscribe to public Reverb channel: chatbot.SESSION_TOKEN\n *\n * STEP 2 — Show greeting locally. NO API CALL.\n * Render this as an assistant chat bubble (no server call needed):\n * Hi! I am Agri, your Agrisiti Academy guide.\n * I will help you find the perfect course. First — what is your name?\n *\n * STEP 3 — User types their name and taps Send.\n * Add user bubble to UI immediately (optimistic, before API responds).\n * Insert empty assistant placeholder bubble. Show typing indicator.\n * Call POST /api/chatbot/message/ws  body: session_token, content: I am Amina\n * Response: 202 Accepted immediately. Actual reply arrives via Reverb.\n * Listen on channel — receive chunk events → append delta text to placeholder bubble.\n * Receive done event → remove typing indicator, unlock input.\n *\n * STEP 4 — Show quiz offer. NO API CALL.\n * After the assistant replies, render two buttons:\n * Button 1: Start Quiz\n * Button 2: Skip — just chat\n *\n * STEP 5 — User taps Start Quiz. Show Question 1 of 5. NO API CALL.\n * Question text: What best describes you?\n * Render chips: Farmer, Student, Agri-business owner, Researcher, Other\n * Also allow free text input.\n * Show a Skip Q1 link.\n * User taps chip or types free text → buffer answer in sessionStorage. No API call.\n * Transition to Q2.\n *\n * STEP 6 — Question 2 of 5. NO API CALL.\n * Question text: Which State and LGA are you in?\n * Render a free text input only — no chips for this question.\n * Placeholder hint: e.g. Kano, Nassarawa LGA\n * User types → buffer in sessionStorage. Transition to Q3.\n *\n * STEP 7 — Question 3 of 5. NO API CALL.\n * Question text: What is your main learning goal?\n * Render chips: Start a farm, Improve my farm, Learn agri-tech, Get certified, Other\n * User taps → buffer. Transition to Q4.\n *\n * STEP 8 — Question 4 of 5. NO API CALL.\n * Question text: What is your farming experience?\n * Render chips: None, Beginner, Intermediate, Expert\n * User taps → buffer. Transition to Q5.\n *\n * STEP 9 — Question 5 of 5. NO API CALL.\n * Question text: What is your preferred language?\n * Render two chips only: English and Hausa\n * English chip stores the string value en in the payload.\n * Hausa chip stores the string value ha in the payload.\n * User taps → buffer.\n *\n * STEP 10 — User answered Q5 (or tapped Skip All). TWO SEQUENTIAL API CALLS.\n * Show loading screen with text: Finding your courses...\n * API CALL 1: POST /api/chatbot/answers\n *   Body: session_token, plus any answered fields, plus skipped_questions array.\n *   On failure: show Retry button. Do NOT call /recommendations yet.\n * API CALL 2 (only after CALL 1 succeeds): POST /api/chatbot/recommendations\n *   Body: session_token only.\n *   On failure: show message Cannot load courses right now. You can still chat.\n * Also save answers to localStorage as chatbot_prefill for pre-filling on future visits.\n *\n * STEP 11 — Render course recommendation cards.\n * Use these fields for each card:\n *   label       — badge text e.g. Best Match (show as a coloured chip on the card)\n *   score       — float 0-1 (can show as percentage or hide from user)\n *   course.thumbnail     — image at top of card\n *   course.title         — large text below image\n *   course.category      — subtitle text\n *   course.level         — badge: beginner, intermediate, or advanced\n *   course.estimated_hours — e.g. 6h 30m\n *   course.languages     — array, show as small flags or text: English, Hausa\n *   course.rationale     — important: show this text as a description on the card\n *   course.id            — use this to navigate to course detail screen on tap\n *\n * STEP 12 — Post-recommendation free chat loop.\n * Chat input remains available below the cards.\n * Any message follows the same 3-tier transport chain as Step 3.\n * This loop continues indefinitely.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO B: Returning anonymous user (token exists in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Read storage: chatbot_session_token is an existing UUID.\n * Call POST /api/chatbot/session  body: session_token=existing UUID, user_id=null\n * Response: is_returning=true, same session_token, messages=full history array.\n * Display all previous messages immediately in chronological order.\n * Skip greeting and skip quiz entirely — open directly in free-chat mode.\n * Connect Reverb and subscribe to channel. Ready for new messages.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO C: Logged-in user\n * ──────────────────────────────────────────────────────────────────────\n *\n * Same as Scenario A or B, but include user_id from auth context:\n * Call POST /api/chatbot/session  body: session_token=null or stored, user_id=101\n * The session is linked to the user from the very start.\n * Quiz flow and chat flow are identical to Scenario A.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO D: Anonymous user who logs in during a session\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User chatted anonymously. session_token abc is in storage. user_id was null.\n * STEP 2 — User logs in or registers on any other screen in the app.\n * STEP 3 — Auth context detects user_id changed from null to 101.\n * STEP 4 — App automatically fires (fire-and-forget, requires no user action):\n * POST /api/chatbot/link-answers  body: session_token=abc, user_id=101\n * All quiz answers and conversation history are now owned by user 101.\n * STEP 5 — Any error from this call must be silently ignored.\n * The chat session still works fine on the current device regardless.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO E: User dismisses the chatbot\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User taps the close X button on the chatbot panel.\n * Immediately store chatbot_dismissed_at = current ISO timestamp in localStorage.\n * Call POST /api/chatbot/dismiss  body: session_token (fire-and-forget, do not await).\n * Collapse widget to FAB button immediately — do not wait for the API response.\n * Any error must be silently ignored.\n *\n * STEP 2 — Next app open within 24 hours.\n * Check: current time minus chatbot_dismissed_at is less than 24 hours.\n * POST /api/chatbot/session still fires (session init happens silently in background).\n * Widget stays collapsed as FAB. User can tap FAB to manually open the chat.\n *\n * STEP 3 — Next app open after 24 hours have elapsed.\n * Widget auto-opens normally with the 3-second delay.\n *\n * ──────────────────────────────────────────────────────────────────────\n * WIDGET STATES — implement all of these\n * ──────────────────────────────────────────────────────────────────────\n *\n * closed          Nothing visible. Timer has not fired yet.\n * minimized       FAB button only. After dismiss or manual collapse.\n * open            Full chat panel. Normal interactive state.\n * thinking        Typing indicator (3 dots animation) in assistant bubble. Waiting for first token.\n * streaming       Text appearing token by token in assistant bubble. Receiving Reverb or SSE chunks.\n * quiz            Quiz question with chip options rendered. No free-text input shown.\n * loading_recs    Spinner or shimmer cards. Between /answers and /recommendations calls.\n * recommendations Course cards rendered below the assistant message. Input still active.\n *\n * ──────────────────────────────────────────────────────────────────────\n * ERROR HANDLING — required behaviour for each failure case\n * ──────────────────────────────────────────────────────────────────────\n *\n * /chatbot/session fails         Silent retry once. If still fails, hide widget entirely.\n * Reverb connect fails           Silently switch to SSE (Tier 2). No error shown to user.\n * SSE fails                      Silently switch to plain REST (Tier 3). No error shown to user.\n * All 3 message tiers fail       Show error bubble: Could not reach server. Please try again.\n * /chatbot/answers fails         Show a Retry button in the quiz. Do NOT call /recommendations.\n * /chatbot/recommendations fails Show inline message: Could not load courses. You can still chat!\n * /chatbot/dismiss fails         Ignore silently. Widget collapses regardless.\n * /chatbot/link-answers fails    Ignore silently. Chat session still works on current device."
+            "description": "All chatbot endpoints are PUBLIC — no Authorization header required.\n * Session identity uses session_token (UUID) in the request body, not auth headers.\n * Store this token in localStorage (web) or AsyncStorage (React Native).\n *\n * =====================================================================\n * COMPLETE USER JOURNEY — READ THIS BEFORE IMPLEMENTING\n * =====================================================================\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO A: First-time anonymous user (no token in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Storage has no chatbot_session_token. User is not logged in.\n * After a 3-second delay (or immediately on FAB tap):\n * Call POST /api/chatbot/session  body: session_token=null, user_id=null\n * Response: is_returning=false, fresh UUID session_token, messages=empty array.\n * Save the session_token to storage. Connect pusher-js to Reverb server.\n * Subscribe to public Reverb channel: chatbot.SESSION_TOKEN\n *\n * STEP 2 — Show greeting locally. NO API CALL.\n * Render this as an assistant chat bubble (no server call needed):\n * Hi! I am Coco, your Agrisiti Academy guide.\n * I will help you find the perfect course. First — what is your name?\n *\n * STEP 3 — User types their name and taps Send.\n * Add user bubble to UI immediately (optimistic, before API responds).\n * Insert empty assistant placeholder bubble. Show typing indicator.\n * Call POST /api/chatbot/message/ws  body: session_token, content: I am Amina\n * Response: 202 Accepted immediately. Actual reply arrives via Reverb.\n * Listen on channel — receive chunk events → append delta text to placeholder bubble.\n * Receive done event → remove typing indicator, unlock input.\n *\n * STEP 4 — Show quiz offer. NO API CALL.\n * After the assistant replies, render two buttons:\n * Button 1: Start Quiz\n * Button 2: Skip — just chat\n *\n * STEP 5 — User taps Start Quiz. Show Question 1 of 5. NO API CALL.\n * Question text: What best describes you?\n * Render chips: Farmer, Student, Agri-business owner, Researcher, Other\n * Also allow free text input.\n * Show a Skip Q1 link.\n * User taps chip or types free text → buffer answer in sessionStorage. No API call.\n * Transition to Q2.\n *\n * STEP 6 — Question 2 of 5. NO API CALL.\n * Question text: Which State and LGA are you in?\n * Render a free text input only — no chips for this question.\n * Placeholder hint: e.g. Kano, Nassarawa LGA\n * User types → buffer in sessionStorage. Transition to Q3.\n *\n * STEP 7 — Question 3 of 5. NO API CALL.\n * Question text: What is your main learning goal?\n * Render chips: Start a farm, Improve my farm, Learn agri-tech, Get certified, Other\n * User taps → buffer. Transition to Q4.\n *\n * STEP 8 — Question 4 of 5. NO API CALL.\n * Question text: What is your farming experience?\n * Render chips: None, Beginner, Intermediate, Expert\n * User taps → buffer. Transition to Q5.\n *\n * STEP 9 — Question 5 of 5. NO API CALL.\n * Question text: What is your preferred language?\n * Render two chips only: English and Hausa\n * English chip stores the string value en in the payload.\n * Hausa chip stores the string value ha in the payload.\n * User taps → buffer.\n *\n * STEP 10 — User answered Q5 (or tapped Skip All). TWO SEQUENTIAL API CALLS.\n * Show loading screen with text: Finding your courses...\n * API CALL 1: POST /api/chatbot/answers\n *   Body: session_token, plus any answered fields, plus skipped_questions array.\n *   On failure: show Retry button. Do NOT call /recommendations yet.\n * API CALL 2 (only after CALL 1 succeeds): POST /api/chatbot/recommendations\n *   Body: session_token only.\n *   On failure: show message Cannot load courses right now. You can still chat.\n * Also save answers to localStorage as chatbot_prefill for pre-filling on future visits.\n *\n * STEP 11 — Render course recommendation cards.\n * Use these fields for each card:\n *   label       — badge text e.g. Best Match (show as a coloured chip on the card)\n *   score       — float 0-1 (can show as percentage or hide from user)\n *   course.thumbnail     — image at top of card\n *   course.title         — large text below image\n *   course.category      — subtitle text\n *   course.level         — badge: beginner, intermediate, or advanced\n *   course.estimated_hours — e.g. 6h 30m\n *   course.languages     — array, show as small flags or text: English, Hausa\n *   course.rationale     — important: show this text as a description on the card\n *   course.id            — use this to navigate to course detail screen on tap\n *\n * STEP 12 — Post-recommendation free chat loop.\n * Chat input remains available below the cards.\n * Any message follows the same 3-tier transport chain as Step 3.\n * This loop continues indefinitely.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO B: Returning anonymous user (token exists in storage)\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — App opens. Read storage: chatbot_session_token is an existing UUID.\n * Call POST /api/chatbot/session  body: session_token=existing UUID, user_id=null\n * Response: is_returning=true, same session_token, messages=full history array.\n * Display all previous messages immediately in chronological order.\n * Skip greeting and skip quiz entirely — open directly in free-chat mode.\n * Connect Reverb and subscribe to channel. Ready for new messages.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO C: Logged-in user\n * ──────────────────────────────────────────────────────────────────────\n *\n * Same as Scenario A or B, but include user_id from auth context:\n * Call POST /api/chatbot/session  body: session_token=null or stored, user_id=101\n * The session is linked to the user from the very start.\n * Quiz flow and chat flow are identical to Scenario A.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO D: Anonymous user who logs in during a session\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User chatted anonymously. session_token abc is in storage. user_id was null.\n * STEP 2 — User logs in or registers on any other screen in the app.\n * STEP 3 — Auth context detects user_id changed from null to 101.\n * STEP 4 — App automatically fires (fire-and-forget, requires no user action):\n * POST /api/chatbot/link-answers  body: session_token=abc, user_id=101\n * All quiz answers and conversation history are now owned by user 101.\n * STEP 5 — Any error from this call must be silently ignored.\n * The chat session still works fine on the current device regardless.\n *\n * ──────────────────────────────────────────────────────────────────────\n * SCENARIO E: User dismisses the chatbot\n * ──────────────────────────────────────────────────────────────────────\n *\n * STEP 1 — User taps the close X button on the chatbot panel.\n * Immediately store chatbot_dismissed_at = current ISO timestamp in localStorage.\n * Call POST /api/chatbot/dismiss  body: session_token (fire-and-forget, do not await).\n * Collapse widget to FAB button immediately — do not wait for the API response.\n * Any error must be silently ignored.\n *\n * STEP 2 — Next app open within 24 hours.\n * Check: current time minus chatbot_dismissed_at is less than 24 hours.\n * POST /api/chatbot/session still fires (session init happens silently in background).\n * Widget stays collapsed as FAB. User can tap FAB to manually open the chat.\n *\n * STEP 3 — Next app open after 24 hours have elapsed.\n * Widget auto-opens normally with the 3-second delay.\n *\n * ──────────────────────────────────────────────────────────────────────\n * WIDGET STATES — implement all of these\n * ──────────────────────────────────────────────────────────────────────\n *\n * closed          Nothing visible. Timer has not fired yet.\n * minimized       FAB button only. After dismiss or manual collapse.\n * open            Full chat panel. Normal interactive state.\n * thinking        Typing indicator (3 dots animation) in assistant bubble. Waiting for first token.\n * streaming       Text appearing token by token in assistant bubble. Receiving Reverb or SSE chunks.\n * quiz            Quiz question with chip options rendered. No free-text input shown.\n * loading_recs    Spinner or shimmer cards. Between /answers and /recommendations calls.\n * recommendations Course cards rendered below the assistant message. Input still active.\n *\n * ──────────────────────────────────────────────────────────────────────\n * ERROR HANDLING — required behaviour for each failure case\n * ──────────────────────────────────────────────────────────────────────\n *\n * /chatbot/session fails         Silent retry once. If still fails, hide widget entirely.\n * Reverb connect fails           Silently switch to SSE (Tier 2). No error shown to user.\n * SSE fails                      Silently switch to plain REST (Tier 3). No error shown to user.\n * All 3 message tiers fail       Show error bubble: Could not reach server. Please try again.\n * /chatbot/answers fails         Show a Retry button in the quiz. Do NOT call /recommendations.\n * /chatbot/recommendations fails Show inline message: Could not load courses. You can still chat!\n * /chatbot/dismiss fails         Ignore silently. Widget collapses regardless.\n * /chatbot/link-answers fails    Ignore silently. Chat session still works on current device."
+        },
+        {
+            "name": "Account",
+            "description": "Password reset/change, profile picture and account deletion"
+        },
+        {
+            "name": "Locations",
+            "description": "Nigerian states and LGAs (public, cached)"
+        },
+        {
+            "name": "Captions",
+            "description": "Lesson video captions, translated on request"
+        },
+        {
+            "name": "Participant Survey",
+            "description": "End-of-course and six-month outcome check (participant form Part 5)"
+        },
+        {
+            "name": "Webhooks",
+            "description": "Inbound callbacks from Africa's Talking"
+        },
+        {
+            "name": "Internal (Finance)",
+            "description": "Server-to-server API used by Agrisiti Finance to verify graduates. Requires the X-Academy-Service-Key header."
+        },
+        {
+            "name": "VR Studio",
+            "description": "Authoring (tutors, facilitators, admins via a Studio handoff token) and the learner VR player"
+        },
+        {
+            "name": "Realtime",
+            "description": "Private channel authorisation for Reverb/Pusher"
         },
         {
             "name": "Career Pathways",

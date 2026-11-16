@@ -86,6 +86,9 @@ class Enrollment extends Model
                 $user = $enrollment->user;
                 $course = $enrollment->course;
 
+                // Keep the learner's CV current (feeds employer job matching)
+                \App\Jobs\BuildLearnerCvJob::dispatch((int) $enrollment->user_id)->afterCommit();
+
                 if ($user && $course) {
                     \App\Services\NotificationService::create(
                         $user,

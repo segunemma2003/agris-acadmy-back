@@ -58,6 +58,10 @@ class Apprenticeship extends Model
 
         // Notify the organisation the moment a learner expresses interest.
         static::created(function (Apprenticeship $apprenticeship) {
+            // Placements created by accepting an employer's offer aren't "interest"
+            if ($apprenticeship->status !== 'interested') {
+                return;
+            }
             $slot = $apprenticeship->slot;
             $org = $slot?->organisation;
             $learner = $apprenticeship->user;

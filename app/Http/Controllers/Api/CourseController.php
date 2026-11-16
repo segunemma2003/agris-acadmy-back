@@ -18,6 +18,7 @@ class CourseController extends Controller
      *     path="/api/courses",
      *     tags={"Courses"},
      *     summary="List published courses with filters (public)",
+     *     description="Staff-only courses are left out unless the caller is staff (a user marked `is_staff`, or an admin, tutor or facilitator). Send the Bearer token to include them.",
      *     @OA\Parameter(name="search", in="query", required=false, @OA\Schema(type="string")),
      *     @OA\Parameter(name="category_id", in="query", required=false, @OA\Schema(type="integer")),
      *     @OA\Parameter(name="level", in="query", required=false, @OA\Schema(type="string", enum={"beginner","intermediate","advanced"})),
@@ -121,6 +122,7 @@ class CourseController extends Controller
      *     path="/api/courses/{course}",
      *     tags={"Courses"},
      *     summary="Get full course details (public)",
+     *     description="Returns 404 for unpublished courses and for staff-only courses when the caller isn't staff.",
      *     @OA\Parameter(name="course", in="path", required=true, @OA\Schema(type="integer")),
      *     @OA\Response(response=200, description="Course details", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", ref="#/components/schemas/Course"))),
      *     @OA\Response(response=404, description="Course not found")
@@ -210,42 +212,44 @@ class CourseController extends Controller
      * @OA\Get(
      *     path="/api/recommended-courses",
      *     tags={"Courses"},
-     *     summary="Get courses recommended for the authenticated user based on enrollment history",
+     *     summary="COCO's course picks for me (up to 10), each with a reason",
+     *     description="Ranked on interests (latest COCO chat answers, else the profile's value chain track) and strengths: quiz averages per subject, completed courses (steps up a level), and admin 'after course X take Y' links. Courses already enrolled in are excluded. Each course carries `coco_label` and `coco_reason`.",
      *     security={{"sanctumAuth":{}}},
-     *     @OA\Response(response=200, description="Recommended courses list")
+     *     @OA\Response(response=200, description="Recommended courses", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="data", type="array", @OA\Items(allOf={
+     *             @OA\Schema(ref="#/components/schemas/Course"),
+     *             @OA\Schema(@OA\Property(property="coco_label", type="string", example="Best match"),
+     *                 @OA\Property(property="coco_reason", type="string", example="Is the recommended next step after Broilers 101. A intermediate livestock course."))
+     *         }))
+     *     ))
      * )
      */
     public function recommendedCourses(Request $request)
     {
         $user = $request->user();
 
-        // Get courses recommended for the user based on their enrollments
-        // Query enrollments directly from database to avoid relationship cache issues
-        // Use exact same query format as EnrollmentController::enroll()
-        $enrolledCourseIds = Enrollment::where('user_id', $user->id)->pluck('course_id');
+        // COCO: ranked on the learner's interests (COCO answers / profile) and
+        // strengths (quiz scores, completions, admin "next course" links).
+        $picks = collect(app(\App\Services\RecommendationService::class)->forUser($user, 10));
+        $byId = Course::visibleTo($user)
+            ->whereIn('id', $picks->pluck('course.id'))
+            ->with(['category:id,name,slug', 'tutor:id,name,avatar', 'tutors:id,name,avatar'])
+            ->get()
+            ->keyBy('id');
 
-        // Get recommended courses from enrolled courses
-        $recommendedFromEnrollments = Course::visibleTo()
-            ->whereNotIn('id', $enrolledCourseIds)
-            ->whereHas('recommendedCourses', function ($query) use ($enrolledCourseIds) {
-                $query->whereIn('course_id', $enrolledCourseIds);
+        $recommendedCourses = $picks
+            ->map(function ($pick) use ($byId) {
+                $course = $byId->get($pick['course']['id']);
+                if (! $course) {
+                    return null;
+                }
+                $course->setAttribute('coco_label', $pick['label']);
+                $course->setAttribute('coco_reason', $pick['course']['rationale']);
+                return $course;
             })
-            ->with(['category:id,name,slug', 'tutor:id,name,avatar', 'tutors:id,name,avatar'])
-            ->get();
-
-        // Get featured courses if not enough recommendations
-        $featuredCourses = Course::visibleTo()
-            ->where('is_featured', true)
-            ->whereNotIn('id', $enrolledCourseIds)
-            ->whereNotIn('id', $recommendedFromEnrollments->pluck('id'))
-            ->with(['category:id,name,slug', 'tutor:id,name,avatar', 'tutors:id,name,avatar'])
-            ->limit(10 - $recommendedFromEnrollments->count())
-            ->get();
-
-        $recommendedCourses = $recommendedFromEnrollments->merge($featuredCourses)
-            ->sortByDesc('rating')
-            ->sortByDesc('enrollment_count')
-            ->take(10)
+            ->filter()
             ->values();
 
         return response()->json([

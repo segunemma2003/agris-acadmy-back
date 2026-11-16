@@ -80,10 +80,23 @@ class OrganisationResource extends Resource
                         Forms\Components\Textarea::make('description')
                             ->rows(3)
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('organisation_type')
+                            ->label('Type')
+                            ->options(Organisation::TYPES),
                         Forms\Components\TextInput::make('sector'),
+                        Forms\Components\TextInput::make('country')
+                            ->default('Nigeria')
+                            ->required(),
                         Forms\Components\TextInput::make('state'),
                         Forms\Components\TextInput::make('lga'),
+                        Forms\Components\TextInput::make('city')
+                            ->helperText('For organisations outside Nigeria'),
                         Forms\Components\TextInput::make('website'),
+                        Forms\Components\TextInput::make('phone'),
+                        Forms\Components\Textarea::make('talent_needs')
+                            ->label('Talent they need')
+                            ->rows(3)
+                            ->columnSpanFull(),
                     ])->columns(2),
                 Forms\Components\Section::make('Approval')
                     ->schema([
@@ -114,6 +127,13 @@ class OrganisationResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('sector')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('organisation_type')
+                    ->label('Type')
+                    ->formatStateUsing(fn (?string $state) => Organisation::TYPES[$state] ?? $state)
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('country')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('state')
                     ->searchable(),
                 Tables\Columns\IconColumn::make('is_approved')
@@ -125,6 +145,12 @@ class OrganisationResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_approved'),
+                Tables\Filters\SelectFilter::make('organisation_type')
+                    ->label('Type')
+                    ->options(Organisation::TYPES),
+                Tables\Filters\Filter::make('outside_nigeria')
+                    ->label('Outside Nigeria')
+                    ->query(fn ($query) => $query->where('country', '!=', 'Nigeria')),
             ])
             ->actions([
                 Tables\Actions\Action::make('approve')
@@ -139,6 +165,20 @@ class OrganisationResource extends Resource
                             'approved_at' => now(),
                             'approved_by' => Auth::id(),
                         ]);
+
+                        // Let the organisation know they can now post openings
+                        if ($email = $record->user?->email) {
+                            try {
+                                $portal = rtrim((string) config('services.frontend.url'), '/') . '/org/slots';
+                                \Illuminate\Support\Facades\Mail::raw(
+                                    "Hello {$record->user->name},\n\n{$record->name} has been approved on Agrisiti Academy. "
+                                    . "You can now post jobs and placements and review trained candidates:\n{$portal}\n\nThe Agrisiti team",
+                                    fn ($m) => $m->to($email)->subject('Your organisation is approved on Agrisiti Academy')
+                                );
+                            } catch (\Throwable $e) {
+                                \Illuminate\Support\Facades\Log::warning('Organisation approval email failed', ['id' => $record->id, 'error' => $e->getMessage()]);
+                            }
+                        }
 
                         Notification::make()
                             ->title("{$record->name} approved")

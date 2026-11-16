@@ -55,3 +55,9 @@ Schedule::command('sms:send-inactivity-nudges')
     ->dailyAt('18:00')
     ->withoutOverlapping()
     ->name('sms-inactivity-nudges-evening');
+
+// Graduates without a CV (e.g. finished before CVs existed) get one, so employers can be matched with them.
+Schedule::command('cvs:build-missing')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->name('build-missing-cvs');

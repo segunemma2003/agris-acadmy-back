@@ -8,14 +8,30 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organisation extends Model
 {
+    /** What kind of organisation is looking for talent. */
+    public const TYPES = [
+        'farm' => 'Farm',
+        'agro_enterprise' => 'Agro-processing / agribusiness',
+        'recruitment_agency' => 'Recruitment agency',
+        'institution' => 'Research / training institution',
+        'ngo' => 'NGO / development programme',
+        'government' => 'Government agency',
+        'other' => 'Other',
+    ];
+
     protected $fillable = [
         'user_id',
         'name',
         'description',
         'sector',
+        'organisation_type',
+        'country',
         'state',
         'lga',
+        'city',
         'website',
+        'phone',
+        'talent_needs',
         'is_approved',
         'approved_at',
         'approved_by',

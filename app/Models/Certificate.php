@@ -8,6 +8,16 @@ use Illuminate\Support\Str;
 
 class Certificate extends Model
 {
+    protected static function booted(): void
+    {
+        // A new certificate belongs on the learner's CV
+        static::saved(function (Certificate $certificate) {
+            if ($certificate->wasRecentlyCreated || $certificate->wasChanged(['certificate_number', 'issued_date'])) {
+                \App\Jobs\BuildLearnerCvJob::dispatch((int) $certificate->user_id)->afterCommit();
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'course_id',

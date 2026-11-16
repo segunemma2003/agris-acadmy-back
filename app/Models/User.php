@@ -203,6 +203,12 @@ class User extends Authenticatable
     }
 
     // The organisation profile this user manages (role: organisation = internship host)
+    /** Auto-generated CV (built when a course is completed). */
+    public function cv(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LearnerCv::class);
+    }
+
     public function organisation(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Organisation::class);

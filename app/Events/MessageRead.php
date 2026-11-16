@@ -34,7 +34,7 @@ class MessageRead implements ShouldBroadcast
     {
         // Broadcast to sender's channel so they know the message was read
         return [
-            new PrivateChannel('private-course.' . $this->message->course_id . '.user.' . $this->message->sender_id),
+            new PrivateChannel('private-course.' . (int) $this->message->course_id . '.user.' . $this->message->sender_id),
         ];
     }
 

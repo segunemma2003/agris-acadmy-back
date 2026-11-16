@@ -55,6 +55,7 @@ Route::prefix('locations')->group(function () {
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/organisations/register', [OrganisationController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -211,6 +212,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Messages
     Route::get('/courses/{course}/messages', [MessageController::class, 'index']);
+    Route::get('/messages/contacts', [MessageController::class, 'contacts']);
+    Route::get('/messages/conversations', [MessageController::class, 'conversations']);
+    Route::get('/messages/thread', [MessageController::class, 'thread']);
     Route::post('/messages', [MessageController::class, 'store']);
     Route::get('/messages/{message}', [MessageController::class, 'show']);
     Route::put('/messages/{message}/read', [MessageController::class, 'markAsRead']);
@@ -252,11 +256,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/career/apprenticeships/{slot}/express-interest', [ApprenticeshipController::class, 'expressInterest']);
     Route::get('/career/my-applications', [ApprenticeshipController::class, 'myApplications']);
 
+    // Career Pathways: auto-generated CV + job offers from employers (learner)
+    Route::get('/cv', [\App\Http\Controllers\Api\CareerMatchController::class, 'myCv']);
+    Route::post('/cv/refresh', [\App\Http\Controllers\Api\CareerMatchController::class, 'refreshCv'])->middleware('throttle:10,1');
+    Route::put('/cv/settings', [\App\Http\Controllers\Api\CareerMatchController::class, 'updateCvSettings']);
+    Route::get('/cv/pdf', [\App\Http\Controllers\Api\CareerMatchController::class, 'myCvPdf']);
+    Route::get('/career/offers', [\App\Http\Controllers\Api\CareerMatchController::class, 'myOffers']);
+    Route::post('/career/offers/{match}/respond', [\App\Http\Controllers\Api\CareerMatchController::class, 'respond']);
+
     // Career Pathways: organisation portal (slot management)
     Route::get('/org/slots', [ApprenticeshipSlotController::class, 'mine']);
     Route::post('/org/slots', [ApprenticeshipSlotController::class, 'store']);
     Route::put('/org/slots/{slot}', [ApprenticeshipSlotController::class, 'update']);
     Route::post('/org/slots/{slot}/close', [ApprenticeshipSlotController::class, 'close']);
+    // Career Pathways: matched candidates for an opening (employer)
+    Route::get('/org/slots/{slot}/matches', [\App\Http\Controllers\Api\CareerMatchController::class, 'slotMatches']);
+    Route::post('/org/matches/{match}/select', [\App\Http\Controllers\Api\CareerMatchController::class, 'select']);
+    Route::post('/org/matches/{match}/dismiss', [\App\Http\Controllers\Api\CareerMatchController::class, 'dismiss']);
+    Route::get('/org/matches/{match}/cv', [\App\Http\Controllers\Api\CareerMatchController::class, 'matchCvPdf']);
     Route::get('/org/slots/{slot}/applicants', [ApprenticeshipController::class, 'applicants']);
     Route::get('/org/interns', [ApprenticeshipController::class, 'interns']);
     Route::post('/org/applications/{apprenticeship}/review', [ApprenticeshipController::class, 'review']);
@@ -286,10 +303,17 @@ Route::middleware('auth:sanctum')->group(function () {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
-            // Check if user is enrolled in the course
-            $enrollment = $user->enrollments()->where('course_id', $courseId)->first();
-            if (!$enrollment) {
-                return response()->json(['message' => 'Not enrolled in course'], 403);
+            // Course 0 = location-based (learner ↔ facilitator) messages: the user-id check above is enough.
+            // Otherwise the user must be enrolled in, or teach, the course.
+            if ((int) $courseId !== 0) {
+                $course = \App\Models\Course::find($courseId);
+                $allowed = $course && (
+                    $user->enrollments()->where('course_id', $courseId)->exists()
+                    || \App\Support\Messaging::isTutor($user, $course)
+                );
+                if (!$allowed) {
+                    return response()->json(['message' => 'Not enrolled in course'], 403);
+                }
             }
         } else {
             return response()->json(['message' => 'Invalid channel name'], 400);
