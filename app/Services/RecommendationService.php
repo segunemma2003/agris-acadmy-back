@@ -24,6 +24,7 @@ class RecommendationService
         $answers = $session->intakeAnswer;
         $courses = Course::with('category')
             ->where('is_published', true)
+            ->where('is_staff_only', false)
             ->get();
 
         if ($courses->isEmpty()) {

@@ -268,6 +268,7 @@ PROMPT
         try {
             $courses = \App\Models\Course::query()
                 ->where('is_published', true)
+                ->where('is_staff_only', false)
                 ->with('category:id,name')
                 ->orderBy('title')
                 ->limit(60)

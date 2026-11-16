@@ -30,7 +30,7 @@ class TestController extends Controller
      */
     public function show(Request $request, Course $course, Module $module)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -276,7 +276,7 @@ class TestController extends Controller
      */
     public function showTopicTest(Request $request, Course $course, Module $module, Topic $topic)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -387,7 +387,7 @@ class TestController extends Controller
         }
 
         // Check if topic belongs to module
-        if (!$course->is_published || $module->course_id !== $course->id || $topic->module_id !== $module->id) {
+        if (!$course->isVisibleTo() || $module->course_id !== $course->id || $topic->module_id !== $module->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Topic not found in this module'

@@ -31,7 +31,7 @@ class ModuleController extends Controller
      */
     public function show(Request $request, Course $course, Module $module)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'

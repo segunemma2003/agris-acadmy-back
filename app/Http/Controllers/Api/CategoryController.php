@@ -60,7 +60,7 @@ class CategoryController extends Controller
         }
 
         $category->load(['courses' => function ($query) {
-            $query->where('is_published', true)
+            $query->visibleTo()
                 ->with(['tutor:id,name,avatar'])
                 ->orderBy('created_at', 'desc');
         }]);
@@ -84,7 +84,7 @@ class CategoryController extends Controller
     {
         $categories = Category::where('is_active', true)
             ->with(['courses' => function ($query) {
-                $query->where('is_published', true)
+                $query->visibleTo()
                     ->with(['tutor:id,name,avatar', 'tutors:id,name,avatar'])
                     ->orderBy('created_at', 'desc');
             }])
@@ -110,13 +110,13 @@ class CategoryController extends Controller
     {
         $categories = Category::where('is_active', true)
             ->with(['courses' => function ($query) {
-                $query->where('is_published', true)
+                $query->visibleTo()
                     ->where('is_featured', true)
                     ->with(['tutor:id,name,avatar', 'tutors:id,name,avatar'])
                     ->orderBy('created_at', 'desc');
             }])
             ->whereHas('courses', function ($query) {
-                $query->where('is_published', true)
+                $query->visibleTo()
                     ->where('is_featured', true);
             })
             ->orderBy('sort_order')
@@ -157,7 +157,7 @@ class CategoryController extends Controller
         }
 
         $query = $category->courses()
-            ->where('is_published', true)
+            ->visibleTo()
             ->with(['tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio']);
 
         // Search filter

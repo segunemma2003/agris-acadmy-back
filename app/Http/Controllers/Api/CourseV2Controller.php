@@ -42,7 +42,7 @@ class CourseV2Controller extends Controller
                 ->unique()
                 ->filter();
             
-            $recommended = Course::where('is_published', true)
+            $recommended = Course::visibleTo()
                 ->whereNotIn('id', $enrolledCourseIds)
                 ->where(function ($query) use ($userCategories) {
                     if ($userCategories->isNotEmpty()) {
@@ -57,7 +57,7 @@ class CourseV2Controller extends Controller
             
             // If not enough, add featured courses
             if ($recommended->count() < 10) {
-                $featured = Course::where('is_published', true)
+                $featured = Course::visibleTo()
                     ->where('is_featured', true)
                     ->whereNotIn('id', $enrolledCourseIds)
                     ->whereNotIn('id', $recommended->pluck('id'))
@@ -95,10 +95,11 @@ class CourseV2Controller extends Controller
     {
         $user = $request->user();
         
-        $cacheKey = 'latest_10_courses';
+        // Staff also see staff-only courses, so they get their own cache entry
+        $cacheKey = 'latest_10_courses' . (Course::viewer()?->isStaff() ? '_staff' : '');
         
         $courses = Cache::remember($cacheKey, 300, function () {
-            return Course::where('is_published', true)
+            return Course::visibleTo()
                 ->with(['category:id,name,slug', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio'])
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
@@ -131,10 +132,11 @@ class CourseV2Controller extends Controller
     {
         $user = $request->user(); // Can be null if not authenticated
         
-        $cacheKey = 'featured_courses';
+        // Staff also see staff-only courses, so they get their own cache entry
+        $cacheKey = 'featured_courses' . (Course::viewer()?->isStaff() ? '_staff' : '');
         
         $courses = Cache::remember($cacheKey, 300, function () {
-            return Course::where('is_published', true)
+            return Course::visibleTo()
                 ->where('is_featured', true)
                 ->with(['category:id,name,slug', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio'])
                 ->orderBy('rating', 'desc')
@@ -158,7 +160,7 @@ class CourseV2Controller extends Controller
      */
     public function show(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json(['message' => 'Course not found'], 404);
         }
 
@@ -428,6 +430,10 @@ class CourseV2Controller extends Controller
      */
     public function reviews(Request $request, Course $course)
     {
+        if (!$course->isVisibleTo()) {
+            return response()->json(['success' => false, 'message' => 'Course not found'], 404);
+        }
+
         $perPage = $request->get('per_page', 10);
         
         $cacheKey = "course_{$course->id}_reviews_page_{$perPage}";

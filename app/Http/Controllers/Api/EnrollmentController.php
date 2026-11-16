@@ -71,7 +71,7 @@ class EnrollmentController extends Controller
         $course = Course::findOrFail($request->course_id);
 
         // Check if course is published
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'This course is not available for enrollment',

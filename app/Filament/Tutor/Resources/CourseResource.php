@@ -127,6 +127,10 @@ class CourseResource extends Resource
                             ->label('Published')
                             ->helperText('When published, enrolled learners can access the course.')
                             ->default(false),
+                        Forms\Components\Toggle::make('is_staff_only')
+                            ->label('Staff only')
+                            ->helperText('Hidden from the public. Only staff (admins, tutors, facilitators and users marked as staff) can see and enroll.')
+                            ->default(false),
                     ]),
             ]);
     }
@@ -151,6 +155,9 @@ class CourseResource extends Resource
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
                     ->label('Published'),
+                Tables\Columns\IconColumn::make('is_staff_only')
+                    ->boolean()
+                    ->label('Staff only'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

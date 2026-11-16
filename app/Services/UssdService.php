@@ -777,6 +777,7 @@ class UssdService
         return Cache::remember("ussd_courses_{$categoryId}", 60, function () use ($categoryId) {
             return Course::where('category_id', $categoryId)
                 ->where('is_published', true)
+                ->where('is_staff_only', false)
                 ->orderByDesc('enrollment_count')
                 ->limit(5)
                 ->get()

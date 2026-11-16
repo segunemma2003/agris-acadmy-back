@@ -57,6 +57,10 @@ class SavedCourseController extends Controller
      */
     public function store(Request $request, Course $course)
     {
+        if (!$course->isVisibleTo()) {
+            return response()->json(['success' => false, 'message' => 'Course not found'], 404);
+        }
+
         $user = $request->user();
         
         // Check if already saved

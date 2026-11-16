@@ -77,6 +77,9 @@ class UserResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\Toggle::make('is_active')
                             ->default(true),
+                        Forms\Components\Toggle::make('is_staff')
+                            ->label('Is staff')
+                            ->helperText('Can see and enroll in staff-only courses. Admins, tutors and facilitators are always staff.'),
                     ])->columns(2),
                 Forms\Components\Section::make('Partner (funder) access')
                     ->description('Partners gave funding and can view program analytics. They do not host interns. Programme Reports always appears for partners (reports you send them). Tick other sections they should see.')
@@ -244,12 +247,18 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_staff')
+                    ->label('Staff')
+                    ->boolean()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TernaryFilter::make('is_staff')
+                    ->label('Marked as staff'),
                 Tables\Filters\SelectFilter::make('role')
                     ->options([
                         'admin' => 'Admin',

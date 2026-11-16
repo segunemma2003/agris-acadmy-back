@@ -34,6 +34,7 @@ class Course extends Model
         'is_free',
         'is_published',
         'is_featured',
+        'is_staff_only',
         'certificate_included',
         'certificate_template_id',
         'duration_minutes',
@@ -54,6 +55,7 @@ class Course extends Model
             'is_free' => 'boolean',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
+            'is_staff_only' => 'boolean',
             'certificate_included' => 'boolean',
         ];
     }
@@ -153,6 +155,38 @@ class Course extends Model
      * Courses this tutor owns as primary author or co-tutor.
      * Does not include other tutors' or admin-owned courses.
      */
+    /**
+     * Published courses this viewer may see: staff-only courses are left out
+     * unless the viewer is staff. With no user given, the request's signed-in
+     * user (Sanctum token, if any) is used — so public routes work too.
+     */
+    public function scopeVisibleTo($query, ?User $user = null)
+    {
+        $user ??= self::viewer();
+        $query->where('is_published', true);
+        if (! $user?->isStaff()) {
+            $query->where('is_staff_only', false);
+        }
+        return $query;
+    }
+
+    /** Single-course form of scopeVisibleTo(). */
+    public function isVisibleTo(?User $user = null): bool
+    {
+        $user ??= self::viewer();
+        return $this->is_published && (! $this->is_staff_only || (bool) $user?->isStaff());
+    }
+
+    /** The signed-in user on this request, also on routes without auth middleware. */
+    public static function viewer(): ?User
+    {
+        try {
+            return auth('sanctum')->user();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function scopeAccessibleByTutor($query, $tutorId)
     {
         return $query->where(function ($q) use ($tutorId) {

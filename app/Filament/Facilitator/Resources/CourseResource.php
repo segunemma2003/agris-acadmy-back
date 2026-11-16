@@ -128,6 +128,10 @@ class CourseResource extends Resource
                             ->default(false),
                         Forms\Components\Toggle::make('is_featured')
                             ->default(false),
+                        Forms\Components\Toggle::make('is_staff_only')
+                            ->label('Staff only')
+                            ->helperText('Hidden from the public. Only staff (users marked "Is staff", plus admins, tutors and facilitators) can see and enroll.')
+                            ->default(false),
                     ])->columns(2),
             ]);
     }
@@ -160,6 +164,9 @@ class CourseResource extends Resource
                     ->boolean(),
                 Tables\Columns\IconColumn::make('is_featured')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_staff_only')
+                    ->label('Staff only')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -173,6 +180,8 @@ class CourseResource extends Resource
                     ->label('Published'),
                 Tables\Filters\TernaryFilter::make('is_featured')
                     ->label('Featured'),
+                Tables\Filters\TernaryFilter::make('is_staff_only')
+                    ->label('Staff only'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

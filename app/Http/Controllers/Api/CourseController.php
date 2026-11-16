@@ -40,7 +40,7 @@ class CourseController extends Controller
     {
         $user = $request->user();
 
-        $query = Course::where('is_published', true)
+        $query = Course::visibleTo()
             ->with(['category', 'tutor:id,name,avatar,bio', 'tutors:id,name,avatar,bio', 'modules' => function ($q) {
                 $q->where('is_active', true);
             }]);
@@ -128,7 +128,7 @@ class CourseController extends Controller
      */
     public function show(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json(['message' => 'Course not found'], 404);
         }
 
@@ -225,7 +225,7 @@ class CourseController extends Controller
         $enrolledCourseIds = Enrollment::where('user_id', $user->id)->pluck('course_id');
 
         // Get recommended courses from enrolled courses
-        $recommendedFromEnrollments = Course::where('is_published', true)
+        $recommendedFromEnrollments = Course::visibleTo()
             ->whereNotIn('id', $enrolledCourseIds)
             ->whereHas('recommendedCourses', function ($query) use ($enrolledCourseIds) {
                 $query->whereIn('course_id', $enrolledCourseIds);
@@ -234,7 +234,7 @@ class CourseController extends Controller
             ->get();
 
         // Get featured courses if not enough recommendations
-        $featuredCourses = Course::where('is_published', true)
+        $featuredCourses = Course::visibleTo()
             ->where('is_featured', true)
             ->whereNotIn('id', $enrolledCourseIds)
             ->whereNotIn('id', $recommendedFromEnrollments->pluck('id'))
@@ -288,7 +288,7 @@ class CourseController extends Controller
      */
     public function modules(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -349,7 +349,7 @@ class CourseController extends Controller
      */
     public function courseInformation(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -423,7 +423,7 @@ class CourseController extends Controller
      */
     public function diyContent(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -471,7 +471,7 @@ class CourseController extends Controller
      */
     public function vrContent(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'
@@ -516,7 +516,7 @@ class CourseController extends Controller
      */
     public function resources(Request $request, Course $course)
     {
-        if (!$course->is_published) {
+        if (!$course->isVisibleTo()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Course not found'

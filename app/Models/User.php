@@ -25,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_staff',
         'locale',
         'notification_preferences',
         'phone',
@@ -83,6 +84,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_staff' => 'boolean',
             'last_login_at' => 'datetime',
             'date_of_birth' => 'date',
             'is_in_facilitator_queue' => 'boolean',
@@ -260,7 +262,16 @@ class User extends Authenticatable
         };
     }
 
-    public function isTutor(): bool
+    /** Roles that are always staff, on top of users an admin marks "Is staff". */
+    public const STAFF_ROLES = ['admin', 'tutor', 'facilitator'];
+
+    /** Can see staff-only courses. */
+    public function isStaff(): bool
+    {
+        return $this->is_active && ($this->is_staff || in_array($this->role, self::STAFF_ROLES, true));
+    }
+
+        public function isTutor(): bool
     {
         return $this->role === 'tutor';
     }
