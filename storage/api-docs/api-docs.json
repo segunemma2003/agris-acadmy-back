@@ -6153,6 +6153,121 @@
                 ]
             }
         },
+        "/api/cv/templates": {
+            "get": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "CV templates by country convention (Nigeria, West/East Africa, UK, US/Canada, Europass, Gulf)",
+                "operationId": "b377b2bdaec7361efdd22b4d448830b2",
+                "responses": {
+                    "200": {
+                        "description": "Templates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CvTemplate"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cv/details": {
+            "put": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Save my own CV details (past experience, education, skills, languages, achievements, referees) and template",
+                "description": "Everything is optional; send only what changed. `details` is saved as a whole (lists replace the previous lists). The CV and its PDF are rebuilt straight away. Past experience also feeds employer job matching.",
+                "operationId": "4d989a7030e2f772049873c8d522a40c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "template": {
+                                        "type": "string",
+                                        "enum": [
+                                            "nigeria",
+                                            "west_africa",
+                                            "uk",
+                                            "us",
+                                            "europass",
+                                            "gulf"
+                                        ]
+                                    },
+                                    "target_country": {
+                                        "type": "string",
+                                        "example": "United Kingdom"
+                                    },
+                                    "details": {
+                                        "$ref": "#/components/schemas/CvDetails"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated CV",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LearnerCv"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error (e.g. dates must be YYYY-MM)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/cv/pdf": {
             "get": {
                 "tags": [
@@ -9132,8 +9247,45 @@
             "CvData": {
                 "description": "Contents of an auto-generated CV. `contact` is omitted for employers until the learner accepts their offer; `gender` is never shown to employers.",
                 "properties": {
-                    "name": {
+                    "template": {
                         "description": "Auto-generated learner CVs and employer job matching.",
+                        "type": "string",
+                        "enum": [
+                            "nigeria",
+                            "west_africa",
+                            "uk",
+                            "us",
+                            "europass",
+                            "gulf"
+                        ]
+                    },
+                    "template_label": {
+                        "type": "string",
+                        "example": "Nigeria (standard CV)"
+                    },
+                    "summary_title": {
+                        "type": "string",
+                        "example": "Career objective"
+                    },
+                    "section_order": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "summary",
+                                "experience",
+                                "training",
+                                "education",
+                                "skills",
+                                "languages",
+                                "achievements",
+                                "certificates",
+                                "interests",
+                                "references"
+                            ]
+                        }
+                    },
+                    "name": {
                         "type": "string",
                         "example": "Amina Bello"
                     },
@@ -9170,10 +9322,94 @@
                             "phone": {
                                 "type": "string",
                                 "nullable": true
+                            },
+                            "location": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "linkedin": {
+                                "type": "string",
+                                "nullable": true
                             }
                         },
                         "type": "object",
                         "nullable": true
+                    },
+                    "personal": {
+                        "description": "Only the personal details the template uses (Nigeria: all four; UK/US: none). Hidden from employers until the learner accepts.",
+                        "properties": {
+                            "date_of_birth": {
+                                "type": "string",
+                                "example": "4 May 2000"
+                            },
+                            "gender": {
+                                "type": "string"
+                            },
+                            "nationality": {
+                                "type": "string"
+                            },
+                            "state_of_origin": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "photo": {
+                        "description": "Profile photo URL when the template uses a photo (Nigeria, West Africa, Gulf)",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "experience": {
+                        "description": "Past work entered by the learner, current job first",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CvExperience"
+                        }
+                    },
+                    "education_history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CvEducation"
+                        }
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "language": {
+                                    "type": "string"
+                                },
+                                "level": {
+                                    "type": "string",
+                                    "example": "B2"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "achievements": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "references": {
+                        "description": "List of referees (Nigeria, West Africa, Gulf), the string `on_request` (UK, Europass, or no referees given), or null (US/Canada)",
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/CvReference"
+                                }
+                            },
+                            {
+                                "type": "string",
+                                "enum": [
+                                    "on_request"
+                                ]
+                            }
+                        ]
                     },
                     "education": {
                         "type": "string",
@@ -9343,6 +9579,256 @@
                 },
                 "type": "object"
             },
+            "CvExperience": {
+                "required": [
+                    "title"
+                ],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "example": "Poultry attendant",
+                        "maxLength": 150
+                    },
+                    "organisation": {
+                        "type": "string",
+                        "example": "Kano Birds Ltd",
+                        "maxLength": 150
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Kano",
+                        "maxLength": 150
+                    },
+                    "start": {
+                        "description": "YYYY-MM",
+                        "type": "string",
+                        "example": "2021-03"
+                    },
+                    "end": {
+                        "description": "YYYY-MM",
+                        "type": "string",
+                        "example": "2023-06",
+                        "nullable": true
+                    },
+                    "current": {
+                        "description": "Still in this job",
+                        "type": "boolean"
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 2000
+                    }
+                },
+                "type": "object"
+            },
+            "CvEducation": {
+                "required": [
+                    "qualification"
+                ],
+                "properties": {
+                    "qualification": {
+                        "type": "string",
+                        "example": "SSCE",
+                        "maxLength": 150
+                    },
+                    "institution": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "location": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "start": {
+                        "description": "YYYY-MM",
+                        "type": "string",
+                        "example": "2014-09"
+                    },
+                    "end": {
+                        "description": "YYYY-MM",
+                        "type": "string",
+                        "example": "2017-07"
+                    },
+                    "details": {
+                        "type": "string",
+                        "maxLength": 1000
+                    }
+                },
+                "type": "object"
+            },
+            "CvReference": {
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "organisation": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 30
+                    }
+                },
+                "type": "object"
+            },
+            "CvDetails": {
+                "description": "What the learner types in themselves. Lists replace what was saved before.",
+                "properties": {
+                    "headline": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "summary": {
+                        "description": "Personal statement / career objective; replaces the automatic summary",
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 30
+                    },
+                    "location": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "linkedin": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "nationality": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "state_of_origin": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "experiences": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CvExperience"
+                        },
+                        "maxItems": 20
+                    },
+                    "education": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CvEducation"
+                        },
+                        "maxItems": 10
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 60
+                        },
+                        "maxItems": 30
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "language"
+                            ],
+                            "properties": {
+                                "language": {
+                                    "type": "string"
+                                },
+                                "level": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "maxItems": 10
+                    },
+                    "achievements": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 300
+                        },
+                        "maxItems": 15
+                    },
+                    "references": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CvReference"
+                        },
+                        "maxItems": 5
+                    }
+                },
+                "type": "object"
+            },
+            "CvTemplate": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "example": "uk"
+                    },
+                    "label": {
+                        "type": "string",
+                        "example": "United Kingdom CV"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "countries": {
+                        "description": "Countries this template suits",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "photo": {
+                        "type": "boolean"
+                    },
+                    "personal": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "date_of_birth",
+                                "gender",
+                                "nationality",
+                                "state_of_origin"
+                            ]
+                        }
+                    },
+                    "references": {
+                        "type": "string",
+                        "enum": [
+                            "list",
+                            "on_request",
+                            "none"
+                        ]
+                    },
+                    "summary_title": {
+                        "type": "string"
+                    },
+                    "order": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "type": "object"
+            },
             "LearnerCv": {
                 "properties": {
                     "id": {
@@ -9353,6 +9839,29 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/CvData"
+                    },
+                    "details": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/CvDetails"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "template": {
+                        "type": "string",
+                        "enum": [
+                            "nigeria",
+                            "west_africa",
+                            "uk",
+                            "us",
+                            "europass",
+                            "gulf"
+                        ]
+                    },
+                    "target_country": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "open_to_work": {
                         "description": "When false the CV is not matched to employers",

@@ -10,6 +10,7 @@ use App\Models\JobMatch;
 use App\Services\CvService;
 use App\Services\JobMatchingService;
 use App\Services\NotificationService;
+use App\Support\CvTemplates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -54,6 +55,67 @@ class CareerMatchController extends Controller
         }
 
         return response()->json(['success' => true, 'data' => $cv]);
+    }
+
+    /** Templates for the CV template picker (country conventions). */
+    public function templates()
+    {
+        return response()->json(['success' => true, 'data' => CvTemplates::catalogue()]);
+    }
+
+    /**
+     * Save the learner's own CV details (past experience, education, languages…)
+     * and template, then rebuild the CV. Sent as a whole: lists replace what was there.
+     */
+    public function updateCvDetails(Request $request)
+    {
+        $ym = 'nullable|date_format:Y-m';
+        $data = $request->validate([
+            'template' => 'sometimes|in:' . implode(',', CvTemplates::keys()),
+            'target_country' => 'nullable|string|max:100',
+            'details' => 'sometimes|array',
+            'details.headline' => 'nullable|string|max:150',
+            'details.summary' => 'nullable|string|max:2000',
+            'details.phone' => 'nullable|string|max:30',
+            'details.location' => 'nullable|string|max:150',
+            'details.linkedin' => 'nullable|string|max:255',
+            'details.nationality' => 'nullable|string|max:100',
+            'details.state_of_origin' => 'nullable|string|max:100',
+            'details.experiences' => 'nullable|array|max:20',
+            'details.experiences.*.title' => 'required|string|max:150',
+            'details.experiences.*.organisation' => 'nullable|string|max:150',
+            'details.experiences.*.location' => 'nullable|string|max:150',
+            'details.experiences.*.start' => $ym,
+            'details.experiences.*.end' => $ym,
+            'details.experiences.*.current' => 'nullable|boolean',
+            'details.experiences.*.description' => 'nullable|string|max:2000',
+            'details.education' => 'nullable|array|max:10',
+            'details.education.*.qualification' => 'required|string|max:150',
+            'details.education.*.institution' => 'nullable|string|max:150',
+            'details.education.*.location' => 'nullable|string|max:150',
+            'details.education.*.start' => $ym,
+            'details.education.*.end' => $ym,
+            'details.education.*.details' => 'nullable|string|max:1000',
+            'details.skills' => 'nullable|array|max:30',
+            'details.skills.*' => 'string|max:60',
+            'details.languages' => 'nullable|array|max:10',
+            'details.languages.*.language' => 'required|string|max:60',
+            'details.languages.*.level' => 'nullable|string|max:40',
+            'details.achievements' => 'nullable|array|max:15',
+            'details.achievements.*' => 'string|max:300',
+            'details.references' => 'nullable|array|max:5',
+            'details.references.*.name' => 'required|string|max:120',
+            'details.references.*.role' => 'nullable|string|max:120',
+            'details.references.*.organisation' => 'nullable|string|max:150',
+            'details.references.*.email' => 'nullable|email|max:150',
+            'details.references.*.phone' => 'nullable|string|max:30',
+        ]);
+
+        $cv = $this->cvs->forUser($request->user());
+        $cv->fill(array_intersect_key($data, array_flip(['template', 'target_country', 'details'])))->save();
+        $cv = $this->cvs->build($request->user());
+
+        return response()->json(['success' => true, 'data' => $cv, 'message' => 'Your CV has been updated']);
     }
 
     public function myCvPdf(Request $request)

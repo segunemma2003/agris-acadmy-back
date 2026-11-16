@@ -260,6 +260,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cv', [\App\Http\Controllers\Api\CareerMatchController::class, 'myCv']);
     Route::post('/cv/refresh', [\App\Http\Controllers\Api\CareerMatchController::class, 'refreshCv'])->middleware('throttle:10,1');
     Route::put('/cv/settings', [\App\Http\Controllers\Api\CareerMatchController::class, 'updateCvSettings']);
+    Route::get('/cv/templates', [\App\Http\Controllers\Api\CareerMatchController::class, 'templates']);
+    Route::put('/cv/details', [\App\Http\Controllers\Api\CareerMatchController::class, 'updateCvDetails']);
     Route::get('/cv/pdf', [\App\Http\Controllers\Api\CareerMatchController::class, 'myCvPdf']);
     Route::get('/career/offers', [\App\Http\Controllers\Api\CareerMatchController::class, 'myOffers']);
     Route::post('/career/offers/{match}/respond', [\App\Http\Controllers\Api\CareerMatchController::class, 'respond']);

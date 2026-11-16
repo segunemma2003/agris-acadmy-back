@@ -136,6 +136,7 @@ class JobMatchingService
             array_values($d['interests'] ?? []),
             [$d['work']['job_title'] ?? '', $d['work']['sector'] ?? ''],
             array_merge(...array_map(fn ($p) => array_merge([$p['role'] ?? ''], $p['skills'] ?? []), $d['placements'] ?? [])) ?: [],
+            array_merge(...array_map(fn ($e) => [$e['title'] ?? '', $e['description'] ?? ''], $d['experience'] ?? [])) ?: [],
         )));
         $learnerTopics = $this->topics($learnerText);
 
@@ -173,9 +174,12 @@ class JobMatchingService
         // Experience on the platform
         $n = (int) ($d['performance']['courses_completed'] ?? 0);
         $placements = count($d['placements'] ?? []);
-        $score += min(10, $n * 3 + $placements * 4);
+        $jobs = count($d['experience'] ?? []);
+        $score += min(10, $n * 3 + $placements * 4 + $jobs * 2);
         if ($placements) {
             $reasons[] = $placements === 1 ? 'Has done a placement before' : "Has done {$placements} placements";
+        } elseif ($jobs) {
+            $reasons[] = $jobs === 1 ? '1 past job' : "{$jobs} past jobs";
         } elseif ($n >= 2) {
             $reasons[] = "Completed {$n} courses";
         }

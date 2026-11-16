@@ -20,11 +20,26 @@ use OpenApi\Annotations as OA;
  * @OA\Schema(
  *     schema="CvData",
  *     description="Contents of an auto-generated CV. `contact` is omitted for employers until the learner accepts their offer; `gender` is never shown to employers.",
+ *     @OA\Property(property="template", type="string", enum={"nigeria","west_africa","uk","us","europass","gulf"}),
+ *     @OA\Property(property="template_label", type="string", example="Nigeria (standard CV)"),
+ *     @OA\Property(property="summary_title", type="string", example="Career objective"),
+ *     @OA\Property(property="section_order", type="array", @OA\Items(type="string", enum={"summary","experience","training","education","skills","languages","achievements","certificates","interests","references"})),
  *     @OA\Property(property="name", type="string", example="Amina Bello"),
  *     @OA\Property(property="headline", type="string", example="Poultry · Agrisiti Academy graduate · Dala, Kano"),
  *     @OA\Property(property="summary", type="string", example="Completed 2 Agrisiti Academy courses in Livestock with an average assessment score of 82%. Goal: secure employment in an existing agro-enterprise."),
  *     @OA\Property(property="location", type="object", @OA\Property(property="state", type="string", nullable=true), @OA\Property(property="lga", type="string", nullable=true), @OA\Property(property="country", type="string", example="Nigeria")),
- *     @OA\Property(property="contact", type="object", nullable=true, @OA\Property(property="email", type="string"), @OA\Property(property="phone", type="string", nullable=true)),
+ *     @OA\Property(property="contact", type="object", nullable=true, @OA\Property(property="email", type="string"), @OA\Property(property="phone", type="string", nullable=true),
+ *         @OA\Property(property="location", type="string", nullable=true), @OA\Property(property="linkedin", type="string", nullable=true)),
+ *     @OA\Property(property="personal", type="object", description="Only the personal details the template uses (Nigeria: all four; UK/US: none). Hidden from employers until the learner accepts.",
+ *         @OA\Property(property="date_of_birth", type="string", example="4 May 2000"), @OA\Property(property="gender", type="string"),
+ *         @OA\Property(property="nationality", type="string"), @OA\Property(property="state_of_origin", type="string")),
+ *     @OA\Property(property="photo", type="string", nullable=true, description="Profile photo URL when the template uses a photo (Nigeria, West Africa, Gulf)"),
+ *     @OA\Property(property="experience", type="array", description="Past work entered by the learner, current job first", @OA\Items(ref="#/components/schemas/CvExperience")),
+ *     @OA\Property(property="education_history", type="array", @OA\Items(ref="#/components/schemas/CvEducation")),
+ *     @OA\Property(property="languages", type="array", @OA\Items(type="object", @OA\Property(property="language", type="string"), @OA\Property(property="level", type="string", example="B2"))),
+ *     @OA\Property(property="achievements", type="array", @OA\Items(type="string")),
+ *     @OA\Property(property="references", description="List of referees (Nigeria, West Africa, Gulf), the string `on_request` (UK, Europass, or no referees given), or null (US/Canada)",
+ *         oneOf={@OA\Schema(type="array", @OA\Items(ref="#/components/schemas/CvReference")), @OA\Schema(type="string", enum={"on_request"})}, nullable=true),
  *     @OA\Property(property="education", type="string", nullable=true),
  *     @OA\Property(property="work", type="object", @OA\Property(property="status", type="string"), @OA\Property(property="job_title", type="string"), @OA\Property(property="employment_type", type="string"), @OA\Property(property="since", type="string", example="Mar 2022"), @OA\Property(property="organisation", type="string"), @OA\Property(property="sector", type="string")),
  *     @OA\Property(property="interests", type="object", @OA\Property(property="value_chain", type="string"), @OA\Property(property="commodity", type="string"), @OA\Property(property="objective", type="string")),
@@ -44,10 +59,73 @@ use OpenApi\Annotations as OA;
  * )
  *
  * @OA\Schema(
+ *     schema="CvExperience",
+ *     required={"title"},
+ *     @OA\Property(property="title", type="string", maxLength=150, example="Poultry attendant"),
+ *     @OA\Property(property="organisation", type="string", maxLength=150, example="Kano Birds Ltd"),
+ *     @OA\Property(property="location", type="string", maxLength=150, example="Kano"),
+ *     @OA\Property(property="start", type="string", example="2021-03", description="YYYY-MM"),
+ *     @OA\Property(property="end", type="string", nullable=true, example="2023-06", description="YYYY-MM"),
+ *     @OA\Property(property="current", type="boolean", description="Still in this job"),
+ *     @OA\Property(property="description", type="string", maxLength=2000)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CvEducation",
+ *     required={"qualification"},
+ *     @OA\Property(property="qualification", type="string", maxLength=150, example="SSCE"),
+ *     @OA\Property(property="institution", type="string", maxLength=150),
+ *     @OA\Property(property="location", type="string", maxLength=150),
+ *     @OA\Property(property="start", type="string", example="2014-09", description="YYYY-MM"),
+ *     @OA\Property(property="end", type="string", example="2017-07", description="YYYY-MM"),
+ *     @OA\Property(property="details", type="string", maxLength=1000)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CvReference",
+ *     required={"name"},
+ *     @OA\Property(property="name", type="string", maxLength=120), @OA\Property(property="role", type="string", maxLength=120),
+ *     @OA\Property(property="organisation", type="string", maxLength=150), @OA\Property(property="email", type="string", format="email"),
+ *     @OA\Property(property="phone", type="string", maxLength=30)
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CvDetails",
+ *     description="What the learner types in themselves. Lists replace what was saved before.",
+ *     @OA\Property(property="headline", type="string", maxLength=150),
+ *     @OA\Property(property="summary", type="string", maxLength=2000, description="Personal statement / career objective; replaces the automatic summary"),
+ *     @OA\Property(property="phone", type="string", maxLength=30), @OA\Property(property="location", type="string", maxLength=150),
+ *     @OA\Property(property="linkedin", type="string", maxLength=255), @OA\Property(property="nationality", type="string", maxLength=100),
+ *     @OA\Property(property="state_of_origin", type="string", maxLength=100),
+ *     @OA\Property(property="experiences", type="array", maxItems=20, @OA\Items(ref="#/components/schemas/CvExperience")),
+ *     @OA\Property(property="education", type="array", maxItems=10, @OA\Items(ref="#/components/schemas/CvEducation")),
+ *     @OA\Property(property="skills", type="array", maxItems=30, @OA\Items(type="string", maxLength=60)),
+ *     @OA\Property(property="languages", type="array", maxItems=10, @OA\Items(type="object", required={"language"}, @OA\Property(property="language", type="string"), @OA\Property(property="level", type="string"))),
+ *     @OA\Property(property="achievements", type="array", maxItems=15, @OA\Items(type="string", maxLength=300)),
+ *     @OA\Property(property="references", type="array", maxItems=5, @OA\Items(ref="#/components/schemas/CvReference"))
+ * )
+ *
+ * @OA\Schema(
+ *     schema="CvTemplate",
+ *     @OA\Property(property="key", type="string", example="uk"),
+ *     @OA\Property(property="label", type="string", example="United Kingdom CV"),
+ *     @OA\Property(property="description", type="string"),
+ *     @OA\Property(property="countries", type="array", @OA\Items(type="string"), description="Countries this template suits"),
+ *     @OA\Property(property="photo", type="boolean"),
+ *     @OA\Property(property="personal", type="array", @OA\Items(type="string", enum={"date_of_birth","gender","nationality","state_of_origin"})),
+ *     @OA\Property(property="references", type="string", enum={"list","on_request","none"}),
+ *     @OA\Property(property="summary_title", type="string"),
+ *     @OA\Property(property="order", type="array", @OA\Items(type="string"))
+ * )
+ *
+ * @OA\Schema(
  *     schema="LearnerCv",
  *     @OA\Property(property="id", type="integer"),
  *     @OA\Property(property="user_id", type="integer"),
  *     @OA\Property(property="data", ref="#/components/schemas/CvData"),
+ *     @OA\Property(property="details", ref="#/components/schemas/CvDetails", nullable=true),
+ *     @OA\Property(property="template", type="string", enum={"nigeria","west_africa","uk","us","europass","gulf"}),
+ *     @OA\Property(property="target_country", type="string", nullable=true),
  *     @OA\Property(property="open_to_work", type="boolean", description="When false the CV is not matched to employers"),
  *     @OA\Property(property="generated_at", type="string", format="date-time")
  * )
@@ -119,6 +197,34 @@ class CareerMatchApiDoc
      * )
      */
     public function updateCvSettings() {}
+
+    /**
+     * @OA\Get(
+     *     path="/api/cv/templates",
+     *     tags={"CV & Job Matching"},
+     *     summary="CV templates by country convention (Nigeria, West/East Africa, UK, US/Canada, Europass, Gulf)",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="Templates", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/CvTemplate"))))
+     * )
+     */
+    public function templates() {}
+
+    /**
+     * @OA\Put(
+     *     path="/api/cv/details",
+     *     tags={"CV & Job Matching"},
+     *     summary="Save my own CV details (past experience, education, skills, languages, achievements, referees) and template",
+     *     description="Everything is optional; send only what changed. `details` is saved as a whole (lists replace the previous lists). The CV and its PDF are rebuilt straight away. Past experience also feeds employer job matching.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(required=true, @OA\JsonContent(
+     *         @OA\Property(property="template", type="string", enum={"nigeria","west_africa","uk","us","europass","gulf"}),
+     *         @OA\Property(property="target_country", type="string", example="United Kingdom"),
+     *         @OA\Property(property="details", ref="#/components/schemas/CvDetails"))),
+     *     @OA\Response(response=200, description="Updated CV", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="message", type="string"), @OA\Property(property="data", ref="#/components/schemas/LearnerCv"))),
+     *     @OA\Response(response=422, description="Validation error (e.g. dates must be YYYY-MM)", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
+     * )
+     */
+    public function updateCvDetails() {}
 
     /**
      * @OA\Get(

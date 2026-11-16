@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** A learner's auto-generated CV (see CvService). */
 class LearnerCv extends Model
 {
-    protected $fillable = ['user_id', 'data', 'pdf_path', 'open_to_work', 'generated_at'];
+    protected $fillable = ['user_id', 'data', 'details', 'template', 'target_country', 'pdf_path', 'open_to_work', 'generated_at'];
 
     protected $hidden = ['pdf_path'];
 
@@ -16,6 +16,7 @@ class LearnerCv extends Model
     {
         return [
             'data' => 'array',
+            'details' => 'array',
             'open_to_work' => 'boolean',
             'generated_at' => 'datetime',
         ];
