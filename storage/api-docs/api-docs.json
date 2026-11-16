@@ -6208,6 +6208,7 @@
                                         "type": "string",
                                         "enum": [
                                             "nigeria",
+                                            "nigeria_public",
                                             "west_africa",
                                             "uk",
                                             "us",
@@ -9252,6 +9253,7 @@
                         "type": "string",
                         "enum": [
                             "nigeria",
+                            "nigeria_public",
                             "west_africa",
                             "uk",
                             "us",
@@ -9336,7 +9338,7 @@
                         "nullable": true
                     },
                     "personal": {
-                        "description": "Only the personal details the template uses (Nigeria: all four; UK/US: none). Hidden from employers until the learner accepts.",
+                        "description": "Only the personal details the template uses (Nigeria government/academic: DOB, sex, marital status, nationality, state of origin, LGA; Gulf: nationality, visa status, DOB; UK/US/Nigeria private: none). Hidden from employers until the learner accepts.",
                         "properties": {
                             "date_of_birth": {
                                 "type": "string",
@@ -9394,7 +9396,7 @@
                         }
                     },
                     "references": {
-                        "description": "List of referees (Nigeria, West Africa, Gulf), the string `on_request` (UK, Europass, or no referees given), or null (US/Canada)",
+                        "description": "List of referees (Nigeria, West Africa, Gulf), the string `on_request` (UK, Europass, or none given), or null (US/Canada)",
                         "nullable": true,
                         "oneOf": [
                             {
@@ -9716,6 +9718,27 @@
                         "type": "string",
                         "maxLength": 100
                     },
+                    "lga": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "marital_status": {
+                        "description": "Only shown by the Nigeria government/academic template",
+                        "type": "string",
+                        "enum": [
+                            "single",
+                            "married",
+                            "divorced",
+                            "widowed",
+                            "prefer_not_to_say"
+                        ]
+                    },
+                    "visa_status": {
+                        "description": "Shown by the Gulf template",
+                        "type": "string",
+                        "example": "UAE residence visa (transferable)",
+                        "maxLength": 120
+                    },
                     "experiences": {
                         "type": "array",
                         "items": {
@@ -9804,8 +9827,11 @@
                             "enum": [
                                 "date_of_birth",
                                 "gender",
+                                "marital_status",
                                 "nationality",
-                                "state_of_origin"
+                                "state_of_origin",
+                                "lga",
+                                "visa_status"
                             ]
                         }
                     },
@@ -9852,6 +9878,7 @@
                         "type": "string",
                         "enum": [
                             "nigeria",
+                            "nigeria_public",
                             "west_africa",
                             "uk",
                             "us",

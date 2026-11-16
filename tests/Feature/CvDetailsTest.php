@@ -56,13 +56,13 @@ class CvDetailsTest extends TestCase
     public function test_templates_are_listed_and_country_maps_to_a_template(): void
     {
         $keys = array_column($this->actingAs($this->user, 'sanctum')->getJson('/api/cv/templates')->assertOk()->json('data'), 'key');
-        $this->assertEqualsCanonicalizing(['nigeria', 'west_africa', 'uk', 'us', 'europass', 'gulf'], $keys);
+        $this->assertEqualsCanonicalizing(['nigeria', 'nigeria_public', 'west_africa', 'uk', 'us', 'europass', 'gulf'], $keys);
         $this->assertSame('uk', CvTemplates::forCountry('united kingdom'));
         $this->assertSame('us', CvTemplates::forCountry('Canada'));
         $this->assertSame('nigeria', CvTemplates::forCountry('Mars'));
     }
 
-    public function test_nigerian_template_shows_personal_details_experience_and_referees(): void
+    public function test_nigerian_private_sector_cv_has_no_personal_details_but_lists_referees(): void
     {
         $data = $this->actingAs($this->user, 'sanctum')
             ->putJson('/api/cv/details', ['template' => 'nigeria', 'target_country' => 'Nigeria', 'details' => $this->details()])
@@ -72,9 +72,31 @@ class CvDetailsTest extends TestCase
         $this->assertSame('Poultry attendant', $data['experience'][0]['title'], 'current job first');
         $this->assertSame('Vaccination', $data['skills'][0], 'own skills come first');
         $this->assertSame('Broiler Production', $data['courses'][0]['title'], 'training still included');
-        $this->assertSame(['date_of_birth', 'gender', 'nationality', 'state_of_origin'], array_keys($data['personal']));
+        $this->assertSame([], $data['personal'], 'Jobberman: no DOB / state of origin / marital status unless asked');
+        $this->assertNull($data['photo']);
         $this->assertSame('Malam Sani', $data['references'][0]['name']);
+        $this->assertSame('Professional summary', $data['summary_title']);
+    }
+
+    public function test_nigerian_government_cv_includes_the_personal_details_forms_ask_for(): void
+    {
+        $data = $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/cv/details', ['template' => 'nigeria_public', 'details' => $this->details(['marital_status' => 'single', 'lga' => 'Dala'])])
+            ->assertOk()->json('data.data');
+
+        $this->assertSame(['date_of_birth', 'gender', 'marital_status', 'nationality', 'state_of_origin', 'lga'], array_keys($data['personal']));
+        $this->assertSame('Dala', $data['personal']['lga']);
         $this->assertSame('Career objective', $data['summary_title']);
+        $this->assertSame('education', $data['section_order'][1]);
+    }
+
+    public function test_gulf_cv_shows_visa_status_not_gender(): void
+    {
+        $data = $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/cv/details', ['template' => 'gulf', 'details' => $this->details(['visa_status' => 'Visit visa'])])
+            ->assertOk()->json('data.data');
+        $this->assertSame('Visit visa', $data['personal']['visa_status']);
+        $this->assertArrayNotHasKey('gender', $data['personal']);
     }
 
     public function test_uk_and_us_templates_drop_personal_details_and_handle_references(): void
@@ -88,7 +110,7 @@ class CvDetailsTest extends TestCase
 
         $us = $this->putJson('/api/cv/details', ['template' => 'us'])->assertOk()->json('data.data');
         $this->assertNull($us['references']);
-        $this->assertSame('skills', $us['section_order'][1]);
+        $this->assertSame('experience', $us['section_order'][1]);
         $this->assertSame('Farm hand', end($us['experience'])['title'], 'details kept when only the template changes');
     }
 

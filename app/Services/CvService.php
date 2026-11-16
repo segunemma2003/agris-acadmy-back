@@ -163,6 +163,9 @@ class CvService
                 'gender' => $user->gender ? ucfirst($user->gender) : null,
                 'nationality' => $details['nationality'] ?? ($user->nationality === 'nigerian' ? 'Nigerian' : null),
                 'state_of_origin' => $details['state_of_origin'] ?? $user->state,
+                'lga' => $details['lga'] ?? $user->lga,
+                'marital_status' => $details['marital_status'] ?? null,
+                'visa_status' => $details['visa_status'] ?? null,
                 default => null,
             };
             if ($value) {
@@ -323,7 +326,8 @@ class CvService
 
         // Personal details (only the ones this template uses)
         if ($withContact && ! empty($d['personal'])) {
-            $labels = ['date_of_birth' => 'Date of birth', 'gender' => 'Gender', 'nationality' => 'Nationality', 'state_of_origin' => 'State'];
+            $labels = ['date_of_birth' => 'Date of birth', 'gender' => 'Sex', 'nationality' => 'Nationality', 'state_of_origin' => 'State of origin',
+                'lga' => 'LGA', 'marital_status' => 'Marital status', 'visa_status' => 'Visa status'];
             $pdf->SetFont('Helvetica', '', 9);
             $pdf->MultiCell($w, 5, $t(implode('   |   ', array_map(fn ($k, $v) => ($labels[$k] ?? $k) . ': ' . $v, array_keys($d['personal']), $d['personal']))));
             $pdf->Ln(1);
