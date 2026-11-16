@@ -166,7 +166,6 @@ class ParticipantProfile
         '150001_300000' => '₦150,001 to ₦300,000 (stable / established youth earner)',
         '300001_500000' => '₦300,001 to ₦500,000 (commercial / upper-tier youth agribusiness earner)',
         'above_500000' => 'Above ₦500,000 (high-capacity / established commercial agribusiness earner)',
-        'prefer_not_to_say' => 'Prefer not to say',
     ];
 
     /** Socio-economic class per income band, for reports. */
@@ -183,7 +182,10 @@ class ParticipantProfile
         'prefer_not_to_say' => 'Prefer not to say',
     ];
 
-    public const INCOME_LEGACY = ['above_300000' => 'Above ₦300,000 (earlier form)'];
+    public const INCOME_LEGACY = [
+        'above_300000' => 'Above ₦300,000 (earlier form)',
+        'prefer_not_to_say' => 'Prefer not to say (earlier form)',
+    ];
 
     public const VALUE_CHAIN = [
         'production' => 'Production (growing, raising)',
