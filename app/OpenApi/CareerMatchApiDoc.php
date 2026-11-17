@@ -230,6 +230,31 @@ class CareerMatchApiDoc
     public function updateCvDetails() {}
 
     /**
+     * @OA\Post(
+     *     path="/api/cv/suggest",
+     *     tags={"CV & Job Matching"},
+     *     summary="Ask Claude to draft CV wording (headline, summary, a job description, achievements or skills)",
+     *     description="Uses the learner's training record plus the editor's current (unsaved) `details`. Nothing is saved — the learner reviews, edits and then saves with PUT /api/cv/details. Claude is told not to invent facts; missing numbers come back as [placeholders]. Rate limited to 20 requests a minute.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(required=true, @OA\JsonContent(required={"field"},
+     *         @OA\Property(property="field", type="string", enum={"headline","summary","experience","achievements","skills"}),
+     *         @OA\Property(property="template", type="string", enum={"nigeria","nigeria_public","west_africa","uk","us","europass","gulf"}),
+     *         @OA\Property(property="target_country", type="string", example="Nigeria"),
+     *         @OA\Property(property="details", ref="#/components/schemas/CvDetails"),
+     *         @OA\Property(property="index", type="integer", description="For field=experience: which item in details.experiences to describe", example=0),
+     *         @OA\Property(property="notes", type="string", description="Learner's rough notes to work from", example="fed 2000 birds, did vaccination"))),
+     *     @OA\Response(response=200, description="Suggestion (string for headline/summary/experience, array of strings for achievements/skills)", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean"),
+     *         @OA\Property(property="data", type="object",
+     *             @OA\Property(property="field", type="string"),
+     *             @OA\Property(property="suggestion", oneOf={@OA\Schema(type="string"), @OA\Schema(type="array", @OA\Items(type="string"))})))),
+     *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError")),
+     *     @OA\Response(response=503, description="Writing assistant unavailable (Claude not configured or failed)")
+     * )
+     */
+    public function suggestCv() {}
+
+    /**
      * @OA\Get(
      *     path="/api/cv/pdf",
      *     tags={"CV & Job Matching"},

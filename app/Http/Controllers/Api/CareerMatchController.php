@@ -121,6 +121,43 @@ class CareerMatchController extends Controller
         return response()->json(['success' => true, 'data' => $cv, 'message' => 'Your CV has been updated']);
     }
 
+    /**
+     * Claude drafts CV wording from the learner's (unsaved) editor contents and
+     * training record. Nothing is saved — the learner edits and saves it.
+     */
+    public function suggestCv(Request $request, \App\Services\CvWriterService $writer)
+    {
+        $data = $request->validate([
+            'field' => 'required|in:' . implode(',', \App\Services\CvWriterService::FIELDS),
+            'template' => 'nullable|in:' . implode(',', CvTemplates::keys()),
+            'target_country' => 'nullable|string|max:100',
+            'details' => 'nullable|array',
+            'details.experiences' => 'nullable|array|max:20',
+            'details.experiences.*' => 'array',
+            'index' => 'nullable|integer|min:0|max:19',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $user = $request->user();
+        $saved = $this->cvs->forUser($user);
+        $suggestion = $writer->suggest(
+            $user,
+            $data['field'],
+            // validated() keeps only keys with rules — take the whole draft
+            is_array($request->input('details')) ? $request->input('details') : ($saved->details ?? []),
+            $data['template'] ?? ($saved->template ?: CvTemplates::DEFAULT),
+            $data['target_country'] ?? $saved->target_country,
+            $data['index'] ?? null,
+            $data['notes'] ?? null,
+        );
+
+        if ($suggestion === null || $suggestion === '' || $suggestion === []) {
+            return response()->json(['success' => false, 'message' => 'The writing assistant is not available right now. Please try again later.'], 503);
+        }
+
+        return response()->json(['success' => true, 'data' => ['field' => $data['field'], 'suggestion' => $suggestion]]);
+    }
+
     public function myCvPdf(Request $request)
     {
         $cv = $this->cvs->forUser($request->user());

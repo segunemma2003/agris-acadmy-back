@@ -6269,6 +6269,126 @@
                 ]
             }
         },
+        "/api/cv/suggest": {
+            "post": {
+                "tags": [
+                    "CV & Job Matching"
+                ],
+                "summary": "Ask Claude to draft CV wording (headline, summary, a job description, achievements or skills)",
+                "description": "Uses the learner's training record plus the editor's current (unsaved) `details`. Nothing is saved — the learner reviews, edits and then saves with PUT /api/cv/details. Claude is told not to invent facts; missing numbers come back as [placeholders]. Rate limited to 20 requests a minute.",
+                "operationId": "88c73dc0b0c5015fc804a9d91369eb2e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "field"
+                                ],
+                                "properties": {
+                                    "field": {
+                                        "type": "string",
+                                        "enum": [
+                                            "headline",
+                                            "summary",
+                                            "experience",
+                                            "achievements",
+                                            "skills"
+                                        ]
+                                    },
+                                    "template": {
+                                        "type": "string",
+                                        "enum": [
+                                            "nigeria",
+                                            "nigeria_public",
+                                            "west_africa",
+                                            "uk",
+                                            "us",
+                                            "europass",
+                                            "gulf"
+                                        ]
+                                    },
+                                    "target_country": {
+                                        "type": "string",
+                                        "example": "Nigeria"
+                                    },
+                                    "details": {
+                                        "$ref": "#/components/schemas/CvDetails"
+                                    },
+                                    "index": {
+                                        "description": "For field=experience: which item in details.experiences to describe",
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "notes": {
+                                        "description": "Learner's rough notes to work from",
+                                        "type": "string",
+                                        "example": "fed 2000 birds, did vaccination"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Suggestion (string for headline/summary/experience, array of strings for achievements/skills)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "field": {
+                                                    "type": "string"
+                                                },
+                                                "suggestion": {
+                                                    "oneOf": [
+                                                        {
+                                                            "type": "string"
+                                                        },
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Writing assistant unavailable (Claude not configured or failed)"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            }
+        },
         "/api/cv/pdf": {
             "get": {
                 "tags": [

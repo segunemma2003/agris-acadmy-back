@@ -146,4 +146,36 @@ class CvDetailsTest extends TestCase
             'details' => ['experiences' => [['organisation' => 'No title', 'start' => '2020/01']]],
         ])->assertStatus(422)->assertJsonValidationErrors(['template', 'details.experiences.0.title', 'details.experiences.0.start']);
     }
+
+    public function test_claude_suggests_cv_wording_from_the_draft(): void
+    {
+        $fake = new class extends \App\Services\ClaudeTextService {
+            public array $calls = [];
+            public function complete(string $system, string $prompt, int $maxTokens = 4096): ?string
+            {
+                $this->calls[] = $prompt;
+                return str_contains($prompt, 'skills') && str_contains($prompt, 'One per line, 1 to 4')
+                    ? "- Brooding\n- Vaccination\n2. Feed formulation"
+                    : "\"• Managed [number] birds\"";
+            }
+        };
+        $this->app->instance(\App\Services\ClaudeTextService::class, $fake);
+        $this->actingAs($this->user, 'sanctum');
+
+        $res = $this->postJson('/api/cv/suggest', ['field' => 'experience', 'index' => 1, 'template' => 'uk', 'details' => $this->details()])->assertOk();
+        $this->assertSame('• Managed [number] birds', $res->json('data.suggestion'));
+        $this->assertStringContainsString('Poultry attendant at Kano Birds', $fake->calls[0]);
+        $this->assertStringContainsString('Completed Agrisiti course: Broiler Production', $fake->calls[0]);
+
+        $skills = $this->postJson('/api/cv/suggest', ['field' => 'skills', 'details' => $this->details()])->assertOk()->json('data.suggestion');
+        $this->assertSame(['Brooding', 'Feed formulation'], $skills, 'bullets stripped, already-listed skills dropped');
+
+        $this->postJson('/api/cv/suggest', ['field' => 'poem'])->assertStatus(422);
+    }
+
+    public function test_suggest_returns_503_when_claude_is_unavailable(): void
+    {
+        config(['claude.api_key' => null, 'services.bedrock.key' => null]);
+        $this->actingAs($this->user, 'sanctum')->postJson('/api/cv/suggest', ['field' => 'summary'])->assertStatus(503);
+    }
 }
