@@ -494,11 +494,11 @@ class PlatformApiDoc
     /**
      * @OA\Schema(
      *     schema="ParticipantInclusion",
-     *     description="Disability & adjustments (form 1.9 / MEL 5.9). disability_types and disability_description only apply when has_disability = yes (they are cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
+     *     description="Disability & adjustments (form 1.9 / MEL 5.9). disability_types (multi-select) only applies when has_disability = yes; ticking self_describe opens disability_description (required then, cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
      *     @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}, description="Required at sign-up"),
      *     @OA\Property(property="disability_types", type="array", description="Multi-select. Required when has_disability = yes. 'prefer_not_to_say' can't be combined with others.",
-     *         @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"})),
-     *     @OA\Property(property="disability_description", type="string", maxLength=1000, nullable=true, description="Self-describe (optional)"),
+     *         @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","self_describe","prefer_not_to_say"})),
+     *     @OA\Property(property="disability_description", type="string", maxLength=1000, nullable=true, description="Self-describe text: required when self_describe is ticked in disability_types"),
      *     @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
      *     @OA\Property(property="accommodation_notes", type="string", maxLength=1000, nullable=true, description="Required when needs_accommodation = yes")
      * )

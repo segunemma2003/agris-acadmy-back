@@ -823,6 +823,7 @@
                                                 "psychosocial",
                                                 "chronic_health",
                                                 "self_care",
+                                                "self_describe",
                                                 "prefer_not_to_say"
                                             ]
                                         },
@@ -832,7 +833,7 @@
                                         ]
                                     },
                                     "disability_description": {
-                                        "description": "Self-describe (optional), only when has_disability = yes",
+                                        "description": "Self-describe text: required when self_describe is ticked in disability_types (cleared otherwise)",
                                         "type": "string",
                                         "nullable": true
                                     },
@@ -1192,12 +1193,13 @@
                                                 "psychosocial",
                                                 "chronic_health",
                                                 "self_care",
+                                                "self_describe",
                                                 "prefer_not_to_say"
                                             ]
                                         }
                                     },
                                     "disability_description": {
-                                        "description": "Self-describe (optional), only when has_disability = yes",
+                                        "description": "Self-describe text: required when self_describe is ticked in disability_types (cleared otherwise)",
                                         "type": "string",
                                         "nullable": true
                                     },
@@ -10705,7 +10707,7 @@
                 "type": "object"
             },
             "ParticipantInclusion": {
-                "description": "Disability & adjustments (form 1.9 / MEL 5.9). disability_types and disability_description only apply when has_disability = yes (they are cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
+                "description": "Disability & adjustments (form 1.9 / MEL 5.9). disability_types (multi-select) only applies when has_disability = yes; ticking self_describe opens disability_description (required then, cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
                 "properties": {
                     "has_disability": {
                         "description": "Required at sign-up",
@@ -10730,12 +10732,13 @@
                                 "psychosocial",
                                 "chronic_health",
                                 "self_care",
+                                "self_describe",
                                 "prefer_not_to_say"
                             ]
                         }
                     },
                     "disability_description": {
-                        "description": "Self-describe (optional)",
+                        "description": "Self-describe text: required when self_describe is ticked in disability_types",
                         "type": "string",
                         "nullable": true,
                         "maxLength": 1000

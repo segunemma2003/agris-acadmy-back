@@ -25,6 +25,8 @@ class ParticipantProfile
         'psychosocial' => 'Psychosocial & mental health (e.g. chronic anxiety, depression, PTSD)',
         'chronic_health' => 'Chronic / long-term health condition (e.g. sickle cell, chronic asthma, epilepsy, chronic pain)',
         'self_care' => 'Self-care (washing, dressing, eating)',
+        // ticking it opens the self-describe box (disability_description)
+        'self_describe' => 'Self-describe',
         'prefer_not_to_say' => 'Prefer not to say / disclose',
     ];
 
@@ -309,6 +311,7 @@ class ParticipantProfile
             'displacement_status' => 'required|' . self::in(self::DISPLACEMENT),
             // 1.9b / 1.9c follow-ups: a "Yes" must say which / what
             'disability_types' => 'required_if:has_disability,yes|nullable|array',
+            'disability_description' => [\Illuminate\Validation\Rule::requiredIf(fn () => self::selfDescribes(request()->input('disability_types'))), 'nullable', 'string', 'max:1000'],
             'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
         ];
     }
@@ -321,6 +324,7 @@ class ParticipantProfile
             'displacement_status' => 'sometimes|required|' . self::in(self::DISPLACEMENT),
             // 1.9b / 1.9c follow-ups: a "Yes" must say which / what
             'disability_types' => 'required_if:has_disability,yes|nullable|array',
+            'disability_description' => [\Illuminate\Validation\Rule::requiredIf(fn () => self::selfDescribes(request()->input('disability_types'))), 'nullable', 'string', 'max:1000'],
             'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
         ];
     }
@@ -371,6 +375,12 @@ class ParticipantProfile
      * 1.9b/1.9c follow-ups only stand when the answer is "Yes": a No / Prefer
      * not to say clears them, and "Prefer not to say" can't be ticked with others.
      */
+    /** Whether "Self-describe" is among the ticked types. */
+    public static function selfDescribes($types): bool
+    {
+        return is_array($types) && in_array('self_describe', $types, true);
+    }
+
     public static function normaliseInclusion(array $data): array
     {
         if (array_key_exists('has_disability', $data) && $data['has_disability'] !== 'yes') {
@@ -380,6 +390,10 @@ class ParticipantProfile
         if (isset($data['disability_types']) && is_array($data['disability_types'])) {
             $types = array_values(array_unique($data['disability_types']));
             $data['disability_types'] = in_array('prefer_not_to_say', $types, true) ? ['prefer_not_to_say'] : $types;
+        }
+        // The self-describe text belongs to the "Self-describe" tick
+        if (array_key_exists('disability_types', $data) && ! self::selfDescribes($data['disability_types'])) {
+            $data['disability_description'] = null;
         }
         if (array_key_exists('needs_accommodation', $data) && $data['needs_accommodation'] !== 'yes') {
             $data['accommodation_notes'] = null;
@@ -421,8 +435,10 @@ class ParticipantProfile
                     'exclusive' => ['prefer_not_to_say'],
                     'options' => self::opts(self::DISABILITY_TYPES),
                 ]),
-                $q('disability_description', 'Self-describe (optional)', 'text', [
-                    'show_if' => ['has_disability' => 'yes'], 'max' => 1000,
+                // Shown when "Self-describe" is ticked (for multi fields, show_if / required_if mean "the list contains")
+                $q('disability_description', 'Self-describe', 'text', [
+                    'show_if' => ['disability_types' => 'self_describe'],
+                    'required_if' => ['disability_types' => 'self_describe'], 'max' => 1000,
                 ]),
                 // 1.9c / MEL 5.9c — asked of everyone
                 $q('needs_accommodation', 'Do you require any physical, learning, or workplace adjustments to participate fully?', 'single', [

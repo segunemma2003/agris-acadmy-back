@@ -49,8 +49,8 @@ class AuthController extends Controller
      *             @OA\Property(property="referral", type="string", nullable=true, example="friend"),
      *             @OA\Property(property="date_of_birth", type="string", format="date", example="2001-04-12", description="Required"),
      *             @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}, description="Required"),
-     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes. Options: GET /api/participant/options", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"}), example={"vision","neurodivergent"}),
-     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe (optional), only when has_disability = yes"),
+     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes. Options: GET /api/participant/options", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","self_describe","prefer_not_to_say"}), example={"vision","neurodivergent"}),
+     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe text: required when self_describe is ticked in disability_types (cleared otherwise)"),
      *             @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
      *             @OA\Property(property="accommodation_notes", type="string", nullable=true, description="Required when needs_accommodation = yes", example="Flexible pacing"),
      *             @OA\Property(property="displacement_status", type="string", enum={"none","idp","refugee","host_community","prefer_not_to_say"}, description="Required")
@@ -323,8 +323,8 @@ class AuthController extends Controller
      *             @OA\Property(property="password", type="string", minLength=8, nullable=true),
      *             @OA\Property(property="password_confirmation", type="string", nullable=true),
      *             @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}),
-     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes (see ParticipantInclusion and GET /api/participant/options)", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"})),
-     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe (optional), only when has_disability = yes"),
+     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes (see ParticipantInclusion and GET /api/participant/options)", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","self_describe","prefer_not_to_say"})),
+     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe text: required when self_describe is ticked in disability_types (cleared otherwise)"),
      *             @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
      *             @OA\Property(property="accommodation_notes", type="string", nullable=true, description="Required when needs_accommodation = yes")
      *         )
