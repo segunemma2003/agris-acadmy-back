@@ -115,6 +115,7 @@ class CareerMatchController extends Controller
             'details.lga' => 'nullable|string|max:100',
             'details.marital_status' => 'nullable|in:single,married,divorced,widowed,prefer_not_to_say',
             'details.visa_status' => 'nullable|string|max:120',
+            'details.no_experience' => 'nullable|boolean', // "I don't have work experience yet"
             'details.experiences' => 'nullable|array|max:20',
             'details.experiences.*.title' => 'required|string|max:150',
             'details.experiences.*.organisation' => 'nullable|string|max:150',

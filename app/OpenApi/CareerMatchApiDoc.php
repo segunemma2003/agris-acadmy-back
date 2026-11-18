@@ -100,6 +100,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="lga", type="string", maxLength=100),
  *     @OA\Property(property="marital_status", type="string", enum={"single","married","divorced","widowed","prefer_not_to_say"}, description="Only shown by the Nigeria government/academic template"),
  *     @OA\Property(property="visa_status", type="string", maxLength=120, example="UAE residence visa (transferable)", description="Shown by the Gulf template"),
+ *     @OA\Property(property="no_experience", type="boolean", description="Learner ticked 'I don't have work experience yet' (the app requires a job or this tick before preview)"),
  *     @OA\Property(property="experiences", type="array", maxItems=20, @OA\Items(ref="#/components/schemas/CvExperience")),
  *     @OA\Property(property="education", type="array", maxItems=10, @OA\Items(ref="#/components/schemas/CvEducation")),
  *     @OA\Property(property="skills", type="array", maxItems=30, @OA\Items(type="string", maxLength=60)),

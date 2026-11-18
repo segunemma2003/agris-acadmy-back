@@ -10531,6 +10531,10 @@
                         "example": "UAE residence visa (transferable)",
                         "maxLength": 120
                     },
+                    "no_experience": {
+                        "description": "Learner ticked 'I don't have work experience yet' (the app requires a job or this tick before preview)",
+                        "type": "boolean"
+                    },
                     "experiences": {
                         "type": "array",
                         "items": {
