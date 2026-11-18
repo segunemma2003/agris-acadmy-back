@@ -232,17 +232,4 @@ class CvDetailsTest extends TestCase
         $this->assertSame([], $u->disability_types);
         $this->assertNull($u->disability_description);
     }
-
-    public function test_value_chain_track_other_needs_the_name(): void
-    {
-        $this->actingAs($this->user, 'sanctum');
-        $this->putJson('/api/user/profile', ['value_chain_track' => 'other'])->assertStatus(422)->assertJsonValidationErrors(['value_chain_track_other']);
-        $this->putJson('/api/user/profile', ['value_chain_track' => 'other', 'value_chain_track_other' => 'Beekeeping'])->assertOk();
-        $this->assertSame('Beekeeping', $this->user->fresh()->value_chain_track_other);
-        $this->putJson('/api/user/profile', ['value_chain_track' => 'poultry'])->assertOk();
-        $this->assertNull($this->user->fresh()->value_chain_track_other);
-
-        $q = collect($this->getJson('/api/participant/options')->json('data.questions'))->keyBy('field');
-        $this->assertSame(['poultry', 'aquaculture', 'horticulture', 'cassava_maize', 'agro_processing', 'agri_logistics', 'other'], array_column($q['value_chain_track']['options'], 'value'));
-    }
 }

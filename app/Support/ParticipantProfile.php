@@ -313,7 +313,6 @@ class ParticipantProfile
             'disability_types' => 'required_if:has_disability,yes|nullable|array',
             'disability_description' => [\Illuminate\Validation\Rule::requiredIf(fn () => self::selfDescribes(request()->input('disability_types'))), 'nullable', 'string', 'max:1000'],
             'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
-            'value_chain_track_other' => 'required_if:value_chain_track,other|nullable|string|max:255',
         ];
     }
 
@@ -327,7 +326,6 @@ class ParticipantProfile
             'disability_types' => 'required_if:has_disability,yes|nullable|array',
             'disability_description' => [\Illuminate\Validation\Rule::requiredIf(fn () => self::selfDescribes(request()->input('disability_types'))), 'nullable', 'string', 'max:1000'],
             'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
-            'value_chain_track_other' => 'required_if:value_chain_track,other|nullable|string|max:255',
         ];
     }
 
@@ -397,9 +395,6 @@ class ParticipantProfile
         if (array_key_exists('disability_types', $data) && ! self::selfDescribes($data['disability_types'])) {
             $data['disability_description'] = null;
         }
-        if (array_key_exists('value_chain_track', $data) && $data['value_chain_track'] !== 'other') {
-            $data['value_chain_track_other'] = null;
-        }
         if (array_key_exists('needs_accommodation', $data) && $data['needs_accommodation'] !== 'yes') {
             $data['accommodation_notes'] = null;
         }
@@ -465,7 +460,7 @@ class ParticipantProfile
                 $q('income_band', 'Baseline monthly personal income (past 3 months average)', 'single', ['required_for_cv' => true, 'options' => self::opts(self::INCOME)]),
                 $q('value_chain', 'Value chain', 'single', ['options' => self::opts(self::VALUE_CHAIN)]),
                 $q('value_chain_track', 'Chosen value chain track / course enrolled', 'single', ['required_for_cv' => true, 'options' => self::opts(self::VALUE_CHAIN_TRACK)]),
-                $q('value_chain_track_other', 'Other: which value chain?', 'text', ['show_if' => ['value_chain_track' => 'other'], 'required_if' => ['value_chain_track' => 'other'], 'max' => 255]),
+                $q('value_chain_track_other', 'Other value chain track', 'text', ['show_if' => ['value_chain_track' => 'other'], 'max' => 255]),
                 $q('training_objective', 'Post-training primary objective', 'single', ['required_for_cv' => true, 'options' => self::opts(self::TRAINING_OBJECTIVE)]),
             ],
         ];
