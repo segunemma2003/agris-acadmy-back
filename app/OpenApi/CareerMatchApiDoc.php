@@ -168,6 +168,13 @@ class CareerMatchApiDoc
      *     tags={"CV & Job Matching"},
      *     summary="Get my auto-generated CV (built on first request if it doesn't exist yet)",
      *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="The learner's CV", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", ref="#/components/schemas/LearnerCv"))),
      *     @OA\Response(response=401, description="Unauthenticated")
      * )
@@ -181,6 +188,13 @@ class CareerMatchApiDoc
      *     summary="Rebuild my CV now from my latest profile, courses and certificates (also happens automatically on course completion)",
      *     description="Rate limited to 10 per minute.",
      *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="Rebuilt CV", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", ref="#/components/schemas/LearnerCv"), @OA\Property(property="message", type="string"))),
      *     @OA\Response(response=429, description="Too many requests")
      * )
@@ -195,6 +209,13 @@ class CareerMatchApiDoc
      *     description="Turning it off removes the learner from pending (suggested) matches immediately. Offers already sent stay.",
      *     security={{"sanctumAuth":{}}},
      *     @OA\RequestBody(required=true, @OA\JsonContent(required={"open_to_work"}, @OA\Property(property="open_to_work", type="boolean", example=true))),
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="Updated CV settings", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", ref="#/components/schemas/LearnerCv"))),
      *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
      * )
@@ -223,6 +244,13 @@ class CareerMatchApiDoc
      *         @OA\Property(property="template", type="string", enum={"nigeria","nigeria_public","west_africa","uk","us","europass","gulf"}),
      *         @OA\Property(property="target_country", type="string", example="United Kingdom"),
      *         @OA\Property(property="details", ref="#/components/schemas/CvDetails"))),
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="Updated CV", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="message", type="string"), @OA\Property(property="data", ref="#/components/schemas/LearnerCv"))),
      *     @OA\Response(response=422, description="Validation error (e.g. dates must be YYYY-MM)", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
      * )
@@ -243,6 +271,13 @@ class CareerMatchApiDoc
      *         @OA\Property(property="details", ref="#/components/schemas/CvDetails"),
      *         @OA\Property(property="index", type="integer", description="For field=experience: which item in details.experiences to describe", example=0),
      *         @OA\Property(property="notes", type="string", description="Learner's rough notes to work from", example="fed 2000 birds, did vaccination"))),
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="Suggestion (string for headline/summary/experience, array of strings for achievements/skills)", @OA\JsonContent(
      *         @OA\Property(property="success", type="boolean"),
      *         @OA\Property(property="data", type="object",
@@ -260,6 +295,13 @@ class CareerMatchApiDoc
      *     tags={"CV & Job Matching"},
      *     summary="Download my CV as a PDF",
      *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=403, description="CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean", example=false),
+     *         @OA\Property(property="code", type="string", example="profile_incomplete"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="errors", type="object",
+     *             @OA\Property(property="missing", type="array", @OA\Items(type="string"), example={"income_band","value_chain_track"}),
+     *             @OA\Property(property="labels", type="array", @OA\Items(type="string"), example={"Monthly income","Value chain track"})))),
      *     @OA\Response(response=200, description="PDF file (Content-Disposition: attachment)", @OA\MediaType(mediaType="application/pdf", @OA\Schema(type="string", format="binary")))
      * )
      */

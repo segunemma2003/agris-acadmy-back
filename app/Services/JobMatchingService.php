@@ -77,7 +77,7 @@ class JobMatchingService
         $job = $this->jobProfile($slot);
 
         $cvs = LearnerCv::where('open_to_work', true)
-            ->whereHas('user', fn ($q) => $q->where('role', 'student')->where('is_active', true))
+            ->whereHas('user', fn ($q) => \App\Support\ParticipantProfile::scopeCvReady($q->where('role', 'student')->where('is_active', true)))
             ->with('user')
             ->get();
 

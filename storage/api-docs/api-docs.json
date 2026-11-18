@@ -6019,6 +6019,54 @@
                 "summary": "Get my auto-generated CV (built on first request if it doesn't exist yet)",
                 "operationId": "209bc4936756bae793d83cf02cfbf196",
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "The learner's CV",
                         "content": {
@@ -6057,6 +6105,54 @@
                 "description": "Rate limited to 10 per minute.",
                 "operationId": "b8a43a66d7316743cea05e6bb6ea0f87",
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "Rebuilt CV",
                         "content": {
@@ -6117,6 +6213,54 @@
                     }
                 },
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "Updated CV settings",
                         "content": {
@@ -6230,6 +6374,54 @@
                     }
                 },
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "Updated CV",
                         "content": {
@@ -6332,6 +6524,54 @@
                     }
                 },
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "Suggestion (string for headline/summary/experience, array of strings for achievements/skills)",
                         "content": {
@@ -6397,6 +6637,54 @@
                 "summary": "Download my CV as a PDF",
                 "operationId": "90f2b66b5cadf7866cbd651f385e94f2",
                 "responses": {
+                    "403": {
+                        "description": "CV locked: the learner hasn't filled the participant form yet. errors.missing lists the field keys, errors.labels their names; code=profile_incomplete. Applies to every /api/cv endpoint.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "profile_incomplete"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "missing": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "income_band",
+                                                        "value_chain_track"
+                                                    ]
+                                                },
+                                                "labels": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "Monthly income",
+                                                        "Value chain track"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "PDF file (Content-Disposition: attachment)",
                         "content": {

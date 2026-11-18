@@ -324,6 +324,43 @@ class ParticipantProfile
         return array_values(array_filter(array_keys(self::profileRules()), fn ($k) => ! str_contains($k, '.')));
     }
 
+    /**
+     * Answers a learner must have given (registration / Profile form) before
+     * their CV unlocks and employers can be matched with them.
+     */
+    public const CV_REQUIRED = [
+        'gender' => 'Gender',
+        'date_of_birth' => 'Date of birth',
+        'phone' => 'Phone number',
+        'state' => 'State',
+        'has_disability' => 'Disability status',
+        'displacement_status' => 'Displacement (IDP) status',
+        'education_level' => 'Highest education',
+        'main_work' => 'Current employment status',
+        'income_band' => 'Monthly income',
+        'value_chain_track' => 'Value chain track',
+        'training_objective' => 'Post-training objective',
+    ];
+
+    /** @return array<string,string>  missing field => label (empty when the CV can unlock) */
+    public static function missingForCv(\App\Models\User $user): array
+    {
+        return array_filter(self::CV_REQUIRED, fn ($label, $field) => blank($user->getAttribute($field)), ARRAY_FILTER_USE_BOTH);
+    }
+
+    /** Limit a users query to learners whose CV is unlocked. */
+    public static function scopeCvReady($query)
+    {
+        foreach (array_keys(self::CV_REQUIRED) as $field) {
+            $query->whereNotNull($field);
+            if ($field !== 'date_of_birth') {
+                $query->where($field, '!=', '');
+            }
+        }
+
+        return $query;
+    }
+
     public static function enrollmentRules(): array
     {
         return [

@@ -27,10 +27,32 @@ class CareerMatchController extends Controller
     {
     }
 
+    /**
+     * The CV stays locked until the learner has filled the participant form.
+     * 403 with errors.missing (field keys) and errors.labels for the app.
+     */
+    private function cvLocked(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        $missing = \App\Support\ParticipantProfile::missingForCv($request->user());
+        if (! $missing) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'code' => 'profile_incomplete',
+            'message' => 'Complete your profile form to unlock your CV.',
+            'errors' => ['missing' => array_keys($missing), 'labels' => array_values($missing)],
+        ], 403);
+    }
+
     // ── Learner ─────────────────────────────────────────────
 
     public function myCv(Request $request)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $cv = $this->cvs->forUser($request->user());
 
         return response()->json(['success' => true, 'data' => $cv]);
@@ -38,6 +60,9 @@ class CareerMatchController extends Controller
 
     public function refreshCv(Request $request)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $cv = $this->cvs->build($request->user());
 
         return response()->json(['success' => true, 'data' => $cv, 'message' => 'Your CV has been updated']);
@@ -45,6 +70,9 @@ class CareerMatchController extends Controller
 
     public function updateCvSettings(Request $request)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $data = $request->validate(['open_to_work' => 'required|boolean']);
         $cv = $this->cvs->forUser($request->user());
         $cv->update($data);
@@ -69,6 +97,9 @@ class CareerMatchController extends Controller
      */
     public function updateCvDetails(Request $request)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $ym = 'nullable|date_format:Y-m';
         $data = $request->validate([
             'template' => 'sometimes|in:' . implode(',', CvTemplates::keys()),
@@ -127,6 +158,9 @@ class CareerMatchController extends Controller
      */
     public function suggestCv(Request $request, \App\Services\CvWriterService $writer)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $data = $request->validate([
             'field' => 'required|in:' . implode(',', \App\Services\CvWriterService::FIELDS),
             'template' => 'nullable|in:' . implode(',', CvTemplates::keys()),
@@ -160,6 +194,9 @@ class CareerMatchController extends Controller
 
     public function myCvPdf(Request $request)
     {
+        if ($locked = $this->cvLocked($request)) {
+            return $locked;
+        }
         $cv = $this->cvs->forUser($request->user());
 
         return $this->pdfResponse($this->cvs->pdf($cv), $cv->data['name'] ?? 'cv');

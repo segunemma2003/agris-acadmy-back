@@ -48,7 +48,7 @@ class JobMatchingTest extends TestCase
 
     private function graduate(string $name, Course $course, string $state = 'Kano', array $attrs = []): User
     {
-        $u = User::factory()->create($attrs + ['role' => 'student', 'is_active' => true, 'name' => $name, 'state' => $state]);
+        $u = User::factory()->cvReady()->create($attrs + ['role' => 'student', 'is_active' => true, 'name' => $name, 'state' => $state]);
         Enrollment::create(['user_id' => $u->id, 'course_id' => $course->id, 'status' => 'completed', 'progress_percentage' => 100, 'enrolled_at' => now(), 'completed_at' => now()]);
         app(CvService::class)->build($u);
         return $u;
@@ -64,7 +64,7 @@ class JobMatchingTest extends TestCase
 
     public function test_completing_a_course_queues_a_cv_build_and_cv_has_courses_and_pdf(): void
     {
-        $u = User::factory()->create(['role' => 'student', 'is_active' => true]);
+        $u = User::factory()->cvReady()->create(['role' => 'student', 'is_active' => true]);
         $e = Enrollment::create(['user_id' => $u->id, 'course_id' => $this->poultry->id, 'status' => 'active', 'enrolled_at' => now()]);
         $e->update(['status' => 'completed', 'completed_at' => now(), 'progress_percentage' => 100]);
         Queue::assertPushed(BuildLearnerCvJob::class, fn ($job) => $job->userId === $u->id);

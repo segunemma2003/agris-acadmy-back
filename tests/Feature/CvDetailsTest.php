@@ -31,7 +31,7 @@ class CvDetailsTest extends TestCase
 
         $cat = Category::create(['name' => 'Livestock', 'slug' => 'livestock']);
         $course = Course::create(['category_id' => $cat->id, 'title' => 'Broiler Production', 'slug' => 'broilers', 'description' => 'x', 'is_published' => true]);
-        $this->user = User::factory()->create([
+        $this->user = User::factory()->cvReady()->create([
             'role' => 'student', 'is_active' => true, 'gender' => 'female', 'date_of_birth' => '2000-05-04', 'state' => 'Kano', 'nationality' => 'nigerian',
         ]);
         Enrollment::create(['user_id' => $this->user->id, 'course_id' => $course->id, 'status' => 'completed', 'progress_percentage' => 100, 'enrolled_at' => now(), 'completed_at' => now()]);
@@ -177,5 +177,20 @@ class CvDetailsTest extends TestCase
     {
         config(['claude.api_key' => null, 'services.bedrock.key' => null]);
         $this->actingAs($this->user, 'sanctum')->postJson('/api/cv/suggest', ['field' => 'summary'])->assertStatus(503);
+    }
+
+    public function test_cv_is_locked_until_the_profile_form_is_filled(): void
+    {
+        $this->user->update(['income_band' => null, 'value_chain_track' => null]);
+        $this->actingAs($this->user, 'sanctum');
+
+        $res = $this->getJson('/api/cv')->assertStatus(403)->assertJsonPath('code', 'profile_incomplete');
+        $this->assertSame(['income_band', 'value_chain_track'], $res->json('errors.missing'));
+        $this->get('/api/cv/pdf')->assertStatus(403);
+        $this->putJson('/api/cv/details', ['template' => 'uk'])->assertStatus(403);
+        $this->postJson('/api/cv/suggest', ['field' => 'summary'])->assertStatus(403);
+
+        $this->user->update(['income_band' => 'none', 'value_chain_track' => 'poultry']);
+        $this->getJson('/api/cv')->assertOk();
     }
 }

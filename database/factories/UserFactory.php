@@ -41,4 +41,22 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /** A learner who has filled the participant form, so their CV is unlocked. */
+    public function cvReady(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'gender' => $attributes['gender'] ?? 'male',
+            'date_of_birth' => $attributes['date_of_birth'] ?? '1999-01-01',
+            'phone' => $attributes['phone'] ?? '08030000000',
+            'state' => $attributes['state'] ?? 'Kano',
+            'has_disability' => 'no',
+            'displacement_status' => 'none',
+            'education_level' => 'secondary',
+            'main_work' => $attributes['main_work'] ?? 'self_employed_agri',
+            'income_band' => 'under_30000',
+            'value_chain_track' => 'poultry',
+            'training_objective' => 'expand_enterprise',
+        ]);
+    }
 }
