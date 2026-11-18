@@ -167,6 +167,16 @@ class UserResource extends Resource
                                 ? 'Yes — given ' . $record->consent_given_at->format('j M Y, H:i') . ' (notice version: ' . ($record->consent_version ?? '—') . ')'
                                 : 'Not recorded (registered before the consent step, or via another channel)')
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('consent_method')
+                            ->label('Signed physical consent form attached / uploaded')
+                            ->options(\App\Support\ParticipantProfile::CONSENT_METHOD),
+                        Forms\Components\Placeholder::make('consent_form')
+                            ->label('Signed consent form')
+                            ->content(fn ($record) => $record?->consent_form_path
+                                ? new \Illuminate\Support\HtmlString('<a class="text-primary-600 underline" target="_blank" href="'
+                                    . e(\Illuminate\Support\Facades\URL::temporarySignedRoute('admin.consent-forms.show', now()->addMinutes(30), ['user' => $record->id]))
+                                    . '">View signed form</a> (uploaded ' . $record->consent_form_uploaded_at?->format('j M Y') . ')')
+                                : 'No file uploaded'),
                         Forms\Components\TextInput::make('first_name')->label('1.1 First name'),
                         Forms\Components\TextInput::make('surname')->label('1.2 Surname'),
                         Forms\Components\Select::make('nationality')->label('1.7 Nationality')->options(\App\Support\ParticipantProfile::NATIONALITY),

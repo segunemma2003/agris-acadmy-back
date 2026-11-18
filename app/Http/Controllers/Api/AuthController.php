@@ -47,6 +47,8 @@ class AuthController extends Controller
      *             @OA\Property(property="lga", type="string", nullable=true, example="Ikeja"),
      *             @OA\Property(property="occupation", type="string", nullable=true, example="Farmer"),
      *             @OA\Property(property="referral", type="string", nullable=true, example="friend"),
+     *             @OA\Property(property="consent", type="boolean", example=true, description="Yes, I agree (data notice)"),
+     *             @OA\Property(property="consent_method", type="string", enum={"physical","digital"}, description="Signed paper form filed / photo uploaded, or digital opt-in only (default digital). Upload the photo afterwards: POST /api/user/consent-form"),
      *             @OA\Property(property="date_of_birth", type="string", format="date", example="2001-04-12", description="Required"),
      *             @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}, description="Required"),
      *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes. Options: GET /api/participant/options", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","self_describe","prefer_not_to_say"}), example={"vision","neurodivergent"}),
@@ -79,6 +81,8 @@ class AuthController extends Controller
             'email'                 => 'required|string|email|max:255|unique:users',
             // "Yes, I agree" to the participant data notice (enforced by the web form)
             'consent'               => 'sometimes|accepted',
+            // Signed paper form filed (photo uploaded after sign-up) or digital opt-in only
+            'consent_method'        => 'nullable|' . ParticipantProfile::in(ParticipantProfile::CONSENT_METHOD),
             ...ParticipantProfile::profileRules(),
             ...ParticipantProfile::requiredOnRegister(),
             'password'              => 'required|string|min:8|confirmed',
@@ -117,6 +121,7 @@ class AuthController extends Controller
             'referral'      => $request->referral,
             'consent_given_at' => $request->boolean('consent') ? now() : null,
             'consent_version'  => $request->boolean('consent') ? ParticipantProfile::CONSENT_VERSION : null,
+            'consent_method'   => $request->boolean('consent') ? ($request->input('consent_method') ?: 'digital') : null,
             'is_active'     => true,
         ]);
 
@@ -353,6 +358,7 @@ class AuthController extends Controller
             'avatar'        => 'nullable|string|max:500',
             'password'      => 'nullable|string|min:8|confirmed',
             'locale'        => 'nullable|string|in:en,ha',
+            'consent_method' => 'nullable|' . ParticipantProfile::in(ParticipantProfile::CONSENT_METHOD),
             'notification_preferences' => 'nullable|array',
             'notification_preferences.in_app' => 'nullable|array',
             'notification_preferences.email' => 'nullable|array',
@@ -373,6 +379,9 @@ class AuthController extends Controller
         if ($request->boolean('consent') && ! $user->consent_given_at) {
             $updateData['consent_given_at'] = now();
             $updateData['consent_version'] = ParticipantProfile::CONSENT_VERSION;
+            $updateData['consent_method'] = $request->input('consent_method') ?: ($user->consent_method ?: 'digital');
+        } elseif ($request->filled('consent_method')) {
+            $updateData['consent_method'] = $request->input('consent_method');
         }
         if (! $request->filled('name') && ($request->filled('first_name') || $request->filled('surname'))) {
             $updateData['name'] = trim(($request->first_name ?? $user->first_name) . ' ' . ($request->surname ?? $user->surname));
@@ -452,6 +461,9 @@ class AuthController extends Controller
                 $user->notification_preferences
             ),
             'consent_given_at' => $user->consent_given_at?->toIso8601String(),
+            'consent_method' => $user->consent_method,
+            'has_consent_form' => filled($user->consent_form_path),
+            'consent_form_uploaded_at' => $user->consent_form_uploaded_at?->toIso8601String(),
             ...collect(ParticipantProfile::profileFields())->mapWithKeys(fn ($f) => [$f => $user->{$f}])->all(),
         ];
     }

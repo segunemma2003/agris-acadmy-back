@@ -53,7 +53,7 @@ class User extends Authenticatable
         'sms_nudge_sent_at',
         'sms_nudge_count',
         // Participant registration form (App\Support\ParticipantProfile)
-        'consent_given_at', 'consent_version',
+        'consent_given_at', 'consent_version', 'consent_method', 'consent_form_path', 'consent_form_uploaded_at',
         'first_name', 'surname', 'nationality', 'has_disability', 'disability_types', 'disability_description', 'accommodation_needs', 'needs_accommodation', 'accommodation_notes', 'displacement_status',
         'women_category', 'education_level', 'locality_type', 'learner_category', 'main_work', 'job_title',
         'employment_type', 'work_started_month', 'work_started_year', 'work_organisation', 'work_sector',
@@ -81,6 +81,7 @@ class User extends Authenticatable
             'disability_types' => 'array',
             'accommodation_needs' => 'array',
             'consent_given_at' => 'datetime',
+            'consent_form_uploaded_at' => 'datetime',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',

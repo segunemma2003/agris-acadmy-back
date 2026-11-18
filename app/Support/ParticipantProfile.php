@@ -13,6 +13,12 @@ class ParticipantProfile
 
     public const NATIONALITY = ['nigerian' => 'Nigerian', 'other' => 'Other nationality'];
 
+    /** Consent proof (MEL tool, before Part 1). */
+    public const CONSENT_METHOD = [
+        'physical' => 'Yes (physical signed copy filed or photo uploaded)',
+        'digital' => 'Digital opt-in only',
+    ];
+
     public const YES_NO_PREFER = ['yes' => 'Yes', 'no' => 'No', 'prefer_not_to_say' => 'Prefer not to say'];
 
     /** 1.9 Type of difficulty, disability or neurodivergence (MEL tool 5.9b). */
@@ -421,6 +427,10 @@ class ParticipantProfile
         return [
             'version' => self::CONSENT_VERSION,
             'questions' => [
+                $q('consent_method', 'Signed physical consent form attached / uploaded', 'single', [
+                    'options' => self::opts(self::CONSENT_METHOD),
+                    'note' => 'With "physical", upload a photo or PDF of the signed form: POST /api/user/consent-form (multipart field "file").',
+                ]),
                 $q('gender', 'Gender', 'single', ['required' => true, 'options' => self::opts(['male' => 'Male', 'female' => 'Female', 'other' => 'Other'])]),
                 $q('date_of_birth', 'Date of birth', 'date', ['required' => true]),
                 $q('nationality', 'Nationality', 'single', ['options' => self::opts(self::NATIONALITY)]),

@@ -525,4 +525,36 @@ class PlatformApiDoc
      * )
      */
     public function participantOptions() {}
+
+    /**
+     * @OA\Post(
+     *     path="/api/user/consent-form",
+     *     tags={"Auth"},
+     *     summary="Upload a photo or PDF of the learner's signed paper consent form (NDPA 2023)",
+     *     description="Marks consent_method as 'physical'. Replaces any earlier file. JPEG, PNG or PDF, max 5 MB. Kept on private storage; admins view it from the admin user page.",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="multipart/form-data", @OA\Schema(required={"file"}, @OA\Property(property="file", type="string", format="binary")))),
+     *     @OA\Response(response=200, description="Uploaded", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean"),
+     *         @OA\Property(property="message", type="string"),
+     *         @OA\Property(property="data", type="object",
+     *             @OA\Property(property="consent_method", type="string", example="physical"),
+     *             @OA\Property(property="has_consent_form", type="boolean", example=true),
+     *             @OA\Property(property="consent_form_uploaded_at", type="string", format="date-time")))),
+     *     @OA\Response(response=422, description="Missing, wrong type or too large", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
+     * )
+     */
+    public function uploadConsentForm() {}
+
+    /**
+     * @OA\Get(
+     *     path="/api/user/consent-form",
+     *     tags={"Auth"},
+     *     summary="Download the learner's own signed consent form",
+     *     security={{"sanctumAuth":{}}},
+     *     @OA\Response(response=200, description="The file (image or PDF)", @OA\MediaType(mediaType="application/octet-stream", @OA\Schema(type="string", format="binary"))),
+     *     @OA\Response(response=404, description="No form uploaded")
+     * )
+     */
+    public function downloadConsentForm() {}
 }

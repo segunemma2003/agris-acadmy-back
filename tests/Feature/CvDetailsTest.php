@@ -232,4 +232,36 @@ class CvDetailsTest extends TestCase
         $this->assertSame([], $u->disability_types);
         $this->assertNull($u->disability_description);
     }
+
+    public function test_consent_method_and_signed_form_upload(): void
+    {
+        $res = $this->postJson('/api/register', [
+            'first_name' => 'Hauwa', 'surname' => 'Musa', 'email' => 'hauwa@example.com',
+            'password' => 'secret123', 'password_confirmation' => 'secret123',
+            'gender' => 'female', 'date_of_birth' => '2001-04-12', 'has_disability' => 'no', 'displacement_status' => 'none',
+            'consent' => true, 'consent_method' => 'physical',
+        ])->assertCreated();
+        $u = User::where('email', 'hauwa@example.com')->first();
+        $this->assertSame('physical', $u->consent_method);
+
+        $this->actingAs($u, 'sanctum');
+        $this->postJson('/api/user/consent-form', ['file' => \Illuminate\Http\UploadedFile::fake()->create('form.exe', 10)])->assertStatus(422);
+        $this->postJson('/api/user/consent-form', ['file' => \Illuminate\Http\UploadedFile::fake()->image('signed.jpg')])
+            ->assertOk()->assertJsonPath('data.has_consent_form', true);
+        Storage::disk('local')->assertExists($u->fresh()->consent_form_path);
+        $this->get('/api/user/consent-form')->assertOk();
+        $this->getJson('/api/user')->assertJsonPath('consent_method', 'physical');
+
+        // admin link is signed
+        $this->get("/admin-tools/consent-forms/{$u->id}")->assertStatus(403);
+        $this->get(\Illuminate\Support\Facades\URL::temporarySignedRoute('admin.consent-forms.show', now()->addMinutes(5), ['user' => $u->id]))->assertOk();
+
+        // digital opt-in by default when consent is given without a method
+        $this->postJson('/api/register', [
+            'first_name' => 'Sani', 'surname' => 'Bello', 'email' => 'sani@example.com',
+            'password' => 'secret123', 'password_confirmation' => 'secret123',
+            'gender' => 'male', 'date_of_birth' => '2000-01-01', 'has_disability' => 'no', 'displacement_status' => 'none', 'consent' => true,
+        ])->assertCreated();
+        $this->assertSame('digital', User::where('email', 'sani@example.com')->first()->consent_method);
+    }
 }

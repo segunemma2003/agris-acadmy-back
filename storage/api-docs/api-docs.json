@@ -794,6 +794,19 @@
                                         "example": "friend",
                                         "nullable": true
                                     },
+                                    "consent": {
+                                        "description": "Yes, I agree (data notice)",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "consent_method": {
+                                        "description": "Signed paper form filed / photo uploaded, or digital opt-in only (default digital). Upload the photo afterwards: POST /api/user/consent-form",
+                                        "type": "string",
+                                        "enum": [
+                                            "physical",
+                                            "digital"
+                                        ]
+                                    },
                                     "date_of_birth": {
                                         "description": "Required",
                                         "type": "string",
@@ -9513,6 +9526,115 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/user/consent-form": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Download the learner's own signed consent form",
+                "operationId": "bffcd7b4b36db4f30a826aec0cb96b41",
+                "responses": {
+                    "200": {
+                        "description": "The file (image or PDF)",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No form uploaded"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Upload a photo or PDF of the learner's signed paper consent form (NDPA 2023)",
+                "description": "Marks consent_method as 'physical'. Replaces any earlier file. JPEG, PNG or PDF, max 5 MB. Kept on private storage; admins view it from the admin user page.",
+                "operationId": "e5b9424448e833187330de28ad011579",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Uploaded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "consent_method": {
+                                                    "type": "string",
+                                                    "example": "physical"
+                                                },
+                                                "has_consent_form": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "consent_form_uploaded_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing, wrong type or too large",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumAuth": []
+                    }
+                ]
             }
         }
     },

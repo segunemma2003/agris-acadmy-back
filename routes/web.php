@@ -12,6 +12,14 @@ Route::get('/admin-tools/certificate-templates/{certificateTemplate}/preview', C
     ->middleware('signed')
     ->name('admin.certificate-templates.preview');
 
+// Signed, short-lived link from the admin user page: the learner's signed paper consent form
+Route::get('/admin-tools/consent-forms/{user}', function (\App\Models\User $user) {
+    $path = $user->consent_form_path;
+    abort_unless($path && \Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk('local')->response($path);
+})->middleware('signed')->name('admin.consent-forms.show');
+
 // Password reset route (required by Laravel's password reset system)
 Route::get('/reset-password/{token}', function () {
     return response()->json(['message' => 'Use the API endpoint /api/reset-password with token in request body']);

@@ -109,6 +109,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
     Route::get('/user/certificates', [AuthController::class, 'certificates']);
     Route::post('/user/profile/avatar', [AuthController::class, 'uploadAvatar']);
+    Route::post('/user/consent-form', [\App\Http\Controllers\Api\ConsentFormController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/user/consent-form', [\App\Http\Controllers\Api\ConsentFormController::class, 'show']);
     Route::delete('/user/profile/avatar', [AuthController::class, 'deleteAvatar']);
 
     // Enrollments
