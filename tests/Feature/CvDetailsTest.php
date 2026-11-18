@@ -193,4 +193,16 @@ class CvDetailsTest extends TestCase
         $this->user->update(['income_band' => 'none', 'value_chain_track' => 'poultry']);
         $this->getJson('/api/cv')->assertOk();
     }
+
+    public function test_disability_and_adjustment_follow_ups_are_required_when_yes(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+        $this->putJson('/api/user/profile', ['has_disability' => 'yes', 'disability_types' => []])
+            ->assertStatus(422)->assertJsonValidationErrors(['disability_types']);
+        $this->putJson('/api/user/profile', ['needs_accommodation' => 'yes'])
+            ->assertStatus(422)->assertJsonValidationErrors(['accommodation_notes']);
+        $this->putJson('/api/user/profile', ['has_disability' => 'yes', 'disability_types' => ['neurodivergent'], 'needs_accommodation' => 'yes', 'accommodation_notes' => 'Flexible pacing'])
+            ->assertOk();
+        $this->assertSame(['neurodivergent'], $this->user->fresh()->disability_types);
+    }
 }

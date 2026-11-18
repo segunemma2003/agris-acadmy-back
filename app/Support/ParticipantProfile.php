@@ -307,6 +307,9 @@ class ParticipantProfile
         return [
             'has_disability' => 'required|' . self::in(self::YES_NO_PREFER),
             'displacement_status' => 'required|' . self::in(self::DISPLACEMENT),
+            // 1.9b / 1.9c follow-ups: a "Yes" must say which / what
+            'disability_types' => 'required_if:has_disability,yes|nullable|array',
+            'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
         ];
     }
 
@@ -316,6 +319,9 @@ class ParticipantProfile
         return [
             'has_disability' => 'sometimes|required|' . self::in(self::YES_NO_PREFER),
             'displacement_status' => 'sometimes|required|' . self::in(self::DISPLACEMENT),
+            // 1.9b / 1.9c follow-ups: a "Yes" must say which / what
+            'disability_types' => 'required_if:has_disability,yes|nullable|array',
+            'accommodation_notes' => 'required_if:needs_accommodation,yes|nullable|string|max:1000',
         ];
     }
 
