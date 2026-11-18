@@ -21,5 +21,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(CertificateTemplateSeeder::class);
+        $this->call(OrganisationSeeder::class);
     }
 }

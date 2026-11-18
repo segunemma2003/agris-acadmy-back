@@ -557,4 +557,20 @@ class PlatformApiDoc
      * )
      */
     public function downloadConsentForm() {}
+
+    /**
+     * @OA\Get(
+     *     path="/api/organisations",
+     *     tags={"Organisations"},
+     *     summary="Approved organisations (public): the learner's 'organisation you work with' picker",
+     *     @OA\Response(response=200, description="List", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean"),
+     *         @OA\Property(property="data", type="array", @OA\Items(type="object",
+     *             @OA\Property(property="id", type="integer"),
+     *             @OA\Property(property="name", type="string", example="Kano State Agricultural and Rural Development Authority (KNARDA)"),
+     *             @OA\Property(property="state", type="string", example="Kano"),
+     *             @OA\Property(property="organisation_type", type="string", example="government")))))
+     * )
+     */
+    public function listOrganisations() {}
 }

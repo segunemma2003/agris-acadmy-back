@@ -264,4 +264,25 @@ class CvDetailsTest extends TestCase
         ])->assertCreated();
         $this->assertSame('digital', User::where('email', 'sani@example.com')->first()->consent_method);
     }
+
+    public function test_organisation_seeder_is_idempotent_and_feeds_the_picker(): void
+    {
+        $this->seed(\Database\Seeders\OrganisationSeeder::class);
+        $this->seed(\Database\Seeders\OrganisationSeeder::class);
+        $this->assertSame(9, \App\Models\Organisation::count(), 'running twice adds nothing');
+
+        $knarda = User::where('email', 'knarda@org.agrisiti.com')->first();
+        $this->assertSame('organisation', $knarda->role);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('Nigeria@60', $knarda->password));
+
+        // a changed password survives a re-run
+        $knarda->update(['password' => \Illuminate\Support\Facades\Hash::make('changed-later')]);
+        $this->seed(\Database\Seeders\OrganisationSeeder::class);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('changed-later', $knarda->fresh()->password));
+
+        $names = array_column($this->getJson('/api/organisations')->assertOk()->json('data'), 'name');
+        $this->assertContains('ITF Minna', $names);
+        $q = collect($this->getJson('/api/participant/options')->json('data.questions'))->keyBy('field');
+        $this->assertContains('Niger Foods Minna', $q['work_organisation']['suggestions']);
+    }
 }

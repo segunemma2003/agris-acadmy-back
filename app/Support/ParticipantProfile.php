@@ -466,6 +466,10 @@ class ParticipantProfile
                 $q('main_work', 'Current employment status', 'single', ['required_for_cv' => true, 'options' => self::opts(self::MAIN_WORK)]),
                 $q('employment_type', 'Employment type', 'single', ['show_if' => ['main_work' => array_values(self::WORKING)], 'options' => self::opts(self::EMPLOYMENT_TYPE)]),
                 $q('work_sector', 'Sector', 'single', ['show_if' => ['main_work' => array_values(self::WORKING)], 'options' => self::opts(self::SECTOR)]),
+                $q('work_organisation', 'Organisation you work with (pick or type)', 'text', [
+                    'max' => 255, 'suggestions_from' => '/api/organisations',
+                    'suggestions' => \App\Models\Organisation::where('is_approved', true)->orderBy('name')->pluck('name')->all(),
+                ]),
                 $q('main_commodity', 'Main commodity', 'single', ['options' => self::opts(self::COMMODITY)]),
                 $q('income_band', 'Baseline monthly personal income (past 3 months average)', 'single', ['required_for_cv' => true, 'options' => self::opts(self::INCOME)]),
                 $q('value_chain', 'Value chain', 'single', ['options' => self::opts(self::VALUE_CHAIN)]),

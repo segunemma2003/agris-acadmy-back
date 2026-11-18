@@ -9636,6 +9636,55 @@
                     }
                 ]
             }
+        },
+        "/api/organisations": {
+            "get": {
+                "tags": [
+                    "Organisations"
+                ],
+                "summary": "Approved organisations (public): the learner's 'organisation you work with' picker",
+                "operationId": "80990575acf80fe34f82dca18ba56c9b",
+                "responses": {
+                    "200": {
+                        "description": "List",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Kano State Agricultural and Rural Development Authority (KNARDA)"
+                                                    },
+                                                    "state": {
+                                                        "type": "string",
+                                                        "example": "Kano"
+                                                    },
+                                                    "organisation_type": {
+                                                        "type": "string",
+                                                        "example": "government"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {

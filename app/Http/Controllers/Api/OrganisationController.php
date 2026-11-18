@@ -36,6 +36,18 @@ class OrganisationController extends Controller
     }
 
     /**
+     * Approved organisations for the learner's "organisation you work with"
+     * picker (public, names only).
+     */
+    public function index()
+    {
+        $orgs = Organisation::where('is_approved', true)->orderBy('name')
+            ->get(['id', 'name', 'state', 'organisation_type']);
+
+        return response()->json(['success' => true, 'data' => $orgs]);
+    }
+
+    /**
      * Self-registration for farms, agro-enterprises, recruitment agencies and
      * institutions (Nigeria or abroad) that need talent. The account works
      * straight away, but openings can only be posted — and are only shown to
