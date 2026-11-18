@@ -507,6 +507,10 @@ jobs:
             echo "Step 12.6: Seeding default certificate template..."
             sudo -u www-data php artisan db:seed --class=CertificateTemplateSeeder --force || echo "⚠️ Certificate template seeding skipped"
 
+            # 12.7. SEED PARTNER ORGANISATIONS (idempotent - matched by name, never duplicates or resets passwords)
+            echo "Step 12.7: Seeding partner organisations..."
+            sudo -u www-data php artisan db:seed --class=OrganisationSeeder --force || echo "⚠️ Organisation seeding skipped"
+
             # 13. CREATE STORAGE LINK
             echo "Step 13: Creating storage link..."
             sudo -u www-data php artisan storage:link || true
