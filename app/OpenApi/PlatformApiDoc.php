@@ -490,4 +490,39 @@ class PlatformApiDoc
      * )
      */
     public function broadcastingAuth() {}
+
+    /**
+     * @OA\Schema(
+     *     schema="ParticipantInclusion",
+     *     description="Disability & adjustments (form 1.9 / MEL 5.9). disability_types and disability_description only apply when has_disability = yes (they are cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
+     *     @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}, description="Required at sign-up"),
+     *     @OA\Property(property="disability_types", type="array", description="Multi-select. Required when has_disability = yes. 'prefer_not_to_say' can't be combined with others.",
+     *         @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"})),
+     *     @OA\Property(property="disability_description", type="string", maxLength=1000, nullable=true, description="Self-describe (optional)"),
+     *     @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
+     *     @OA\Property(property="accommodation_notes", type="string", maxLength=1000, nullable=true, description="Required when needs_accommodation = yes")
+     * )
+     *
+     * @OA\Get(
+     *     path="/api/participant/options",
+     *     tags={"Auth"},
+     *     summary="Participant form: every question, its answers (value + label), single/multi-select, and show_if / required_if conditions",
+     *     description="Public. Use it to build the sign-up / profile form in any app. Example: disability_types is type=multi, show_if={has_disability: yes}, required_if={has_disability: yes}, exclusive=[prefer_not_to_say]. Send the chosen values to POST /api/register or PUT /api/user/profile.",
+     *     @OA\Response(response=200, description="Form catalogue", @OA\JsonContent(
+     *         @OA\Property(property="success", type="boolean"),
+     *         @OA\Property(property="data", type="object",
+     *             @OA\Property(property="version", type="string", example="October 2026"),
+     *             @OA\Property(property="questions", type="array", @OA\Items(type="object",
+     *                 @OA\Property(property="field", type="string", example="disability_types"),
+     *                 @OA\Property(property="label", type="string"),
+     *                 @OA\Property(property="type", type="string", enum={"single","multi","text","date"}),
+     *                 @OA\Property(property="required", type="boolean"),
+     *                 @OA\Property(property="required_for_cv", type="boolean", description="Needed before the learner's CV unlocks"),
+     *                 @OA\Property(property="show_if", type="object", example={"has_disability":"yes"}),
+     *                 @OA\Property(property="required_if", type="object", example={"has_disability":"yes"}),
+     *                 @OA\Property(property="exclusive", type="array", @OA\Items(type="string"), example={"prefer_not_to_say"}),
+     *                 @OA\Property(property="options", type="array", @OA\Items(type="object", @OA\Property(property="value", type="string"), @OA\Property(property="label", type="string"))))))))
+     * )
+     */
+    public function participantOptions() {}
 }

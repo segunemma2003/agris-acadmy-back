@@ -205,4 +205,25 @@ class CvDetailsTest extends TestCase
             ->assertOk();
         $this->assertSame(['neurodivergent'], $this->user->fresh()->disability_types);
     }
+
+    public function test_participant_options_api_and_follow_ups_cleared_when_not_yes(): void
+    {
+        $q = collect($this->getJson('/api/participant/options')->assertOk()->json('data.questions'))->keyBy('field');
+        $this->assertSame('multi', $q['disability_types']['type']);
+        $this->assertSame(['has_disability' => 'yes'], $q['disability_types']['show_if']);
+        $this->assertContains('neurodivergent', array_column($q['disability_types']['options'], 'value'));
+        $this->assertSame(['has_disability' => 'yes'], $q['disability_description']['show_if']);
+        $this->assertSame(['needs_accommodation' => 'yes'], $q['accommodation_notes']['required_if']);
+        $this->assertSame(['yes', 'no', 'prefer_not_to_say'], array_column($q['has_disability']['options'], 'value'));
+
+        $this->actingAs($this->user, 'sanctum');
+        $this->putJson('/api/user/profile', ['has_disability' => 'yes', 'disability_types' => ['vision', 'prefer_not_to_say']])->assertOk();
+        $this->assertSame(['prefer_not_to_say'], $this->user->fresh()->disability_types, 'prefer not to say stands alone');
+
+        $this->putJson('/api/user/profile', ['has_disability' => 'yes', 'disability_types' => ['vision'], 'disability_description' => 'Low vision'])->assertOk();
+        $this->putJson('/api/user/profile', ['has_disability' => 'no', 'needs_accommodation' => 'no'])->assertOk();
+        $u = $this->user->fresh();
+        $this->assertSame([], $u->disability_types);
+        $this->assertNull($u->disability_description);
+    }
 }

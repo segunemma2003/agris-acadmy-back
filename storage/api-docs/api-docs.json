@@ -793,6 +793,72 @@
                                         "type": "string",
                                         "example": "friend",
                                         "nullable": true
+                                    },
+                                    "date_of_birth": {
+                                        "description": "Required",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2001-04-12"
+                                    },
+                                    "has_disability": {
+                                        "description": "Required",
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "no",
+                                            "prefer_not_to_say"
+                                        ]
+                                    },
+                                    "disability_types": {
+                                        "description": "Multi-select; required when has_disability = yes. Options: GET /api/participant/options",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "mobility",
+                                                "vision",
+                                                "hearing_speech",
+                                                "cognitive_learning",
+                                                "neurodivergent",
+                                                "psychosocial",
+                                                "chronic_health",
+                                                "self_care",
+                                                "prefer_not_to_say"
+                                            ]
+                                        },
+                                        "example": [
+                                            "vision",
+                                            "neurodivergent"
+                                        ]
+                                    },
+                                    "disability_description": {
+                                        "description": "Self-describe (optional), only when has_disability = yes",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "needs_accommodation": {
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "no"
+                                        ]
+                                    },
+                                    "accommodation_notes": {
+                                        "description": "Required when needs_accommodation = yes",
+                                        "type": "string",
+                                        "example": "Flexible pacing",
+                                        "nullable": true
+                                    },
+                                    "displacement_status": {
+                                        "description": "Required",
+                                        "type": "string",
+                                        "enum": [
+                                            "none",
+                                            "idp",
+                                            "refugee",
+                                            "host_community",
+                                            "prefer_not_to_say"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -1101,6 +1167,49 @@
                                         "minLength": 8
                                     },
                                     "password_confirmation": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "has_disability": {
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "no",
+                                            "prefer_not_to_say"
+                                        ]
+                                    },
+                                    "disability_types": {
+                                        "description": "Multi-select; required when has_disability = yes (see ParticipantInclusion and GET /api/participant/options)",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "mobility",
+                                                "vision",
+                                                "hearing_speech",
+                                                "cognitive_learning",
+                                                "neurodivergent",
+                                                "psychosocial",
+                                                "chronic_health",
+                                                "self_care",
+                                                "prefer_not_to_say"
+                                            ]
+                                        }
+                                    },
+                                    "disability_description": {
+                                        "description": "Self-describe (optional), only when has_disability = yes",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "needs_accommodation": {
+                                        "type": "string",
+                                        "enum": [
+                                            "yes",
+                                            "no"
+                                        ]
+                                    },
+                                    "accommodation_notes": {
+                                        "description": "Required when needs_accommodation = yes",
                                         "type": "string",
                                         "nullable": true
                                     }
@@ -9301,6 +9410,108 @@
                     }
                 ]
             }
+        },
+        "/api/participant/options": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Participant form: every question, its answers (value + label), single/multi-select, and show_if / required_if conditions",
+                "description": "Public. Use it to build the sign-up / profile form in any app. Example: disability_types is type=multi, show_if={has_disability: yes}, required_if={has_disability: yes}, exclusive=[prefer_not_to_say]. Send the chosen values to POST /api/register or PUT /api/user/profile.",
+                "operationId": "42129f97e96ba9177de16bc54641c43d",
+                "responses": {
+                    "200": {
+                        "description": "Form catalogue",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "version": {
+                                                    "type": "string",
+                                                    "example": "October 2026"
+                                                },
+                                                "questions": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "field": {
+                                                                "type": "string",
+                                                                "example": "disability_types"
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "type": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "single",
+                                                                    "multi",
+                                                                    "text",
+                                                                    "date"
+                                                                ]
+                                                            },
+                                                            "required": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "required_for_cv": {
+                                                                "description": "Needed before the learner's CV unlocks",
+                                                                "type": "boolean"
+                                                            },
+                                                            "show_if": {
+                                                                "type": "object",
+                                                                "example": {
+                                                                    "has_disability": "yes"
+                                                                }
+                                                            },
+                                                            "required_if": {
+                                                                "type": "object",
+                                                                "example": {
+                                                                    "has_disability": "yes"
+                                                                }
+                                                            },
+                                                            "exclusive": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string"
+                                                                },
+                                                                "example": [
+                                                                    "prefer_not_to_say"
+                                                                ]
+                                                            },
+                                                            "options": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "properties": {
+                                                                        "value": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "label": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    },
+                                                                    "type": "object"
+                                                                }
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -10489,6 +10700,58 @@
                             "learner",
                             "facilitator"
                         ]
+                    }
+                },
+                "type": "object"
+            },
+            "ParticipantInclusion": {
+                "description": "Disability & adjustments (form 1.9 / MEL 5.9). disability_types and disability_description only apply when has_disability = yes (they are cleared otherwise); accommodation_notes only when needs_accommodation = yes.",
+                "properties": {
+                    "has_disability": {
+                        "description": "Required at sign-up",
+                        "type": "string",
+                        "enum": [
+                            "yes",
+                            "no",
+                            "prefer_not_to_say"
+                        ]
+                    },
+                    "disability_types": {
+                        "description": "Multi-select. Required when has_disability = yes. 'prefer_not_to_say' can't be combined with others.",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "mobility",
+                                "vision",
+                                "hearing_speech",
+                                "cognitive_learning",
+                                "neurodivergent",
+                                "psychosocial",
+                                "chronic_health",
+                                "self_care",
+                                "prefer_not_to_say"
+                            ]
+                        }
+                    },
+                    "disability_description": {
+                        "description": "Self-describe (optional)",
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 1000
+                    },
+                    "needs_accommodation": {
+                        "type": "string",
+                        "enum": [
+                            "yes",
+                            "no"
+                        ]
+                    },
+                    "accommodation_notes": {
+                        "description": "Required when needs_accommodation = yes",
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 1000
                     }
                 },
                 "type": "object"

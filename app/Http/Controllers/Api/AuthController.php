@@ -46,7 +46,14 @@ class AuthController extends Controller
      *             @OA\Property(property="state", type="string", nullable=true, example="Lagos State"),
      *             @OA\Property(property="lga", type="string", nullable=true, example="Ikeja"),
      *             @OA\Property(property="occupation", type="string", nullable=true, example="Farmer"),
-     *             @OA\Property(property="referral", type="string", nullable=true, example="friend")
+     *             @OA\Property(property="referral", type="string", nullable=true, example="friend"),
+     *             @OA\Property(property="date_of_birth", type="string", format="date", example="2001-04-12", description="Required"),
+     *             @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}, description="Required"),
+     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes. Options: GET /api/participant/options", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"}), example={"vision","neurodivergent"}),
+     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe (optional), only when has_disability = yes"),
+     *             @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
+     *             @OA\Property(property="accommodation_notes", type="string", nullable=true, description="Required when needs_accommodation = yes", example="Flexible pacing"),
+     *             @OA\Property(property="displacement_status", type="string", enum={"none","idp","refugee","host_community","prefer_not_to_say"}, description="Required")
      *         )
      *     ),
      *     @OA\Response(
@@ -314,7 +321,12 @@ class AuthController extends Controller
      *             @OA\Property(property="bio", type="string", nullable=true),
      *             @OA\Property(property="avatar", type="string", nullable=true),
      *             @OA\Property(property="password", type="string", minLength=8, nullable=true),
-     *             @OA\Property(property="password_confirmation", type="string", nullable=true)
+     *             @OA\Property(property="password_confirmation", type="string", nullable=true),
+     *             @OA\Property(property="has_disability", type="string", enum={"yes","no","prefer_not_to_say"}),
+     *             @OA\Property(property="disability_types", type="array", description="Multi-select; required when has_disability = yes (see ParticipantInclusion and GET /api/participant/options)", @OA\Items(type="string", enum={"mobility","vision","hearing_speech","cognitive_learning","neurodivergent","psychosocial","chronic_health","self_care","prefer_not_to_say"})),
+     *             @OA\Property(property="disability_description", type="string", nullable=true, description="Self-describe (optional), only when has_disability = yes"),
+     *             @OA\Property(property="needs_accommodation", type="string", enum={"yes","no"}),
+     *             @OA\Property(property="accommodation_notes", type="string", nullable=true, description="Required when needs_accommodation = yes")
      *         )
      *     ),
      *     @OA\Response(response=200, description="Profile updated", @OA\JsonContent(@OA\Property(property="success", type="boolean"), @OA\Property(property="data", type="object", @OA\Property(property="user", ref="#/components/schemas/User"))))
@@ -447,11 +459,13 @@ class AuthController extends Controller
     /** Participant-form fields present in the request (Parts 1–3). */
     private function profileData(Request $request): array
     {
-        return array_filter(
+        $data = array_filter(
             $request->only(ParticipantProfile::profileFields()),
             fn ($key) => $request->has($key),
             ARRAY_FILTER_USE_KEY
         );
+
+        return ParticipantProfile::normaliseInclusion($data);
     }
 
     /**

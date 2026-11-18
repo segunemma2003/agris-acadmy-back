@@ -367,6 +367,89 @@ class ParticipantProfile
         return $query;
     }
 
+    /**
+     * 1.9b/1.9c follow-ups only stand when the answer is "Yes": a No / Prefer
+     * not to say clears them, and "Prefer not to say" can't be ticked with others.
+     */
+    public static function normaliseInclusion(array $data): array
+    {
+        if (array_key_exists('has_disability', $data) && $data['has_disability'] !== 'yes') {
+            $data['disability_types'] = [];
+            $data['disability_description'] = null;
+        }
+        if (isset($data['disability_types']) && is_array($data['disability_types'])) {
+            $types = array_values(array_unique($data['disability_types']));
+            $data['disability_types'] = in_array('prefer_not_to_say', $types, true) ? ['prefer_not_to_say'] : $types;
+        }
+        if (array_key_exists('needs_accommodation', $data) && $data['needs_accommodation'] !== 'yes') {
+            $data['accommodation_notes'] = null;
+        }
+
+        return $data;
+    }
+
+    /** [{value, label}] for an option list. */
+    private static function opts(array $options): array
+    {
+        return array_map(fn ($v, $l) => ['value' => $v, 'label' => $l], array_keys($options), array_values($options));
+    }
+
+    /**
+     * The participant form as data, for any app (web, mobile, partners):
+     * each question's answers, whether it's single or multi-select, and the
+     * conditions that show it or make it required. Labels are English; the web
+     * app shows its own translations for the same values.
+     */
+    public static function catalogue(): array
+    {
+        $q = fn (string $field, string $label, string $type, array $extra = []) => ['field' => $field, 'label' => $label, 'type' => $type] + $extra;
+
+        return [
+            'version' => self::CONSENT_VERSION,
+            'questions' => [
+                $q('gender', 'Gender', 'single', ['required' => true, 'options' => self::opts(['male' => 'Male', 'female' => 'Female', 'other' => 'Other'])]),
+                $q('date_of_birth', 'Date of birth', 'date', ['required' => true]),
+                $q('nationality', 'Nationality', 'single', ['options' => self::opts(self::NATIONALITY)]),
+                // 1.9 / MEL 5.9
+                $q('has_disability', 'Do you have a disability or long-term difficulty with daily activities?', 'single', [
+                    'required' => true, 'options' => self::opts(self::YES_NO_PREFER),
+                ]),
+                // 1.9b / MEL 5.9b — only when has_disability = yes; tick all that apply
+                $q('disability_types', 'Select any areas where you experience long-term difficulty or identify with any of the categories below. Tick all that apply.', 'multi', [
+                    'show_if' => ['has_disability' => 'yes'],
+                    'required_if' => ['has_disability' => 'yes'],
+                    'exclusive' => ['prefer_not_to_say'],
+                    'options' => self::opts(self::DISABILITY_TYPES),
+                ]),
+                $q('disability_description', 'Self-describe (optional)', 'text', [
+                    'show_if' => ['has_disability' => 'yes'], 'max' => 1000,
+                ]),
+                // 1.9c / MEL 5.9c — asked of everyone
+                $q('needs_accommodation', 'Do you require any physical, learning, or workplace adjustments to participate fully?', 'single', [
+                    'options' => self::opts(self::YES_NO),
+                ]),
+                $q('accommodation_notes', 'Please specify (e.g. accessible seating, sign interpretation, digital reading aids, flexible pacing)', 'text', [
+                    'show_if' => ['needs_accommodation' => 'yes'], 'required_if' => ['needs_accommodation' => 'yes'], 'max' => 1000,
+                ]),
+                $q('displacement_status', 'Displacement status', 'single', ['required' => true, 'options' => self::opts(self::DISPLACEMENT)]),
+                $q('women_category', 'Which best describes you?', 'single', ['show_if' => ['gender' => 'female'], 'options' => self::opts(self::WOMEN_CATEGORY)]),
+                $q('education_level', 'Highest education', 'single', ['options' => self::opts(self::EDUCATION)]),
+                $q('locality_type', 'Where you live', 'single', ['options' => self::opts(self::LOCALITY)]),
+                $q('learner_category', 'Learner category', 'single', ['options' => self::opts(self::LEARNER_CATEGORY)]),
+                // WEO learner baseline (MEL Part 2)
+                $q('main_work', 'Current employment status', 'single', ['required_for_cv' => true, 'options' => self::opts(self::MAIN_WORK)]),
+                $q('employment_type', 'Employment type', 'single', ['show_if' => ['main_work' => array_values(self::WORKING)], 'options' => self::opts(self::EMPLOYMENT_TYPE)]),
+                $q('work_sector', 'Sector', 'single', ['show_if' => ['main_work' => array_values(self::WORKING)], 'options' => self::opts(self::SECTOR)]),
+                $q('main_commodity', 'Main commodity', 'single', ['options' => self::opts(self::COMMODITY)]),
+                $q('income_band', 'Baseline monthly personal income (past 3 months average)', 'single', ['required_for_cv' => true, 'options' => self::opts(self::INCOME)]),
+                $q('value_chain', 'Value chain', 'single', ['options' => self::opts(self::VALUE_CHAIN)]),
+                $q('value_chain_track', 'Chosen value chain track / course enrolled', 'single', ['required_for_cv' => true, 'options' => self::opts(self::VALUE_CHAIN_TRACK)]),
+                $q('value_chain_track_other', 'Other value chain track', 'text', ['show_if' => ['value_chain_track' => 'other'], 'max' => 255]),
+                $q('training_objective', 'Post-training primary objective', 'single', ['required_for_cv' => true, 'options' => self::opts(self::TRAINING_OBJECTIVE)]),
+            ],
+        ];
+    }
+
     public static function enrollmentRules(): array
     {
         return [

@@ -54,6 +54,7 @@ Route::prefix('locations')->group(function () {
 });
 
 // Public routes
+Route::get('/participant/options', [\App\Http\Controllers\Api\ParticipantOptionsController::class, 'index']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/organisations/register', [OrganisationController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/login', [AuthController::class, 'login']);
