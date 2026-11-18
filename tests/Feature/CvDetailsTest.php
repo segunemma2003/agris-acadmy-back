@@ -285,4 +285,12 @@ class CvDetailsTest extends TestCase
         $q = collect($this->getJson('/api/participant/options')->json('data.questions'))->keyBy('field');
         $this->assertContains('Niger Foods Minna', $q['work_organisation']['suggestions']);
     }
+
+    public function test_profile_answers_come_back_as_saved(): void
+    {
+        $this->actingAs($this->user, 'sanctum')->putJson('/api/user/profile', ['date_of_birth' => '2000-05-04', 'work_organisation' => 'ITF Minna'])->assertOk();
+        $me = $this->getJson('/api/user')->json();
+        $this->assertSame('2000-05-04', $me['date_of_birth'], 'plain date, so <input type="date"> can show it');
+        $this->assertSame('ITF Minna', $me['work_organisation']);
+    }
 }

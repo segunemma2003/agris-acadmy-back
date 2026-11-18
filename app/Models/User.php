@@ -87,7 +87,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'is_staff' => 'boolean',
             'last_login_at' => 'datetime',
-            'date_of_birth' => 'date',
+            'date_of_birth' => 'date:Y-m-d',
             'is_in_facilitator_queue' => 'boolean',
             'covered_states' => 'array',
             'covered_lgas' => 'array',
