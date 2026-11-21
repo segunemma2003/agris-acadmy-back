@@ -500,6 +500,22 @@ class CourseController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        // Simulations: tell the Academy which items are simulations and how this learner did
+        $attempts = \App\Models\CourseVrSimAttempt::query()
+            ->where('user_id', $user->id)
+            ->whereIn('course_vr_content_id', $vrContent->pluck('id'))
+            ->get()
+            ->groupBy('course_vr_content_id');
+        $vrContent->each(function ($item) use ($attempts) {
+            $mine = $attempts->get($item->id);
+            $item->setAttribute('kind', $item->isSimulation() ? 'simulation' : 'vr');
+            $item->setAttribute('my_result', $mine ? [
+                'attempts' => $mine->count(),
+                'best_score' => (int) $mine->max('score'),
+                'passed' => $mine->contains('passed', true),
+            ] : null);
+        });
+
         return response()->json([
             'success' => true,
             'data' => $vrContent,

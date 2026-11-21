@@ -138,6 +138,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/experiences/{experience}/generate', [\App\Http\Controllers\Api\VrStudioController::class, 'generate']);
         Route::post('/experiences/{experience}/assets', [\App\Http\Controllers\Api\VrStudioController::class, 'uploadAsset']);
         Route::post('/experiences/{experience}/complete', [\App\Http\Controllers\Api\VrStudioController::class, 'complete']);
+        Route::post('/experiences/{experience}/attempts', [\App\Http\Controllers\Api\VrStudioController::class, 'storeAttempt'])
+            ->middleware('throttle:30,1');
+        Route::get('/experiences/{experience}/attempts', [\App\Http\Controllers\Api\VrStudioController::class, 'attempts']);
     });
 
     // Courses

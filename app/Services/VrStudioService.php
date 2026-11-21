@@ -86,7 +86,9 @@ class VrStudioService
         }
 
         if ($user->role === 'tutor') {
-            $course = $content->relationLoaded('course') ? $content->course : $content->course()->first();
+            // Always read tutor_id fresh: callers often eager-load only course:id,title,
+            // which left tutor_id null and locked the course's own tutor out of Studio.
+            $course = $content->course()->first(['id', 'tutor_id']);
 
             return $course && $course->isAccessibleByTutor($user->id);
         }

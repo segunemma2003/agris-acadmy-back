@@ -51,7 +51,7 @@ class CourseVrContentResource extends Resource
                             ->label('VR URL (auto-set by Studio on publish)')
                             ->url()
                             ->maxLength(255)
-                            ->helperText('Prefer “Open VR Studio” to author WebXR. You can still paste an external URL.')
+                            ->helperText('Use “Open VR Studio” to build a 360° scene or a fish pond simulation. You can still paste an external URL.')
                             ->dehydrated(fn ($state) => filled($state)),
                         Forms\Components\Textarea::make('instructions')
                             ->rows(3)
