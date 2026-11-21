@@ -25,6 +25,16 @@ class VrSceneGeneratorService
         'tractor',
         'chicken',
         'goat',
+        // real 3D models from the fish pond kit
+        'feed_bucket',
+        'air_pump',
+        'lab_table',
+        'pond_light',
+        'shade_canopy',
+        'dip_net',
+        'lime_bag',
+        'farmer',
+        'farmer_woman',
     ];
 
     public function __construct(private VrStudioService $studio)
@@ -142,9 +152,12 @@ Return ONLY a single JSON object (no markdown fences, no commentary) with this s
 Rules:
 - Allowed object types ONLY: {$types}
 - Place 4–12 objects spread around the learner (vary yaw); put ground props at pitch about -12 to -25; sky accents higher.
+- Objects stand on the ground: a lower pitch puts them closer (pitch -25 ≈ 3.5 m away, -12 ≈ 7.5 m). Put big things (fish_pond, barn, shade_canopy, tractor) at pitch -9 to -13, small things (feed_bucket, lime_bag, dip_net, chicken) at -18 to -28.
+- fish_pond is a real concrete pond with tilapia already swimming in it. A "fish" placed within about 4 m of a fish_pond (same yaw, similar pitch) joins that pond; elsewhere a fish is shown in a small tank.
+- For fish-farming lessons put the pond in front of the learner and the related equipment (air_pump, feed_bucket, lab_table, pond_light, dip_net, lime_bag) around it; add a farmer or farmer_woman for scale.
 - Include 3–6 educational hotspots with clear info payloads (action "info" unless a complete marker is useful).
 - Do NOT invent photoreal panorama images. Set panoramaUrl to null unless the user's brief contains an https URL to an image — then copy that URL exactly.
-- Prefer farm-realistic skyColor greens/blues (e.g. #0b3d2e, #1a4d6d).
+- Use a daytime sky colour (e.g. #6fb3e0) unless the lesson needs dusk or night.
 - Content must fit smallholder / aquaculture / livestock lessons for Agrisiti Academy.
 PROMPT;
     }
