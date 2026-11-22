@@ -35,6 +35,20 @@ class VrSceneGeneratorService
         'lime_bag',
         'farmer',
         'farmer_woman',
+        // real 3D models from the poultry kit
+        'poultry_house',
+        'broiler',
+        'layer_hen',
+        'local_chicken',
+        'turkey',
+        'guinea_fowl',
+        'chicks',
+        'tube_feeder',
+        'bell_drinker',
+        'brooder',
+        'nest_box',
+        'egg_tray',
+        'feed_bag',
     ];
 
     public function __construct(private VrStudioService $studio)
@@ -155,6 +169,7 @@ Rules:
 - Objects stand on the ground: a lower pitch puts them closer (pitch -25 ≈ 3.5 m away, -12 ≈ 7.5 m). Put big things (fish_pond, barn, shade_canopy, tractor) at pitch -9 to -13, small things (feed_bucket, lime_bag, dip_net, chicken) at -18 to -28.
 - fish_pond is a real concrete pond with tilapia already swimming in it. A "fish" placed within about 4 m of a fish_pond (same yaw, similar pitch) joins that pond; elsewhere a fish is shown in a small tank.
 - For fish-farming lessons put the pond in front of the learner and the related equipment (air_pump, feed_bucket, lab_table, pond_light, dip_net, lime_bag) around it; add a farmer or farmer_woman for scale.
+- For poultry lessons put a poultry_house in front of the learner (it already holds a flock of broilers, feeders and drinkers), or build a small brooding area from chicks, brooder, tube_feeder and bell_drinker; use layer_hen with nest_box and egg_tray for egg production, and local_chicken, turkey or guinea_fowl when the lesson is about those birds. Add a farmer or farmer_woman for scale.
 - Include 3–6 educational hotspots with clear info payloads (action "info" unless a complete marker is useful).
 - Do NOT invent photoreal panorama images. Set panoramaUrl to null unless the user's brief contains an https URL to an image — then copy that URL exactly.
 - Use a daytime sky colour (e.g. #6fb3e0) unless the lesson needs dusk or night.
