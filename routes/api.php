@@ -118,6 +118,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/enroll', [EnrollmentController::class, 'enroll']);
     Route::get('/my-enrollments', [EnrollmentController::class, 'myEnrollments']);
     Route::get('/my-simulation-results', [\App\Http\Controllers\Api\VrStudioController::class, 'myResults']);
+    // DIY practicals: steps, observation entries (with photos), hand in for review
+    Route::post('/diy/{diy}/steps', [\App\Http\Controllers\Api\DiyController::class, 'steps']);
+    Route::post('/diy/{diy}/entries', [\App\Http\Controllers\Api\DiyController::class, 'entry'])->middleware('throttle:60,1');
+    Route::post('/diy/{diy}/submit', [\App\Http\Controllers\Api\DiyController::class, 'submit']);
     // End-of-course check (participant form Part 5)
     Route::get('/course-surveys/pending', [\App\Http\Controllers\Api\CourseOutcomeSurveyController::class, 'pending']);
     Route::post('/course-surveys', [\App\Http\Controllers\Api\CourseOutcomeSurveyController::class, 'store']);

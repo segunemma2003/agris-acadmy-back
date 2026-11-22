@@ -453,6 +453,12 @@ class CourseController extends Controller
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();
+        $mine = \App\Models\CourseDiySubmission::query()
+            ->where('user_id', $user->id)
+            ->whereIn('course_diy_content_id', $diyContent->pluck('id'))
+            ->get()
+            ->keyBy('course_diy_content_id');
+        $diyContent = $diyContent->map(fn ($d) => \App\Http\Controllers\Api\DiyController::forLearner($d, $mine->get($d->id)))->values();
 
         return response()->json([
             'success' => true,
