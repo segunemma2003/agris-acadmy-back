@@ -356,7 +356,10 @@ class VrStudioController extends Controller
             ->where('studio_status', 'published')
             ->where('is_active', true)
             ->with(['course:id,title'])
-            ->firstOrFail();
+            ->first();
+        if (! $experience) {
+            return response()->json(['message' => "We couldn't find this VR experience. It may not be published yet, or the link may be old — ask your tutor for the latest link."], 404);
+        }
 
         $user = $request->user('sanctum');
         if (! $user && $request->filled('token')) {

@@ -153,4 +153,11 @@ class VrSimulationAttemptsTest extends TestCase
         Sanctum::actingAs($this->tutor);
         $this->getJson('/api/my-simulation-results')->assertOk()->assertJsonCount(0, 'data');
     }
+
+    public function test_unknown_play_link_gives_a_friendly_message(): void
+    {
+        $this->getJson('/api/vr-studio/play/no-such-slug')
+            ->assertNotFound()
+            ->assertJsonPath('message', "We couldn't find this VR experience. It may not be published yet, or the link may be old — ask your tutor for the latest link.");
+    }
 }
