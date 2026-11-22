@@ -161,6 +161,51 @@ class VrStudioController extends Controller
         ], 201);
     }
 
+    /**
+     * The signed-in learner's simulation results across all their courses
+     * (best score, passed or not, attempts), for the Academy dashboard.
+     */
+    public function myResults(Request $request)
+    {
+        $user = $request->user();
+        $rows = CourseVrSimAttempt::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('created_at')
+            ->get(['course_vr_content_id', 'course_id', 'passed', 'score', 'created_at'])
+            ->groupBy('course_vr_content_id');
+        if ($rows->isEmpty()) {
+            return response()->json(['data' => []]);
+        }
+        $items = CourseVrContent::query()
+            ->with('course:id,title')
+            ->whereIn('id', $rows->keys())
+            ->get()
+            ->keyBy('id');
+
+        $data = $rows->map(function ($attempts, $id) use ($items) {
+            $vr = $items->get($id);
+            if (! $vr) {
+                return null;
+            }
+            $last = $attempts->first();
+
+            return [
+                'id' => $vr->id,
+                'title' => $vr->title,
+                'course_id' => $vr->course_id,
+                'course_title' => $vr->course?->title,
+                'best_score' => (int) $attempts->max('score'),
+                'last_score' => (int) $last->score,
+                'passed' => $attempts->contains('passed', true),
+                'attempts' => $attempts->count(),
+                'last_attempt_at' => $last->created_at?->toIso8601String(),
+                'play_url' => $vr->vr_url,
+            ];
+        })->filter()->sortByDesc('last_attempt_at')->values();
+
+        return response()->json(['data' => $data]);
+    }
+
     public function show(Request $request, CourseVrContent $experience)
     {
         $user = $request->user();

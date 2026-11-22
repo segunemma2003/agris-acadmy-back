@@ -136,4 +136,21 @@ class VrSimulationAttemptsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.experience.id', $this->sim->id);
     }
+
+    public function test_learner_sees_their_simulation_results_for_the_dashboard(): void
+    {
+        Sanctum::actingAs($this->learner);
+        $this->postJson("/api/vr-studio/experiences/{$this->sim->id}/attempts", $this->attempt(false, 40))->assertSuccessful();
+        $this->postJson("/api/vr-studio/experiences/{$this->sim->id}/attempts", $this->attempt(true, 85))->assertSuccessful();
+
+        $res = $this->getJson('/api/my-simulation-results')->assertOk();
+        $this->assertSame('Night oxygen crash', $res->json('data.0.title'));
+        $this->assertSame('Fish Farming', $res->json('data.0.course_title'));
+        $this->assertSame(85, $res->json('data.0.best_score'));
+        $this->assertTrue($res->json('data.0.passed'));
+        $this->assertSame(2, $res->json('data.0.attempts'));
+
+        Sanctum::actingAs($this->tutor);
+        $this->getJson('/api/my-simulation-results')->assertOk()->assertJsonCount(0, 'data');
+    }
 }
