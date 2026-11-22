@@ -78,6 +78,89 @@ class VrStudioController extends Controller
         ]);
     }
 
+    /**
+     * Courses (with their modules) this author can add a VR experience to —
+     * used when a tutor adds a ready-made simulation from the Studio.
+     */
+    public function courses(Request $request)
+    {
+        $user = $request->user();
+        if (! $user || ! in_array($user->role, ['admin', 'tutor', 'facilitator'], true)) {
+            return response()->json(['message' => 'Only tutors, facilitators, and admins can author VR.'], 403);
+        }
+
+        $courses = $this->studio->authorCoursesQuery($user)
+            ->with(['modules:id,course_id,title'])
+            ->orderBy('title')
+            ->limit(200)
+            ->get(['id', 'title'])
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'title' => $c->title,
+                'modules' => $c->modules->map(fn ($m) => ['id' => $m->id, 'title' => $m->title])->values(),
+            ]);
+
+        return response()->json(['data' => $courses]);
+    }
+
+    /**
+     * Create a VR experience in one of the author's courses, optionally with a
+     * scene (e.g. a ready-made simulation lesson) and published straight away.
+     */
+    public function store(Request $request)
+    {
+        $user = $request->user();
+        if (! $user || ! in_array($user->role, ['admin', 'tutor', 'facilitator'], true)) {
+            return response()->json(['message' => 'Only tutors, facilitators, and admins can author VR.'], 403);
+        }
+
+        $data = $request->validate([
+            'course_id' => 'required|integer|exists:courses,id',
+            'module_id' => 'nullable|integer|exists:modules,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'instructions' => 'nullable|string',
+            'cta_label' => 'nullable|string|max:100',
+            'scene' => 'nullable|array',
+            'duration_minutes' => 'nullable|integer|min:0',
+            'publish' => 'sometimes|boolean',
+        ]);
+
+        if (! $this->studio->authorCoursesQuery($user)->whereKey($data['course_id'])->exists()) {
+            return response()->json(['message' => 'You cannot add content to this course.'], 403);
+        }
+        if (! empty($data['module_id']) && ! \App\Models\Module::whereKey($data['module_id'])->where('course_id', $data['course_id'])->exists()) {
+            return response()->json(['message' => 'That module is not part of the course.'], 422);
+        }
+
+        $experience = CourseVrContent::create(array_filter([
+            'course_id' => $data['course_id'],
+            'module_id' => $data['module_id'] ?? null,
+            'tutor_id' => $user->id,
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'instructions' => $data['instructions'] ?? null,
+            'cta_label' => $data['cta_label'] ?? 'Launch VR',
+            'scene_json' => $data['scene'] ?? null,
+            'duration_minutes' => $data['duration_minutes'] ?? null,
+            'studio_status' => 'draft',
+            'is_active' => true,
+        ], fn ($v) => $v !== null)); // let column defaults apply (e.g. duration_minutes)
+
+        if ($request->boolean('publish')) {
+            if (empty($experience->scene_json)) {
+                $experience->scene_json = $this->studio->defaultScene($experience);
+                $experience->save();
+            }
+            $experience = $this->studio->publish($experience);
+        }
+
+        return response()->json([
+            'message' => $request->boolean('publish') ? 'Added to the course and published' : 'Added to the course as a draft',
+            'data' => $this->studio->serializeExperience($experience->fresh(['course', 'module'])),
+        ], 201);
+    }
+
     public function show(Request $request, CourseVrContent $experience)
     {
         $user = $request->user();

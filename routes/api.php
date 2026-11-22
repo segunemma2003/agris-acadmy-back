@@ -132,6 +132,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // VR Studio authoring (tutor / admin / facilitator via handoff Sanctum token)
     Route::prefix('vr-studio')->group(function () {
         Route::get('/experiences', [\App\Http\Controllers\Api\VrStudioController::class, 'index']);
+        Route::post('/experiences', [\App\Http\Controllers\Api\VrStudioController::class, 'store'])->middleware('throttle:30,1');
+        Route::get('/courses', [\App\Http\Controllers\Api\VrStudioController::class, 'courses']);
         Route::get('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'show']);
         Route::put('/experiences/{experience}', [\App\Http\Controllers\Api\VrStudioController::class, 'update']);
         Route::post('/experiences/{experience}/publish', [\App\Http\Controllers\Api\VrStudioController::class, 'publish']);

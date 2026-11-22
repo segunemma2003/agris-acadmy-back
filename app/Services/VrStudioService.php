@@ -75,6 +75,28 @@ class VrStudioService
         ];
     }
 
+    /** Courses this author may add VR content to (same rules as userCanAuthor). */
+    public function authorCoursesQuery(User $user)
+    {
+        $query = \App\Models\Course::query();
+        if ($user->role === 'tutor') {
+            return $query->accessibleByTutor($user->id);
+        }
+        if ($user->role === 'facilitator') {
+            $location = $user->location;
+            if (! $location) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereHas('enrollments.user', fn ($q) => $q->whereRaw('LOWER(location) = LOWER(?)', [$location]));
+        }
+        if ($user->role === 'admin') {
+            return $query;
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
     public function userCanAuthor(User $user, CourseVrContent $content): bool
     {
         if (! in_array($user->role, ['admin', 'tutor', 'facilitator'], true)) {
