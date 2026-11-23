@@ -306,6 +306,8 @@ class CourseResource extends Resource
             RelationManagers\EnrollmentsRelationManager::class,
             // Keep last: the "Enrollments" table action links to tab index 3.
             RelationManagers\AssignmentsRelationManager::class,
+            \App\Filament\Shared\RelationManagers\VrContentRelationManager::class,
+            \App\Filament\Shared\RelationManagers\DiyContentRelationManager::class,
         ];
     }
 

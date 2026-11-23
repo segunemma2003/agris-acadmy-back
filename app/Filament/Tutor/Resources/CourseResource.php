@@ -190,6 +190,8 @@ class CourseResource extends Resource
             RelationManagers\ResourcesRelationManager::class,
             RelationManagers\EnrollmentsRelationManager::class,
             RelationManagers\AssignmentsRelationManager::class,
+            \App\Filament\Shared\RelationManagers\VrContentRelationManager::class,
+            \App\Filament\Shared\RelationManagers\DiyContentRelationManager::class,
         ];
     }
 

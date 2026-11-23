@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 /** Admin: every learner's DIY work. */
 class CourseDiySubmissionResource extends TutorSubmissions
 {
+    protected static ?string $navigationGroup = 'Course Management';
+
     public static function courseScope(Builder $query): Builder
     {
         return $query;

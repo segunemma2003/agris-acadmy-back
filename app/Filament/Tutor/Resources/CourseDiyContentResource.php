@@ -79,6 +79,7 @@ class CourseDiyContentResource extends Resource
                     Forms\Components\Select::make('course_id')
                         ->label('Course')
                         ->relationship('course', 'title', fn ($query) => static::courseScope($query))
+                        ->default(fn () => request()->integer('course_id') ?: null)
                         ->required()
                         ->searchable()
                         ->preload(),

@@ -67,6 +67,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups([
                 'System Management', // 'heroicon-o-cog-6-tooth',
+                'Course Management',
                 'Content Management', // 'heroicon-o-book-open',
                 'User Management', // 'heroicon-o-users',
                 'Communication', // 'heroicon-o-chat-bubble-left-right',

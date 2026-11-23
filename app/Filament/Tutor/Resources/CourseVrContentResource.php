@@ -39,6 +39,7 @@ class CourseVrContentResource extends Resource
                                 'title',
                                 fn ($query) => $query->accessibleByTutor(Auth::id())
                             )
+                            ->default(fn () => request()->integer('course_id') ?: null)
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -90,7 +91,8 @@ class CourseVrContentResource extends Resource
     {
         // Tutors can only view VR content they created
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('tutor_id', Auth::id()))
+            // everything in the tutor's courses (also items an admin added for them)
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('course', fn ($q) => $q->accessibleByTutor(Auth::id())))
             ->columns([
                 Tables\Columns\TextColumn::make('course.title')
                     ->searchable()

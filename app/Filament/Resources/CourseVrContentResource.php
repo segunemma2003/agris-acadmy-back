@@ -34,6 +34,7 @@ class CourseVrContentResource extends Resource
                         Forms\Components\Select::make('course_id')
                             ->label('Course')
                             ->relationship('course', 'title')
+                            ->default(fn () => request()->integer('course_id') ?: null)
                             ->required()
                             ->searchable()
                             ->preload(),
