@@ -255,16 +255,37 @@ class UserResource extends Resource
                     ->label('Queued')
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('enrollments_count')
+                    ->label('Courses')
+                    ->counts('enrollments')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('profile_complete')
+                    ->label('Profile')
+                    ->getStateUsing(fn (User $record) => $record->role !== 'student' ? null : ! \App\Support\ParticipantProfile::missingForCv($record))
+                    ->boolean()
+                    ->tooltip(fn (User $record) => $record->role === 'student' && ($m = \App\Support\ParticipantProfile::missingForCv($record))
+                        ? 'Missing: ' . implode(', ', $m) : null),
+                Tables\Columns\TextColumn::make('phone')->searchable()->toggleable()->placeholder('—'),
+                Tables\Columns\TextColumn::make('state')->searchable()->sortable()->toggleable()->placeholder('—'),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
                 Tables\Columns\IconColumn::make('is_staff')
                     ->label('Staff')
                     ->boolean()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->label('Last login')
+                    ->since()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable()
+                    ->placeholder('Never'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Registered')
+                    ->date('j M Y')
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_staff')
@@ -283,6 +304,35 @@ class UserResource extends Resource
                     ->label('Active Status'),
                 Tables\Filters\TernaryFilter::make('is_in_facilitator_queue')
                     ->label('In facilitator queue'),
+                Tables\Filters\TernaryFilter::make('enrolled')
+                    ->label('Enrolled in a course')
+                    ->queries(
+                        true: fn ($query) => $query->whereHas('enrollments'),
+                        false: fn ($query) => $query->whereDoesntHave('enrollments'),
+                    ),
+                Tables\Filters\SelectFilter::make('course')
+                    ->label('Enrolled in')
+                    ->options(fn () => \App\Models\Course::orderBy('title')->pluck('title', 'id')->all())
+                    ->searchable()
+                    ->query(fn ($query, array $data) => $query->when($data['value'] ?? null,
+                        fn ($q, $id) => $q->whereHas('enrollments', fn ($e) => $e->where('course_id', $id)))),
+                Tables\Filters\TernaryFilter::make('profile_complete')
+                    ->label('Profile form complete')
+                    ->queries(
+                        true: fn ($query) => \App\Support\ParticipantProfile::scopeCvReady($query),
+                        false: fn ($query) => $query->whereNot(fn ($w) => \App\Support\ParticipantProfile::scopeCvReady($w)),
+                    ),
+                Tables\Filters\SelectFilter::make('state')
+                    ->options(fn () => User::query()->whereNotNull('state')->where('state', '!=', '')->distinct()->orderBy('state')->pluck('state', 'state')->all())
+                    ->searchable(),
+                Tables\Filters\Filter::make('registered')
+                    ->form([
+                        Forms\Components\DatePicker::make('from')->label('Registered from'),
+                        Forms\Components\DatePicker::make('until')->label('Registered until'),
+                    ])
+                    ->query(fn ($query, array $data) => $query
+                        ->when($data['from'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
+                        ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))),
             ])
             ->headerActions([
                 Tables\Actions\ExportAction::make()
@@ -291,16 +341,98 @@ class UserResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    self::enrolAction(),
+                    Tables\Actions\Action::make('toggleActive')
+                        ->label(fn (User $record) => $record->is_active ? 'Deactivate' : 'Activate')
+                        ->icon(fn (User $record) => $record->is_active ? 'heroicon-o-no-symbol' : 'heroicon-o-check-circle')
+                        ->color(fn (User $record) => $record->is_active ? 'danger' : 'success')
+                        ->requiresConfirmation()
+                        ->modalDescription(fn (User $record) => $record->is_active
+                            ? 'They will no longer be able to sign in.' : 'They will be able to sign in again.')
+                        ->action(fn (User $record) => $record->update(['is_active' => ! $record->is_active])),
+                    Tables\Actions\Action::make('setPassword')
+                        ->label('Set new password')
+                        ->icon('heroicon-o-key')
+                        ->form([
+                            Forms\Components\TextInput::make('password')->password()->revealable()->required()->minLength(8)->confirmed(),
+                            Forms\Components\TextInput::make('password_confirmation')->password()->revealable()->required()->label('Confirm password'),
+                        ])
+                        ->action(function (User $record, array $data) {
+                            $record->update(['password' => Hash::make($data['password'])]);
+                            $record->tokens()->delete(); // sign them out everywhere
+                            \Filament\Notifications\Notification::make()->title('Password changed')->success()->send();
+                        }),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('enrolSelected')
+                        ->label('Enrol in a course')
+                        ->icon('heroicon-o-academic-cap')
+                        ->form([self::courseSelect()])
+                        ->action(fn (\Illuminate\Support\Collection $records, array $data) => self::enrol($records, (int) $data['course_id']))
+                        ->deselectRecordsAfterCompletion(),
+                    Tables\Actions\BulkAction::make('activate')
+                        ->label('Activate')
+                        ->icon('heroicon-o-check-circle')
+                        ->requiresConfirmation()
+                        ->action(fn (\Illuminate\Support\Collection $records) => User::whereKey($records->modelKeys())->update(['is_active' => true]))
+                        ->deselectRecordsAfterCompletion(),
+                    Tables\Actions\BulkAction::make('deactivate')
+                        ->label('Deactivate')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->action(fn (\Illuminate\Support\Collection $records) => User::whereKey($records->modelKeys())->where('role', '!=', 'admin')->update(['is_active' => false]))
+                        ->deselectRecordsAfterCompletion(),
                     Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\ExportBulkAction::make()
                         ->label('Export for MEL')
                         ->exporter(UserExporter::class),
                 ]),
             ]);
+    }
+
+    private static function courseSelect(): Forms\Components\Select
+    {
+        return Forms\Components\Select::make('course_id')
+            ->label('Course')
+            ->options(fn () => \App\Models\Course::orderBy('title')->pluck('title', 'id')->all())
+            ->searchable()
+            ->required();
+    }
+
+    private static function enrolAction(): Tables\Actions\Action
+    {
+        return Tables\Actions\Action::make('enrol')
+            ->label('Enrol in a course')
+            ->icon('heroicon-o-academic-cap')
+            ->visible(fn (User $record) => $record->role === 'student')
+            ->form([self::courseSelect()])
+            ->action(fn (User $record, array $data) => self::enrol(collect([$record]), (int) $data['course_id']));
+    }
+
+    /** Enrol learners in a course; anyone already enrolled is left as they are. */
+    private static function enrol(\Illuminate\Support\Collection $users, int $courseId): void
+    {
+        $added = 0;
+        foreach ($users as $user) {
+            if ($user->role !== 'student') {
+                continue;
+            }
+            $enrollment = \App\Models\Enrollment::firstOrCreate(
+                ['user_id' => $user->id, 'course_id' => $courseId],
+                ['status' => 'active', 'enrolled_at' => now(), 'progress_percentage' => 0],
+            );
+            $added += $enrollment->wasRecentlyCreated ? 1 : 0;
+        }
+        $skipped = $users->count() - $added;
+        \Filament\Notifications\Notification::make()
+            ->title("Enrolled {$added} learner" . ($added === 1 ? '' : 's'))
+            ->body($skipped ? "{$skipped} skipped (already enrolled, or not a learner)." : null)
+            ->success()->send();
     }
 
     public static function getRelations(): array
