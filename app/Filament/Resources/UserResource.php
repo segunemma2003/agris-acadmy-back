@@ -382,6 +382,8 @@ class UserResource extends Resource
                         default => $query->whereHas('enrollments', fn ($e) => $e->where('course_id', $v)),
                     }),
                 Tables\Filters\SelectFilter::make('state')
+                    ->label('States')
+                    ->multiple()
                     ->placeholder('Any state')
                     ->options(fn () => User::query()->whereNotNull('state')->where('state', '!=', '')->distinct()->orderBy('state')->pluck('state', 'state')->all())
                     ->searchable(),

@@ -54,6 +54,25 @@ class AdminUserFilterStatsTest extends TestCase
             ->assertCanNotSeeTableRecords([$this->recent, $this->old]);
     }
 
+    public function test_state_filter_takes_several_states(): void
+    {
+        $this->old->update(['state' => 'Oyo']);
+        $this->recent->update(['state' => 'Kano']);
+        $this->today->update(['state' => 'Lagos']);
+
+        Livewire::test(ListUsers::class)
+            ->filterTable('state', ['Oyo', 'Kano'])
+            ->assertCanSeeTableRecords([$this->old, $this->recent])
+            ->assertCanNotSeeTableRecords([$this->today]);
+
+        Livewire::test(UserFilterStats::class, ['tableFilters' => ['state' => ['values' => ['Oyo', 'Kano']]], 'activeTab' => null, 'tableSearch' => null])
+            ->assertSee('Matching your 1 filter')
+            ->assertSeeInOrder(['Users', '2']);
+
+        Livewire::test(UserFilterStats::class, ['tableFilters' => ['state' => ['values' => []]], 'activeTab' => null, 'tableSearch' => null])
+            ->assertSee('No filters applied');
+    }
+
     public function test_stats_and_export_follow_the_filters(): void
     {
         $filters = ['registered' => ['period' => '30d', 'from' => null, 'until' => null]];
