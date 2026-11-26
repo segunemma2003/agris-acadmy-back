@@ -44,7 +44,7 @@ class AdminUsersTest extends TestCase
         Livewire::test(ListUsers::class, ['activeTab' => 'organisations'])->assertCanSeeTableRecords([$org]);
         Livewire::test(ListUsers::class, ['activeTab' => 'staff'])->assertCanSeeTableRecords([$this->admin]);
 
-        Livewire::test(ListUsers::class)->filterTable('enrolled', false)->assertCanSeeTableRecords([$new])->assertCanNotSeeTableRecords([$enrolled]);
+        Livewire::test(ListUsers::class)->filterTable('course', 'none')->assertCanSeeTableRecords([$new])->assertCanNotSeeTableRecords([$enrolled]);
         Livewire::test(ListUsers::class)->filterTable('course', $this->course->id)->assertCanSeeTableRecords([$enrolled])->assertCanNotSeeTableRecords([$new]);
     }
 

@@ -6,6 +6,7 @@ use App\Filament\Resources\UserResource;
 use App\Models\User;
 use App\Support\ParticipantProfile;
 use Filament\Actions;
+use Filament\Pages\Concerns\ExposesTableToWidgets;
 use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,7 +18,19 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class ListUsers extends ListRecords
 {
+    use ExposesTableToWidgets;
+
     protected static string $resource = UserResource::class;
+
+    protected function getHeaderWidgets(): array
+    {
+        return [UserResource\Widgets\UserFilterStats::class];
+    }
+
+    public function getHeaderWidgetsColumns(): int|array
+    {
+        return 3;
+    }
 
     protected function getHeaderActions(): array
     {

@@ -21,6 +21,36 @@ class UserResource extends Resource
 
     protected static ?string $navigationGroup = 'User Management';
 
+    public const PERIODS = [
+        'today' => 'Today',
+        '7d' => 'Last 7 days',
+        '30d' => 'Last 30 days',
+        '90d' => 'Last 90 days',
+        'month' => 'This month',
+        'year' => 'This year',
+        'custom' => 'From a date…',
+    ];
+
+    /** [from, until] for the "Registered" filter; until defaults to now. */
+    public static function periodRange(array $data): array
+    {
+        $now = now();
+
+        return match ($data['period'] ?? null) {
+            'today' => [$now->copy()->startOfDay(), null],
+            '7d' => [$now->copy()->subDays(7)->startOfDay(), null],
+            '30d' => [$now->copy()->subDays(30)->startOfDay(), null],
+            '90d' => [$now->copy()->subDays(90)->startOfDay(), null],
+            'month' => [$now->copy()->startOfMonth(), null],
+            'year' => [$now->copy()->startOfYear(), null],
+            'custom' => [
+                filled($data['from'] ?? null) ? \Illuminate\Support\Carbon::parse($data['from'])->startOfDay() : null,
+                filled($data['until'] ?? null) ? \Illuminate\Support\Carbon::parse($data['until'])->endOfDay() : null,
+            ],
+            default => [null, null],
+        };
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -288,9 +318,45 @@ class UserResource extends Resource
                     ->toggleable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_staff')
-                    ->label('Marked as staff'),
+                Tables\Filters\Filter::make('registered')
+                    ->form([
+                        Forms\Components\Select::make('period')
+                            ->label('Registered')
+                            ->placeholder('Any time')
+                            ->options(self::PERIODS)
+                            ->live(),
+                        Forms\Components\DatePicker::make('from')
+                            ->label('From')
+                            ->maxDate(now())
+                            ->visible(fn (Forms\Get $get) => $get('period') === 'custom'),
+                        Forms\Components\DatePicker::make('until')
+                            ->label('Until')
+                            ->placeholder('Now')
+                            ->helperText('Leave empty for up to now')
+                            ->visible(fn (Forms\Get $get) => $get('period') === 'custom'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->query(function ($query, array $data) {
+                        [$from, $until] = self::periodRange($data);
+
+                        return $query
+                            ->when($from, fn ($q) => $q->where('created_at', '>=', $from))
+                            ->when($until, fn ($q) => $q->where('created_at', '<=', $until));
+                    })
+                    ->indicateUsing(function (array $data) {
+                        [$from, $until] = self::periodRange($data);
+                        if (! $from && ! $until) {
+                            return null;
+                        }
+                        $period = $data['period'] ?? null;
+
+                        return 'Registered: '.($period && $period !== 'custom'
+                            ? self::PERIODS[$period]
+                            : ($from ? $from->format('j M Y') : 'start').' – '.($until && ! $until->isToday() ? $until->format('j M Y') : 'now'));
+                    }),
                 Tables\Filters\SelectFilter::make('role')
+                    ->placeholder('Any role')
                     ->options([
                         'admin' => 'Admin',
                         'tutor' => 'Tutor',
@@ -300,44 +366,67 @@ class UserResource extends Resource
                         'organisation' => 'Organisation (host)',
                         'partner' => 'Partner (funder)',
                     ]),
-                Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active Status'),
-                Tables\Filters\TernaryFilter::make('is_in_facilitator_queue')
-                    ->label('In facilitator queue'),
-                Tables\Filters\TernaryFilter::make('enrolled')
-                    ->label('Enrolled in a course')
-                    ->queries(
-                        true: fn ($query) => $query->whereHas('enrollments'),
-                        false: fn ($query) => $query->whereDoesntHave('enrollments'),
-                    ),
+                // one field for "enrolled / not enrolled / in this course"
                 Tables\Filters\SelectFilter::make('course')
-                    ->label('Enrolled in')
-                    ->options(fn () => \App\Models\Course::orderBy('title')->pluck('title', 'id')->all())
+                    ->label('Course')
+                    ->placeholder('Any')
+                    ->options(fn () => [
+                        'any' => 'Enrolled in any course',
+                        'none' => 'Not enrolled in any course',
+                    ] + \App\Models\Course::orderBy('title')->pluck('title', 'id')->mapWithKeys(fn ($t, $id) => [(string) $id => 'Enrolled in: '.$t])->all())
                     ->searchable()
-                    ->query(fn ($query, array $data) => $query->when($data['value'] ?? null,
-                        fn ($q, $id) => $q->whereHas('enrollments', fn ($e) => $e->where('course_id', $id)))),
+                    ->query(fn ($query, array $data) => match ($v = $data['value'] ?? null) {
+                        null, '' => $query,
+                        'any' => $query->whereHas('enrollments'),
+                        'none' => $query->whereDoesntHave('enrollments'),
+                        default => $query->whereHas('enrollments', fn ($e) => $e->where('course_id', $v)),
+                    }),
+                Tables\Filters\SelectFilter::make('state')
+                    ->placeholder('Any state')
+                    ->options(fn () => User::query()->whereNotNull('state')->where('state', '!=', '')->distinct()->orderBy('state')->pluck('state', 'state')->all())
+                    ->searchable(),
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Account')
+                    ->placeholder('Any')
+                    ->trueLabel('Active')
+                    ->falseLabel('Deactivated'),
                 Tables\Filters\TernaryFilter::make('profile_complete')
-                    ->label('Profile form complete')
+                    ->label('Profile form')
+                    ->placeholder('Any')
+                    ->trueLabel('Complete')
+                    ->falseLabel('Incomplete')
                     ->queries(
                         true: fn ($query) => \App\Support\ParticipantProfile::scopeCvReady($query),
                         false: fn ($query) => $query->whereNot(fn ($w) => \App\Support\ParticipantProfile::scopeCvReady($w)),
                     ),
-                Tables\Filters\SelectFilter::make('state')
-                    ->options(fn () => User::query()->whereNotNull('state')->where('state', '!=', '')->distinct()->orderBy('state')->pluck('state', 'state')->all())
-                    ->searchable(),
-                Tables\Filters\Filter::make('registered')
-                    ->form([
-                        Forms\Components\DatePicker::make('from')->label('Registered from'),
-                        Forms\Components\DatePicker::make('until')->label('Registered until'),
-                    ])
-                    ->query(fn ($query, array $data) => $query
-                        ->when($data['from'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
-                        ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('created_at', '<=', $d))),
+                Tables\Filters\SelectFilter::make('flag')
+                    ->label('Other')
+                    ->placeholder('Any')
+                    ->options(['staff' => 'Marked as staff', 'queue' => 'In facilitator queue'])
+                    ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
+                        'staff' => $query->where('is_staff', true),
+                        'queue' => $query->where('is_in_facilitator_queue', true),
+                        default => $query,
+                    }),
             ])
+            // a labelled button opens the filters in a side panel (scrolls on small
+            // screens); the table, stats and export follow them once "Apply filters" is pressed
+            ->filtersLayout(Tables\Enums\FiltersLayout::Modal)
+            ->filtersFormColumns(3)
+            ->filtersFormWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+            ->deferFilters()
+            ->filtersTriggerAction(fn (Tables\Actions\Action $action) => $action
+                ->button()
+                ->label('Filters')
+                ->slideOver())
+            ->filtersApplyAction(fn (Tables\Actions\Action $action) => $action->label('Apply filters'))
             ->headerActions([
                 Tables\Actions\ExportAction::make()
                     ->label('Export for MEL')
-                    ->exporter(UserExporter::class),
+                    ->exporter(UserExporter::class)
+                    // exports exactly what the table shows: the tab, search and applied filters
+                    ->modalHeading(fn ($livewire) => 'Export '.number_format($n = $livewire->getTableQueryForExport()->count()).' '.str('user')->plural($n))
+                    ->modalDescription('Only the users matching the current tab, search and filters are exported. Change the filters first to export a different group.'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -441,6 +530,11 @@ class UserResource extends Resource
             RelationManagers\EnrollmentsRelationManager::class,
             RelationManagers\OutcomeSurveysRelationManager::class,
         ];
+    }
+
+    public static function getWidgets(): array
+    {
+        return [UserResource\Widgets\UserFilterStats::class];
     }
 
     public static function getPages(): array
