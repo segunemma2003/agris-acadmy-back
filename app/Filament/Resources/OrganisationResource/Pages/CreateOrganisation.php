@@ -6,6 +6,8 @@ use App\Filament\Resources\OrganisationResource;
 use App\Models\User;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class CreateOrganisation extends CreateRecord
@@ -20,17 +22,24 @@ class CreateOrganisation extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        $user = User::create([
-            'name' => $data['contact_name'],
-            'email' => $data['contact_email'],
-            'password' => Hash::make($data['contact_password']),
-            'role' => 'organisation',
-            'is_active' => true,
-        ]);
+        // the login and the organisation are created together, or not at all
+        return DB::transaction(function () use ($data) {
+            $user = User::create([
+                'name' => $data['contact_name'],
+                'email' => $data['contact_email'],
+                'password' => Hash::make($data['contact_password']),
+                'role' => 'organisation',
+                'is_active' => true,
+            ]);
 
-        unset($data['contact_name'], $data['contact_email'], $data['contact_password']);
-        $data['user_id'] = $user->id;
+            unset($data['contact_name'], $data['contact_email'], $data['contact_password']);
+            $data['user_id'] = $user->id;
+            if (! empty($data['is_approved'])) {
+                $data['approved_at'] ??= now();
+                $data['approved_by'] = Auth::id();
+            }
 
-        return static::getModel()::create($data);
+            return static::getModel()::create($data);
+        });
     }
 }
